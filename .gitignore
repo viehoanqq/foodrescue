@@ -1,0 +1,14 @@
+# Backend
+backend/target/
+backend/src/main/resources/application-local.yml
+uploads/
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+# IDE, hệ điều hành
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
