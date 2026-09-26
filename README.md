@@ -24,7 +24,7 @@ Cài sẵn: **JDK 17+**, **Maven**, **Node.js 20+**, **Git**, **XAMPP**.
 > Clone repo vào thư mục **không dấu, không khoảng trắng** (vd `E:\projects\foodrescue`). Đường dẫn có dấu tiếng Việt làm `mvn spring-boot:run` báo lỗi `Could not find or load main class`.
 
 ```powershell
-git clone https://github.com/<tên-github>/foodrescue.git
+git clone https://github.com/viehoanqq/foodrescue.git
 cd foodrescue
 git checkout develop
 ```
