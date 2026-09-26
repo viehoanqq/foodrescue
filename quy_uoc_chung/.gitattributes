@@ -1,9 +1,0 @@
-# Giữ ký tự xuống dòng LF cho mọi file text (tránh lỗi mvnw / script khi chạy trong Docker, Linux)
-* text=auto eol=lf
-mvnw text eol=lf
-*.sh text eol=lf
-*.cmd text eol=crlf
-*.bat text eol=crlf
-*.png binary
-*.jpg binary
-*.pdf binary
