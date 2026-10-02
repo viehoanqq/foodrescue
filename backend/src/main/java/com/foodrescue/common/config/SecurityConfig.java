@@ -1,42 +1,59 @@
 package com.foodrescue.common.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.foodrescue.common.api.ApiError;
 import com.foodrescue.common.exception.ErrorCode;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.time.LocalDateTime;
+import com.foodrescue.common.security.ApiErrorWriter;
+import com.foodrescue.common.security.AuthUserLoader;
+import com.foodrescue.common.security.JwtAuthFilter;
+import com.foodrescue.common.security.JwtService;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/** Khung bảo mật ban đầu. TV1 bổ sung JWT, DevAuth và quy tắc theo vai trò ở việc F4. */
+/**
+ * Bảo mật (F4). Quyền theo khu vực URL (Quy ước chung mục 5.1): đặt API đúng tiền tố
+ * thì KHÔNG cần sửa file này. Quyền chi tiết hơn (vd chỉ chủ cửa hàng) dùng @PreAuthorize ở controller.
+ */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    private final ObjectMapper objectMapper;
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
+    private final JwtService jwtService;
+    private final AuthUserLoader authUserLoader;
+    private final ApiErrorWriter errorWriter;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    public SecurityConfig(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    @Value("${app.dev-auth.enabled:false}")
+    private boolean devAuthEnabled;
+
+    public SecurityConfig(JwtService jwtService, AuthUserLoader authUserLoader, ApiErrorWriter errorWriter) {
+        this.jwtService = jwtService;
+        this.authUserLoader = authUserLoader;
+        this.errorWriter = errorWriter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        if (devAuthEnabled) {
+            log.warn("DevAuth DANG BAT: header {} gia lap nguoi dung. Chi dung tren may dev!", JwtAuthFilter.DEV_HEADER);
+        }
         http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -44,20 +61,27 @@ public class SecurityConfig {
             .httpBasic(b -> b.disable())
             .formLogin(f -> f.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/ping", "/api/auth/**", "/api/payments/vnpay/ipn",
+                // Công khai
+                .requestMatchers("/api/ping", "/api/auth/**", "/api/payments/vnpay/ipn", "/error",
                         "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/batches/**", "/api/stores/**", "/api/categories/**").permitAll()
-                // F4: thêm quy tắc theo vai trò cho /api/cart, /api/orders, /api/store, /api/admin
+                // Theo vai trò
+                .requestMatchers("/api/cart/**", "/api/orders/**", "/api/payments/**").hasRole("CUSTOMER")
+                .requestMatchers("/api/store/**").hasAnyRole("STORE_OWNER", "STORE_STAFF")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // Còn lại (vd /api/me, POST đánh giá): chỉ cần đăng nhập
                 .anyRequest().authenticated())
             .exceptionHandling(e -> e
-                .authenticationEntryPoint((req, res, ex) -> writeError(req, res, ErrorCode.UNAUTHORIZED))
-                .accessDeniedHandler((req, res, ex) -> writeError(req, res, ErrorCode.FORBIDDEN)));
+                .authenticationEntryPoint((req, res, ex) -> errorWriter.write(req, res, ErrorCode.UNAUTHORIZED))
+                .accessDeniedHandler((req, res, ex) -> errorWriter.write(req, res, ErrorCode.FORBIDDEN)))
+            .addFilterBefore(new JwtAuthFilter(jwtService, authUserLoader, errorWriter, devAuthEnabled),
+                    UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(); // cost 10, khớp mật khẩu mẫu 123456 trong foodrescue_schema.sql
     }
 
     @Bean
@@ -69,15 +93,5 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
-    }
-
-    /** Lỗi 401/403 cũng trả đúng định dạng ApiError như mọi lỗi khác. */
-    private void writeError(HttpServletRequest req, HttpServletResponse res, ErrorCode code) throws IOException {
-        res.setStatus(code.status());
-        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        res.setCharacterEncoding("UTF-8");
-        ApiError body = new ApiError(code.name(), code.defaultMessage(), List.of(), LocalDateTime.now(),
-                req.getRequestURI());
-        objectMapper.writeValue(res.getOutputStream(), body);
     }
 }
