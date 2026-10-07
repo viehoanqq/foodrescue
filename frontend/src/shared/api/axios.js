@@ -15,6 +15,8 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const devUserId = localStorage.getItem('fr_dev_user_id');
+  if (devUserId) config.headers['X-Dev-User-Id'] = devUserId;
   return config;
 });
 

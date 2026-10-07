@@ -31,7 +31,7 @@ app:
     secret: ${JWT_SECRET:doi-chuoi-nay-trong-application-local-yml-toi-thieu-32-ky-tu}
     expiration-hours: 24
   dev-auth:
-    enabled: false                        # chỉ bật trong application-local.yml trên máy dev
+    enabled: ${DEV_AUTH_ENABLED:true}                        # Bật trên máy dev để hỗ trợ X-Dev-User-Id
   order:
     payment-link-minutes: 10              # vnp_ExpireDate
     expire-after-minutes: 15              # tác vụ huỷ đơn chưa thanh toán

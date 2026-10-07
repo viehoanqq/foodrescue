@@ -62,7 +62,7 @@ public class SecurityConfig {
             .formLogin(f -> f.disable())
             .authorizeHttpRequests(auth -> auth
                 // Công khai
-                .requestMatchers("/api/ping", "/api/auth/**", "/api/payments/vnpay/ipn", "/error",
+                .requestMatchers("/api/ping", "/api/auth/**", "/api/payments/vnpay/**", "/error",
                         "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/batches/**", "/api/stores/**", "/api/categories/**").permitAll()
                 // Theo vai trò
