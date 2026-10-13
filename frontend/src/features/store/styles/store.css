@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* Phong cách Stitch cho module cửa hàng: nền xanh nhạt, thẻ bo lớn, nút xanh lá đậm. */
+.fr-store {
+  min-height: 100vh;
+  background: #f6f8ff;
+  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+.fr-store :focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+.fr-brandbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  border-radius: 20px;
+  background: #eef3ff;
+  box-shadow: 0 4px 16px rgba(30, 64, 175, 0.06);
+}
+
+.fr-register {
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(30, 64, 175, 0.08);
+}
+.fr-register__pitch {
+  background: #12733a;
+  color: #fff;
+  padding: 24px 20px;
+}
+.fr-register__pitch-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.fr-register__main {
+  padding: 24px 16px 32px;
+}
+
+.fr-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 992px) {
+  .fr-register {
+    grid-template-columns: 380px 1fr;
+  }
+  .fr-register__pitch {
+    padding: 40px 32px;
+  }
+  .fr-register__pitch-inner {
+    position: sticky;
+    top: 24px;
+    gap: 20px;
+  }
+  .fr-register__main {
+    padding: 40px 44px 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .fr-brandbar__chip {
+    display: none;
+  }
+}

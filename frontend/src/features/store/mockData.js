@@ -1,0 +1,72 @@
+// Dữ liệu giả cho giao diện tĩnh (S0). Sẽ được thay bằng API thật ở việc S5.
+// Tên trường theo quy ước JSON của dự án (camelCase, tiền là số nguyên VNĐ, giờ ISO giờ Việt Nam).
+
+export const MOCK_CATEGORIES = [
+  { id: 1, name: 'Bánh ngọt' },
+  { id: 2, name: 'Bánh mì' },
+  { id: 3, name: 'Cơm' },
+  { id: 4, name: 'Rau củ' },
+];
+
+export const MOCK_BATCHES = [
+  {
+    id: 1,
+    title: 'Túi Bánh Mì Cuối Ngày',
+    categoryName: 'Bánh mì',
+    originalPrice: 90000,
+    rescuePrice: 35000,
+    quantity: 20,
+    remainingQuantity: 14,
+    pickupStart: '2026-10-13T20:30:00',
+    pickupEnd: '2026-10-13T21:30:00',
+    status: 'AVAILABLE',
+  },
+  {
+    id: 2,
+    title: 'Surprise Box Bánh Pháp',
+    categoryName: 'Bánh ngọt',
+    originalPrice: 120000,
+    rescuePrice: 45000,
+    quantity: 10,
+    remainingQuantity: 0,
+    pickupStart: '2026-10-13T21:00:00',
+    pickupEnd: '2026-10-13T22:00:00',
+    status: 'SOLD_OUT',
+  },
+  {
+    id: 3,
+    title: 'Cơm Tấm Sườn Combo',
+    categoryName: 'Cơm',
+    originalPrice: 65000,
+    rescuePrice: 25000,
+    quantity: 12,
+    remainingQuantity: 5,
+    pickupStart: '2026-10-14T20:00:00',
+    pickupEnd: '2026-10-14T21:00:00',
+    status: 'AVAILABLE',
+  },
+  {
+    id: 4,
+    title: 'Túi Rau Củ Cuối Ngày',
+    categoryName: 'Rau củ',
+    originalPrice: 80000,
+    rescuePrice: 30000,
+    quantity: 8,
+    remainingQuantity: 3,
+    pickupStart: '2026-10-12T19:00:00',
+    pickupEnd: '2026-10-12T20:00:00',
+    status: 'EXPIRED',
+  },
+  {
+    id: 5,
+    title: 'Túi Bánh Kem Lát',
+    categoryName: 'Bánh ngọt',
+    originalPrice: 100000,
+    rescuePrice: 40000,
+    quantity: 6,
+    remainingQuantity: 6,
+    pickupStart: '2026-10-13T21:00:00',
+    pickupEnd: '2026-10-13T22:00:00',
+    status: 'CANCELLED',
+  },
+];
