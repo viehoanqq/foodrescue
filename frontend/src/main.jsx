@@ -6,7 +6,7 @@ import viVN from 'antd/locale/vi_VN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import 'leaflet/dist/leaflet.css';
-import { antdTheme } from './shared/theme/theme';
+import { antdTheme } from './theme/theme';
 import App from './App';
 
 dayjs.locale('vi');
