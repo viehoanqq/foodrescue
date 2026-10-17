@@ -25,7 +25,9 @@ Website **giải cứu thực phẩm cuối ngày**. Cửa hàng đăng "túi gi
 | Tích hợp | VNPay Sandbox (thanh toán), OSRM + OpenStreetMap (bản đồ, khoảng cách) |
 | CI | GitHub Actions: build, test backend với MySQL 8; lint, build frontend |
 
-Kiến trúc: **frontend React** gọi **REST API** của backend (JSON). Backend chia tầng **Controller → Service → Repository** và chia mã nguồn theo module nghiệp vụ.
+Kiến trúc: **frontend React** (View) gọi **REST API** của backend (JSON). Backend tổ chức theo **3 lớp**, mỗi lớp một package:
+**Controller** (nhận request, gọi service) → **Service** (nghiệp vụ, transaction) → **Repository** (truy cập CSDL).
+Controller không gọi thẳng Repository; Service không trả Entity ra ngoài mà trả DTO.
 
 ## Cấu trúc thư mục
 
@@ -36,17 +38,30 @@ foodrescue/
 │   └── pull_request_template.md    checklist khi mở Pull Request
 ├── backend/                        Spring Boot, cổng 8080
 │   └── src/main/java/com/foodrescue/
-│       ├── common/                 dùng chung: api, config, entity, enums, exception, repository,
-│       │                           security, service (sổ kho, nhật ký, hoàn tiền), storage, util
-│       ├── auth/  admin/           TV1
-│       ├── store/  batch/  adminuser/        TV2
-│       ├── catalog/  review/  admincatalog/  TV3
-│       └── cart/  order/  payment/  pickup/  scheduler/   TV4
+│       ├── config/                 SecurityConfig, TimeZoneConfig
+│       ├── controller/             LỚP 1 - REST controller (/api/...)
+│       │   └── store/              controller khu vực cửa hàng (/api/store/...)
+│       ├── service/                LỚP 2 - nghiệp vụ, @Transactional
+│       ├── repository/             LỚP 3 - Spring Data JPA repository
+│       ├── entity/                 13 entity (bảng CSDL)
+│       │   └── enums/              trạng thái, vai trò, ...
+│       ├── dto/request/            dữ liệu client gửi lên (@Valid)
+│       ├── dto/response/           dữ liệu trả về client, ApiError, PageResponse
+│       ├── security/               JWT, JwtAuthFilter, CurrentUser
+│       ├── exception/              ErrorCode, BusinessException, GlobalExceptionHandler
+│       ├── scheduler/              tác vụ tự động (@Scheduled)
+│       └── util/                   Money, VNPayUtil
 ├── frontend/                       React + Vite, cổng 5173
 │   └── src/
-│       ├── app/  layouts/          khung ứng dụng, 3 layout (khách, cửa hàng, admin)
-│       ├── features/               mỗi module một thư mục (auth, admin, store, catalog, order, ...)
-│       └── shared/                 dùng chung: api (axios), theme, constants (trạng thái), utils (format), components
+│       ├── App.jsx  main.jsx       khung ứng dụng
+│       ├── pages/customer/         màn hình phía khách hàng
+│       ├── pages/store/            màn hình phía cửa hàng
+│       ├── components/             component tái sử dụng (store/ ...)
+│       ├── services/               gọi API: axios.js (dùng chung), api.js
+│       ├── routes/                 khai báo route, menu
+│       ├── constants/  utils/      nhãn trạng thái; format tiền, ngày giờ, geo
+│       ├── theme/  styles/         màu, font; CSS
+│       └── mocks/                  dữ liệu giả tạm thời
 ├── database/
 │   ├── foodrescue_schema.sql       tạo CSDL 13 bảng + dữ liệu mẫu
 │   └── foodrescue_checks.sql       câu truy vấn kiểm tra dữ liệu (tiền, kho, đơn)
@@ -127,14 +142,17 @@ Mật khẩu chung: **`123456`**
 
 ### Phân công module
 
-| Thành viên | Module | Backend | Frontend |
-|---|---|---|---|
-| TV1 | Nền tảng, tài khoản, tiền (nhóm trưởng) | `common/`, `auth/`, `admin/` | `app/`, `layouts/`, `shared/`, `features/auth`, `features/admin` |
-| TV2 | Cửa hàng, túi, kho | `store/`, `batch/`, `adminuser/` | `features/store`, `features/admin-stores`, `features/admin-users` |
-| TV3 | Khách hàng, bản đồ, giao diện chung | `catalog/`, `review/`, `admincatalog/` | `features/catalog`, `features/review`, `features/admin-catalog`, `shared/components` |
-| TV4 | Giỏ hàng, đơn, thanh toán, giao hàng | `cart/`, `order/`, `payment/`, `pickup/`, `scheduler/` | `features/order` |
+Code chia theo lớp nên phân công tính theo **file / class** của từng chức năng, không theo thư mục.
+Mỗi chức năng gồm `XxxController` + `XxxService` (+ DTO, repository nếu cần) ở đúng package của lớp đó.
 
-Mỗi người chỉ sửa trong thư mục của mình. Sửa phần dùng chung (`common/`, `shared/`, `database/`, `pom.xml`, `package.json`) thì mở Pull Request riêng, gắn nhãn `shared-change`, báo cả nhóm. Chi tiết việc từng tuần: `docs/FoodRescue_KeHoachPhanCong.pdf`.
+| Thành viên | Module | Backend (class) | Frontend |
+|---|---|---|---|
+| TV1 | Nền tảng, tài khoản, tiền (nhóm trưởng) | `config/`, `security/`, `exception/`, `entity/`, `repository/`, `util/Money`, `AuditService`, `StockService`, `MeController`, Auth*, Admin* (đơn, hoàn tiền, chi trả) | `App.jsx`, `main.jsx`, `services/axios.js`, `theme/`, `constants/`, `utils/format.js`, trang đăng nhập, trang admin |
+| TV2 | Cửa hàng, túi, kho | Store*, `BatchController`/`BatchService`, AdminUser* | `pages/store/StoreBatchesPage`, `StoreRegisterPage`, `components/store/`, `routes/store*` |
+| TV3 | Khách hàng, bản đồ, giao diện chung | Catalog*, Review*, AdminCatalog* | `pages/customer/HomeCatalogView`, `RescueBatchDetailView`, component dùng chung |
+| TV4 | Giỏ hàng, đơn, thanh toán, giao hàng | Cart*, Order*, StoreOrder*, Payment*, Pickup*, `util/VNPayUtil`, `scheduler/` | `pages/customer/` (giỏ, đơn, thanh toán), `pages/store/StoreOrdersView`, `StorePickupView`, `services/api.js` |
+
+Mỗi người chỉ sửa file của mình. Sửa phần dùng chung (`entity/`, `repository/`, `config/`, `security/`, `exception/`, `services/axios.js`, `database/`, `pom.xml`, `package.json`) thì mở Pull Request riêng, gắn nhãn `shared-change`, báo cả nhóm. Chi tiết việc từng tuần: `docs/FoodRescue_KeHoachPhanCong.pdf`.
 
 ### Nhánh Git
 
@@ -174,8 +192,8 @@ Trước khi push nên chạy `mvn verify` và `npm run build` ở máy để CI
 
 ### Quy ước
 Đặt tên (bảng, class, hàm, URL, JSON), định dạng lỗi API, màu, font, cách hiện tiền và ngày: xem `docs/FoodRescue_QuyUocChung.pdf`. Luôn dùng các file dùng chung thay vì tự viết lại:
-- Backend: `ErrorCode` và `BusinessException` cho lỗi, `Money` cho tính tiền, các enum trong `common/enums`.
-- Frontend: `theme.js` cho màu và font, `status.js` cho nhãn trạng thái, `format.js` cho tiền và ngày giờ, `api` từ `shared/api/axios.js` để gọi API.
+- Backend: `ErrorCode` và `BusinessException` cho lỗi, `Money` cho tính tiền, các enum trong `entity/enums`.
+- Frontend: `theme.js` cho màu và font, `status.js` cho nhãn trạng thái, `format.js` cho tiền và ngày giờ, `api` từ `services/axios.js` để gọi API.
 
 ## Kiểm tra dữ liệu
 Sau khi test các chức năng liên quan đến tiền, kho, đơn hàng, chạy:

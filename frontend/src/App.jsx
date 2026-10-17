@@ -7,14 +7,14 @@ import {
   ProfileOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import CartView from './features/order/CartView';
-import MyOrdersView from './features/order/MyOrdersView';
-import StorePickupView from './features/order/StorePickupView';
-import StoreOrdersView from './features/order/StoreOrdersView';
-import PaymentResultView from './features/order/PaymentResultView';
-import HomeCatalogView from './features/catalog/HomeCatalogView';
-import RescueBatchDetailView from './features/catalog/RescueBatchDetailView';
-import OrderInvoiceDetailView from './features/order/OrderInvoiceDetailView';
+import CartView from './pages/customer/CartView';
+import MyOrdersView from './pages/customer/MyOrdersView';
+import StorePickupView from './pages/store/StorePickupView';
+import StoreOrdersView from './pages/store/StoreOrdersView';
+import PaymentResultView from './pages/customer/PaymentResultView';
+import HomeCatalogView from './pages/customer/HomeCatalogView';
+import RescueBatchDetailView from './pages/customer/RescueBatchDetailView';
+import OrderInvoiceDetailView from './pages/customer/OrderInvoiceDetailView';
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
