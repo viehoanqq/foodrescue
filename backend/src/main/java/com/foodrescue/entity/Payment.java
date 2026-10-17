@@ -16,7 +16,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "payments")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class Payment {
 
     @Id

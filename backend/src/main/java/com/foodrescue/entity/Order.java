@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "orders")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class Order {
 
     @Id

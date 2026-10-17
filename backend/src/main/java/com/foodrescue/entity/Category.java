@@ -10,7 +10,7 @@ import lombok.Setter;
 @Table(name = "categories")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class Category {
 
     @Id

@@ -5,7 +5,6 @@ import {
   Tag,
   Typography,
   Space,
-  Alert,
   message,
   Spin,
   Divider,
@@ -19,14 +18,10 @@ import {
   EnvironmentOutlined,
   PhoneOutlined,
   CheckCircleOutlined,
-  SafetyCertificateOutlined,
-  InfoCircleOutlined,
-  CreditCardOutlined,
   CompassOutlined,
-  ShareAltOutlined,
 } from '@ant-design/icons';
 import { QRCodeSVG } from 'qrcode.react';
-import { orderApi, paymentApi } from '../../services/api';
+import { orderApi } from '../../services/api';
 import { formatMoney, formatDateTime, formatPickupWindow } from '../../utils/format';
 
 const { Title, Text, Paragraph } = Typography;

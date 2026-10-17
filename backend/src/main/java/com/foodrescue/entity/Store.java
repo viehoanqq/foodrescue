@@ -17,8 +17,10 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "stores")
 @Getter
 @Setter
-@NoArgsConstructor
 public class Store {
+
+    public Store() {
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

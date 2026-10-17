@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "audit_logs")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class AuditLog {
 
     @Id

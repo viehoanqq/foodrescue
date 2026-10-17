@@ -13,7 +13,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @IdClass(CartItemId.class)
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class CartItem {
 
     @Id
