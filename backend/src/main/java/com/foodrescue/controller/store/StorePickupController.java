@@ -23,8 +23,18 @@ public class StorePickupController {
         return pickupService.lookupByPickupCode(CurrentUser.storeId(), code);
     }
 
+    @GetMapping("/{code}")
+    public PickupLookupResponse lookupByPath(@PathVariable String code) {
+        return pickupService.lookupByPickupCode(CurrentUser.storeId(), code);
+    }
+
     @PostMapping("/handover")
     public OrderResponse handover(@Valid @RequestBody HandoverRequest req) {
         return pickupService.handoverByPickupCode(CurrentUser.id(), CurrentUser.storeId(), req.pickupCode());
+    }
+
+    @PostMapping("/{code}/complete")
+    public OrderResponse completeByPath(@PathVariable String code) {
+        return pickupService.handoverByPickupCode(CurrentUser.id(), CurrentUser.storeId(), code);
     }
 }
