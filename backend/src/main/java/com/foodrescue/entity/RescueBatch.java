@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "rescue_batches")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class RescueBatch {
 
     @Id

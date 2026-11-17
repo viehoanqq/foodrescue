@@ -17,7 +17,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "stock_movements")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class StockMovement {
 
     @Id

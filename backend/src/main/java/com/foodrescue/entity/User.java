@@ -16,7 +16,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "users")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class User {
 
     @Id

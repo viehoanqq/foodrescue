@@ -210,6 +210,98 @@ class OrderServiceTest {
     }
 
     @Test
+    void taoDon_haiLoaiTuiMaMotLoaiThieu_nemLoiStockNotEnough_TC22() {
+        when(userRepository.findById(8L)).thenReturn(Optional.of(customer));
+        batch1.setRemainingQuantity(5);
+        batch2.setRemainingQuantity(1); // Cần 2 nhưng chỉ còn 1
+
+        when(rescueBatchRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(batch1));
+        when(rescueBatchRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(batch2));
+
+        CreateOrderRequest req = new CreateOrderRequest(List.of(
+                new CreateOrderItemRequest(1L, 2),
+                new CreateOrderItemRequest(2L, 2)));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> orderService.createOrder(8L, req));
+        assertEquals(ErrorCode.STOCK_NOT_ENOUGH, ex.getCode());
+
+        // Kiểm tra không có đơn nào được lưu khi thiếu hàng 1 loại
+        verify(orderRepository, never()).save(any());
+        verify(stockService, never()).recordMovement(any(), anyInt(), any(), any(), any(), anyString());
+    }
+
+    @Test
+    void testDatDongThoi_10LuongCungDatTuiCon1_dung1ThanhCong_TC01() throws Exception {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(customer));
+
+        RescueBatch singleBatch = new RescueBatch();
+        singleBatch.setId(99L);
+        singleBatch.setTitle("Túi Cứu Trợ Duy Nhất");
+        singleBatch.setOriginalPrice(new BigDecimal("100000"));
+        singleBatch.setRescuePrice(new BigDecimal("40000"));
+        singleBatch.setQuantity(1);
+        singleBatch.setRemainingQuantity(1);
+        singleBatch.setStatus(BatchStatus.AVAILABLE);
+        singleBatch.setPickupStart(LocalDateTime.now().plusHours(1));
+        singleBatch.setPickupEnd(LocalDateTime.now().plusHours(3));
+        singleBatch.setStore(store);
+
+        when(rescueBatchRepository.findByIdForUpdate(99L)).thenAnswer(inv -> Optional.of(singleBatch));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(999L);
+            return o;
+        });
+        when(orderItemRepository.save(any(OrderItem.class))).thenAnswer(inv -> {
+            OrderItem oi = inv.getArgument(0);
+            oi.setId(888L);
+            return oi;
+        });
+
+        int threadCount = 10;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+        java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(threadCount);
+
+        java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger failCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        Object lock = new Object();
+
+        for (int i = 0; i < threadCount; i++) {
+            final long custId = 100L + i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    synchronized (lock) {
+                        orderService.createOrder(custId, new CreateOrderRequest(List.of(new CreateOrderItemRequest(99L, 1))));
+                    }
+                    successCount.incrementAndGet();
+                } catch (BusinessException e) {
+                    if (e.getCode() == ErrorCode.STOCK_NOT_ENOUGH
+                            || e.getCode() == ErrorCode.BATCH_SOLD_OUT
+                            || e.getCode() == ErrorCode.BATCH_NOT_AVAILABLE) {
+                        failCount.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    // unexpected
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        executor.shutdown();
+
+        assertEquals(1, successCount.get(), "Đúng 1 luồng đặt thành công");
+        assertEquals(9, failCount.get(), "9 luồng còn lại thất bại vì hết hàng");
+        assertEquals(0, singleBatch.getRemainingQuantity(), "Tồn kho sau khi đặt bằng 0");
+        assertEquals(BatchStatus.SOLD_OUT, singleBatch.getStatus(), "Trạng thái chuyển sang SOLD_OUT");
+    }
+
+    @Test
     void khachHuyDonChuaThanhToan_thanhCong_hoanTraKhoVaGhiSoKho() {
         Order order = new Order();
         order.setId(10L);

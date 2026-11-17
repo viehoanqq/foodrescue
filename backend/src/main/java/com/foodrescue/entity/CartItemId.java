@@ -9,7 +9,7 @@ import lombok.Setter;
 /** Khoá chính ghép của cart_items: (customer_id, batch_id). */
 @Getter
 @Setter
-@NoArgsConstructor
+
 @EqualsAndHashCode
 public class CartItemId implements Serializable {
 

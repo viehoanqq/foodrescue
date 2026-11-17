@@ -17,7 +17,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "refunds")
 @Getter
 @Setter
-@NoArgsConstructor
+
 public class Refund {
 
     @Id
