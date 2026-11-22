@@ -1,11 +1,14 @@
-import { Button, Layout, Menu, Space, Typography } from 'antd';
-import { InboxOutlined, ProfileOutlined, ShopOutlined, UserOutlined, ShoppingCartOutlined, GiftOutlined, TeamOutlined, DollarOutlined, DashboardOutlined, AppstoreOutlined, AuditOutlined, BankOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { Button, Drawer, Layout, Menu, Typography } from 'antd';
+import {
+  AppstoreOutlined, AuditOutlined, BankOutlined, DashboardOutlined, DollarOutlined,
+  GiftOutlined, InboxOutlined, MenuOutlined, ProfileOutlined, ReloadOutlined,
+  ShopOutlined, ShoppingCartOutlined, TeamOutlined, UserOutlined,
+} from '@ant-design/icons';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
-import { homeForRole, STORE_ROLES } from '../routes/paths';
-
-const { Header, Content, Footer } = Layout;
-const { Title, Text } = Typography;
+import { homeForRole, loginForRole } from '../routes/paths';
+import './layout.css';
 
 const customerMenu = [
   { key: '/customer', icon: <ShopOutlined />, label: 'Trang chủ' },
@@ -13,11 +16,14 @@ const customerMenu = [
   { key: '/customer/cart', icon: <ShoppingCartOutlined />, label: 'Giỏ hàng' },
   { key: '/customer/orders', icon: <InboxOutlined />, label: 'Đơn của tôi' },
 ];
-const storeMenu = [
+const staffMenu = [
   { key: '/store/orders', icon: <ProfileOutlined />, label: 'Đơn cửa hàng' },
-  { key: '/store/pickup', icon: <ShopOutlined />, label: 'Quầy giao hàng' },
+  { key: '/store/pickup', icon: <ShopOutlined />, label: 'Nhận hàng' },
   { key: '/store/batches', icon: <GiftOutlined />, label: 'Túi giải cứu' },
-  { key: '/store/profile', icon: <ShopOutlined />, label: 'Hồ sơ' },
+];
+const ownerMenu = [
+  ...staffMenu,
+  { key: '/store/profile', icon: <ShopOutlined />, label: 'Hồ sơ cửa hàng' },
   { key: '/store/staff', icon: <TeamOutlined />, label: 'Nhân viên' },
   { key: '/store/revenue', icon: <DollarOutlined />, label: 'Doanh thu' },
   { key: '/store/reviews', icon: <AuditOutlined />, label: 'Đánh giá' },
@@ -38,29 +44,65 @@ export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isStore = STORE_ROLES.includes(user.role);
-  const menu = user.role === 'ADMIN' ? adminMenu : isStore ? storeMenu : customerMenu;
-  const selected = menu.findLast((item) => location.pathname === item.key || location.pathname.startsWith(`${item.key}/`));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const sideLayout = user.role === 'ADMIN' || user.role === 'STORE_OWNER';
+  const menu = user.role === 'ADMIN' ? adminMenu : user.role === 'STORE_OWNER' ? ownerMenu
+    : user.role === 'STORE_STAFF' ? staffMenu : customerMenu;
+  const areaName = user.role === 'ADMIN' ? 'Quản trị' : user.role === 'STORE_OWNER' ? 'Chủ cửa hàng'
+    : user.role === 'STORE_STAFF' ? 'Nhân viên cửa hàng' : 'Khách hàng';
+  const selected = menu.filter((item) => location.pathname === item.key || location.pathname.startsWith(`${item.key}/`))
+    .sort((a, b) => b.key.length - a.key.length)[0];
 
-  function signOut() {
-    logout();
-    navigate('/login', { replace: true });
+  function selectMenu({ key }) {
+    setDrawerOpen(false);
+    navigate(key);
   }
 
-  return <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-    <Header style={{ background: '#fff', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100, height: 'auto', minHeight: 72 }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 72, flexWrap: 'wrap', gap: 12 }}>
-      <Space>
-        <Link to={homeForRole(user.role)}><Title level={3} style={{ margin: 0, color: '#fa8c16' }}>FoodRescue</Title></Link>
-        <Text type="secondary">{user.role === 'ADMIN' ? 'Quản trị' : isStore ? 'Kênh cửa hàng' : 'Kênh khách hàng'}</Text>
-      </Space>
-      <Menu mode="horizontal" selectedKeys={selected ? [selected.key] : []} onClick={({ key }) => navigate(key)}
-        items={menu} style={{ flex: 1, minWidth: 0, justifyContent: 'center', borderBottom: 'none' }} />
-      <Space><UserOutlined /><Link to="/me"><Text>{user.fullName}</Text></Link><Button onClick={signOut}>Đăng xuất</Button></Space>
+  function signOut() {
+    const loginPath = loginForRole(user.role);
+    logout();
+    navigate(loginPath, { replace: true });
+  }
+
+  const navigation = <>
+    <div className="app-sidebar-heading">Điều hướng</div>
+    <Menu mode="inline" selectedKeys={selected ? [selected.key] : []} items={menu} onClick={selectMenu} />
+    <div className="app-sidebar-bottom">
+      <Link to="/me" onClick={() => setDrawerOpen(false)}><UserOutlined /> Tài khoản của tôi</Link>
+      <Button block onClick={signOut}>Đăng xuất</Button>
+    </div>
+  </>;
+
+  return <Layout className={`app-shell ${sideLayout ? 'app-shell-side' : 'app-shell-top'}`}>
+    {sideLayout && <Layout.Sider width={244} theme="light" className="app-desktop-sidebar">
+      <div className="app-sidebar-inner">
+        <Link to={homeForRole(user.role)} className="app-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link>
+        <Typography.Text type="secondary" className="app-sidebar-subtitle">{areaName}</Typography.Text>
+        {navigation}
       </div>
-    </Header>
-    <Content style={{ padding: '0 24px', maxWidth: 1200,
-      margin: '0 auto', width: '100%' }}><Outlet /></Content>
-    <Footer style={{ textAlign: 'center', color: '#8c8c8c' }}>FoodRescue © 2026</Footer>
+    </Layout.Sider>}
+    <Layout className="app-main">
+      <Layout.Header className="app-topbar">
+        <div className="app-topbar-inner">
+          <Button className="app-mobile-menu" type="text" icon={<MenuOutlined />} aria-label="Mở menu" onClick={() => setDrawerOpen(true)} />
+          {sideLayout ? <Typography.Text strong className="app-page-name">{selected?.label || (location.pathname.startsWith('/me') ? 'Tài khoản' : areaName)}</Typography.Text>
+            : <>
+              <Link to={homeForRole(user.role)} className="app-top-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link>
+              <Menu className="app-top-menu" theme="dark" mode="horizontal" selectedKeys={selected ? [selected.key] : []}
+                items={menu} onClick={selectMenu} />
+            </>}
+          <Link to="/me" className="app-current-user"><UserOutlined /> {user.fullName}</Link>
+          {!sideLayout && <Button className="app-top-logout" onClick={signOut}>Đăng xuất</Button>}
+        </div>
+      </Layout.Header>
+      <Layout.Content className="app-content"><Outlet /></Layout.Content>
+      {user.role !== 'ADMIN' && <Layout.Footer className="app-footer">
+        <div><strong>FoodRescue</strong><span>Giải cứu thực phẩm còn tốt, cùng giảm lãng phí mỗi ngày.</span></div>
+        <span>© 2026 FoodRescue</span>
+      </Layout.Footer>}
+    </Layout>
+    <Drawer title="FoodRescue" placement="left" open={drawerOpen} onClose={() => setDrawerOpen(false)} width={264} className="app-mobile-drawer">
+      <div className="app-sidebar-inner">{navigation}</div>
+    </Drawer>
   </Layout>;
 }

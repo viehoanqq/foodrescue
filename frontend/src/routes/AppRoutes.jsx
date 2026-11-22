@@ -1,8 +1,11 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
+import ProfileLayout from '../layouts/ProfileLayout';
 import AuthScreen from '../pages/AuthScreen';
-import AdminIdentityView from '../pages/admin/AdminIdentityView';
+import AdminUsersPage from '../pages/admin/AdminUsersPage';
+import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
 import ProfilePage from '../pages/ProfilePage';
+import PasswordPage from '../pages/PasswordPage';
 import CustomerLanding, { PublicHeader } from '../pages/customer/CustomerLanding';
 import { AnonymousRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from './RouteGuards';
 import { STORE_ROLES } from './paths';
@@ -19,7 +22,6 @@ export default function AppRoutes() {
     <Route element={<AnonymousRoute />}>
       <Route path="/login" element={<AuthScreen mode="login" />} />
       <Route path="/admin/login" element={<AuthScreen mode="login" portal="admin" />} />
-      <Route path="/staff/login" element={<AuthScreen mode="login" portal="staff" />} />
       <Route path="/store/login" element={<AuthScreen mode="login" portal="store" />} />
       <Route path="/register" element={<AuthScreen mode="register" />} />
     </Route>
@@ -28,7 +30,10 @@ export default function AppRoutes() {
     </Route>
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
-        <Route path="/me" element={<ProfilePage />} />
+        <Route element={<ProfileLayout />}>
+          <Route path="/me" element={<ProfilePage />} />
+          <Route path="/me/password" element={<PasswordPage />} />
+        </Route>
         <Route element={<RoleRoute roles={['CUSTOMER']} />}>
           <Route path="/customer" element={<CustomerLanding />} />
           <Route path="/customer/batches" element={<DemoHome />} />
@@ -43,14 +48,17 @@ export default function AppRoutes() {
           <Route path="/store/orders/:orderId" element={<DemoOrderDetail store />} />
           <Route path="/store/pickup" element={<DemoPickup />} />
           <Route path="/store/batches" element={<DemoBatches />} />
+        </Route>
+        <Route element={<RoleRoute roles={['STORE_OWNER']} />}>
           <Route path="/store/profile" element={<DemoStoreProfile />} />
           <Route path="/store/staff" element={<DemoStaff />} />
           <Route path="/store/revenue" element={<DemoRevenue />} />
           <Route path="/store/reviews" element={<DemoReviews />} />
         </Route>
         <Route element={<RoleRoute roles={['ADMIN']} />}>
-          <Route path="/admin/users" element={<AdminIdentityView />} />
-          {['dashboard', 'stores', 'categories', 'orders', 'refunds', 'payouts', 'finance', 'audit'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdmin section={section} />} />)}
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/audit" element={<AdminAuditLogsPage />} />
+          {['dashboard', 'stores', 'categories', 'orders', 'refunds', 'payouts', 'finance'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdmin section={section} />} />)}
         </Route>
       </Route>
     </Route>

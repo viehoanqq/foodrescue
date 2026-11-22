@@ -17,7 +17,7 @@ function ProductCard({ batch, store, compact = false }) {
 }
 
 export function PublicHeader() {
-  return <header className="home-public-header"><div className="home-wrap"><Link to="/" className="home-brand"><HeartOutlined /> FoodRescue</Link><nav><Link to="/">Trang chủ</Link><Link to="/batches">Túi giải cứu</Link><Link to="/login">Đăng nhập</Link><Link to="/register" className="home-register">Đăng ký</Link></nav></div></header>;
+  return <header className="home-public-header"><div className="home-wrap"><Link to="/" className="home-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link><nav><Link to="/">Trang chủ</Link><Link to="/batches">Túi giải cứu</Link><Link to="/login">Đăng nhập</Link><Link to="/register" className="home-register">Đăng ký</Link></nav></div></header>;
 }
 
 export default function CustomerLanding({ publicPage = false }) {
@@ -37,5 +37,11 @@ export default function CustomerLanding({ publicPage = false }) {
       <section className="home-steps" id="how-it-works"><div className="home-section-heading"><div><span className="home-eyebrow">ĐƠN GIẢN TRONG BA BƯỚC</span><h2>Cách FoodRescue hoạt động</h2></div></div><div className="home-step-grid"><div><ShoppingOutlined /><b>01. Chọn túi</b><p>Xem giá, số lượng và khung giờ nhận trước khi đặt.</p></div><div><GiftOutlined /><b>02. Đặt và thanh toán</b><p>Giữ túi bạn thích, nhận mã lấy hàng khi thanh toán.</p></div><div><EnvironmentOutlined /><b>03. Đến nhận</b><p>Đưa mã cho cửa hàng trong thời gian đã chọn.</p></div></div></section>
       <section className="home-partner"><div><span className="home-eyebrow">DÀNH CHO CỬA HÀNG</span><h2>Bán tốt hơn phần thực phẩm cuối ngày</h2><p>Đăng túi, quản lý đơn và theo dõi doanh thu trong một nơi.</p></div><Link to={user ? '/store/register' : '/register'}><Button size="large">Trở thành đối tác <ArrowRightOutlined /></Button></Link></section>
     </div>
+    {publicPage && <footer className="home-public-footer"><div className="home-wrap home-public-footer-inner">
+      <div><Link to="/" className="home-footer-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link>
+        <p>Kết nối thực phẩm còn tốt với người cần, cùng giảm lãng phí mỗi ngày.</p></div>
+      <nav aria-label="Liên kết cuối trang"><Link to="/batches">Túi giải cứu</Link><Link to="/login">Đăng nhập</Link><Link to="/register">Đăng ký</Link></nav>
+      <span>© 2026 FoodRescue</span>
+    </div></footer>}
   </div>;
 }

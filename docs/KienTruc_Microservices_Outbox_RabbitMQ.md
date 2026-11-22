@@ -295,21 +295,19 @@ Mỗi hàng là một routing key minh họa. Tên queue bắt buộc và các e
 
 | Routing key | Producer / thời điểm phát | Queue → consumer / việc xử lý | Trạng thái |
 |---|---|---|---|
-| `store.status-changed.v1` | Store sau duyệt/từ chối/khóa/mở/đổi vị trí-phí; payload `storeId,ownerId,status,commissionRate,latitude,longitude,version` | `identity.store-status` → cấp role `STORE_OWNER` khi duyệt; `catalog.store-status` → chỉ hiển thị/giữ túi của store APPROVED; `order.store-status` → chặn đơn mới khi bị khóa | Dự kiến |
-| `catalog.batch-changed.v1` | Catalog khi tạo/sửa/số lượng/trạng thái túi đổi; `batchId,storeId,status,remainingQuantity,pickupEnd` | `order.batch-status` → làm mới dữ liệu giỏ/đọc, không dùng bản sao để trừ kho | Dự kiến |
-| `catalog.batch-cancelled.v1` | Catalog khi chủ/admin hủy túi; `batchId,storeId,reason` | `order.batch-cancelled` → hủy đơn còn hiệu lực chứa túi, yêu cầu hoàn nếu đã thu tiền | Dự kiến |
-| `stock.reserved.v1` | Catalog sau giữ kho atomic; `reservationId,orderId,storeId,items,expiresAt` | `order.stock-events` → đối chiếu trạng thái reservation; kết quả HTTP đã dùng để hoàn tất đặt đơn, không tạo đơn lần hai | **Producer đã có**, consumer dự kiến |
-| `stock.released.v1` | Catalog sau trả kho một lần; `reservationId,orderId,reason` | `order.stock-events` → đối chiếu đã trả kho, không gọi release lại | **Producer đã có**, consumer dự kiến |
-| `order.refund-required.v1` | Order sau hủy đơn đã thu tiền hoặc xác nhận thanh toán muộn; `orderId,amount,reason,cancelledAt` | `finance.refund-required` → kiểm tra payment SUCCESS rồi tạo refund PENDING đúng một lần | Dự kiến |
-| `payment.succeeded.v1` | Finance sau IPN hợp lệ và payment SUCCESS; `paymentId,orderId,amount,txnRef,paidAt` | `order.payment-results` → xác nhận đơn/mở mã nhận; nếu đơn đã hủy hoặc hết hạn thì xử lý thanh toán muộn | Dự kiến |
-| `payment.failed.v1` | Finance sau xác định payment FAILED; `paymentId,orderId,txnRef,responseCode` | `order.payment-results` → hủy/cho thử lại theo hạn thanh toán | Dự kiến |
-| `order.state-changed.v1` | Order sau mỗi chuyển trạng thái; full snapshot gồm `orderId,storeId,customerId,status,paymentStatus,totalAmount,commissionAmount,storeEarning,completedAt,items,reservationId` | `finance.order-snapshots` → cập nhật projection theo version; `store.order-status` → hỗ trợ điều kiện review/hiển thị | Dự kiến |
-| `refund.requested.v1` | Finance sau lưu refund PENDING; `refundId,orderId,amount,reason` | `order.refund-status` → hiện trạng thái chờ hoàn cho khách | Dự kiến |
-| `refund.completed.v1` | Finance sau admin xác nhận hoàn; `refundId,orderId,amount,gatewayRef,processedAt` | `order.refund-status` → hiện hoàn tất/mã giao dịch | Dự kiến |
-| `payout.state-changed.v1` | Finance sau tạo/hủy/đánh dấu PAID; `payoutId,storeId,status,netAmount,transferRef?` | `store.payout-status` → thông báo/trang cửa hàng nếu có projection; báo cáo tài chính gốc vẫn ở finance | Dự kiến |
-| `audit.action.v1` | Store/Catalog/Order/Finance sau thao tác cần audit; `action,entityType,entityId,amount?,detail?`, `actorId` ở envelope | `identity.audit-events` → insert `audit_logs` với Inbox dedup; lỗi tới `identity.audit-dead` | **Consumer đã có**, producer từ 4 service dự kiến |
+| `store.status-changed.v1` | Store sau admin duyệt/từ chối/khóa/mở | `identity.store-status` → cấp role `STORE_OWNER` khi APPROVED | Dự kiến |
+| `catalog.batch-cancelled.v1` | Catalog sau khi chủ/admin hủy túi | `order.batch-cancelled` → xử lý đơn còn hiệu lực chứa túi, yêu cầu hoàn nếu đã thu tiền | Dự kiến |
+| `stock.reserved.v1` | Catalog sau giữ kho qua HTTP | Không có consumer nghiệp vụ V1; kết quả giữ kho trả đồng bộ cho Order | **Producer đã có** |
+| `stock.released.v1` | Catalog sau trả kho qua HTTP | Không có consumer nghiệp vụ V1; Order không gọi trả kho lần nữa khi thấy event | **Producer đã có** |
+| `order.state-changed.v1` | Order sau tạo đơn và các lần đổi trạng thái | `finance.order-snapshots` → cập nhật `order_snapshots` theo version | Dự kiến |
+| `payment.succeeded.v1` | Finance sau VNPay IPN thành công hợp lệ | `order.payment-results` → xác nhận đơn, hoặc xử lý thanh toán muộn | Dự kiến |
+| `payment.failed.v1` | Finance sau VNPay IPN xác định thất bại cuối cùng | `order.payment-results` → cho thử lại trong hạn hoặc hết hạn và trả kho | Dự kiến |
+| `order.refund-required.v1` | Order sau hủy đơn đã thu tiền hoặc thanh toán muộn | `finance.refund-required` → tạo refund PENDING đúng một lần | Dự kiến |
+| `refund.requested.v1` | Finance sau tạo refund PENDING | `order.refund-status` → cập nhật `payment_status=REFUND_PENDING` | Dự kiến |
+| `refund.completed.v1` | Finance sau xác nhận hoàn tiền | `order.refund-status` → cập nhật `payment_status=REFUNDED` | Dự kiến |
+| `audit.action.v1` | Store/Catalog/Order/Finance sau thao tác cần ghi audit | `identity.audit-events` → ghi `audit_logs` và Inbox chống lặp | **Consumer đã có**, producer nghiệp vụ dự kiến |
 
-Identity tự ghi audit cho thao tác trên user trong cùng transaction, không phát `audit.action.v1` để tự nhận lại. Store admin duyệt chỉ cần đọc `store_db`; không có message “gửi admin duyệt”. `store.status-changed.v1` phát **sau khi admin đã quyết định**. Order chịu trách nhiệm gọi `release` idempotent; Catalog không consume order state để trả kho. Hợp đồng chi tiết và JSON Schema nằm ở `contracts/quyet-dinh-tich-hop-v1.md` và `contracts/schemas/`.
+Identity tự ghi audit cho thao tác trên user trong cùng transaction, không phát `audit.action.v1` để tự nhận lại. Store admin duyệt chỉ cần đọc `store_db`; không có message “gửi admin duyệt”. `store.status-changed.v1` phát **sau khi admin đã quyết định**. Order chịu trách nhiệm gọi `release` idempotent; Catalog không consume order state để trả kho. Các event `catalog.batch-changed.v1`, `store.profile-changed.v1`, `payout.state-changed.v1` chưa thuộc luồng bắt buộc V1 vì chưa có consumer/projection cần chúng. Hợp đồng chi tiết và JSON Schema nằm ở `contracts/quyet-dinh-tich-hop-v1.md` và `contracts/schemas/`.
 
 ## 7. Luồng giao tiếp giữa service
 

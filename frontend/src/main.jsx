@@ -8,6 +8,7 @@ import 'dayjs/locale/vi';
 import { antdTheme } from './theme/theme';
 import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
+import './global.css';
 
 dayjs.locale('vi');
 

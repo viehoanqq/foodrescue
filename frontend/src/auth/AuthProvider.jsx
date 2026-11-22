@@ -17,7 +17,8 @@ export function AuthProvider({ children }) {
   const checking = useRef(false);
 
   const refresh = useCallback(async (silent = false) => {
-    if (!localStorage.getItem(TOKEN_KEY)) {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
       setUser(null);
       setLoading(false);
       return;
@@ -30,8 +31,9 @@ export function AuthProvider({ children }) {
     }
     try {
       const current = await identityApi.me();
-      setUser(current);
+      if (localStorage.getItem(TOKEN_KEY) === token) setUser(current);
     } catch (failure) {
+      if (localStorage.getItem(TOKEN_KEY) !== token) return;
       if (failure.status === 401 || failure.code === 'ACCOUNT_LOCKED') {
         clearSession();
         setUser(null);
@@ -56,8 +58,14 @@ export function AuthProvider({ children }) {
     };
   }, [refresh]);
 
-  const authenticate = useCallback(async (credentials, mode) => {
+  const authenticate = useCallback(async (credentials, mode, allowedRoles) => {
     const result = mode === 'register' ? await identityApi.register(credentials) : await identityApi.login(credentials);
+    if (allowedRoles && !allowedRoles.includes(result.user.role)) {
+      const roleError = new Error('Tài khoản này không có quyền vào khu vực đã chọn.');
+      roleError.status = 403;
+      roleError.code = 'ROLE_MISMATCH';
+      throw roleError;
+    }
     localStorage.setItem(TOKEN_KEY, result.token);
     localStorage.removeItem('fr_dev_user_id');
     setUser(result.user);
@@ -65,7 +73,7 @@ export function AuthProvider({ children }) {
     return result.user;
   }, []);
 
-  const logout = useCallback(() => { clearSession(); setUser(null); }, []);
+  const logout = useCallback(() => { clearSession(); setUser(null); setError(null); }, []);
   const changePassword = useCallback(async (details) => {
     await identityApi.changePassword(details);
     clearSession();

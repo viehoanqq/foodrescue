@@ -8,14 +8,17 @@ src/
   routes/AppRoutes.jsx        # Khai báo URL và trang
   routes/RouteGuards.jsx      # Bắt buộc đăng nhập, đổi mật khẩu, vai trò
   routes/paths.js            # Trang đầu theo vai trò
-  layouts/AppLayout.jsx      # Header, menu và Outlet
+  layouts/AppLayout.jsx      # Header, menu theo vai trò và Outlet
+  layouts/ProfileLayout.jsx  # Menu tài khoản lồng trong layout chính
   pages/                     # Màn hình theo customer/store/admin
   services/axios.js          # Axios, token và chuẩn hóa lỗi
   services/identityApi.js    # API identity đã triển khai
   demo/data.js               # Dữ liệu mẫu nghiệp vụ trong localStorage
 ```
 
-Route đăng nhập: `/login` cho khách, `/admin/login` cho quản trị, `/staff/login` cho nhân viên, `/store/login` cho chủ hoặc nhân viên cửa hàng. Tất cả dùng cùng `POST /api/auth/login` của identity-service; màn hình theo khu vực kiểm tra role sau khi đăng nhập và chuyển đến `/admin/users` hoặc `/store/orders`. Nhân viên không tự đăng ký qua trang khách; tài khoản nhân viên phải được tạo bởi nghiệp vụ cửa hàng (API này còn dự kiến).
+Ba URL đăng nhập: `/login` cho khách hàng, `/store/login` cho chủ cửa hàng và nhân viên (chọn vai trò ngay trên trang), `/admin/login` cho quản trị. Tất cả dùng `POST /api/auth/login` của identity-service và kiểm tra vai trò trước khi lưu phiên. Nhân viên không tự đăng ký qua trang khách; tài khoản nhân viên do nghiệp vụ cửa hàng tạo.
+
+Khách hàng và nhân viên dùng menu ngang; chủ cửa hàng và admin dùng sidebar. `/me` và `/me/password` nằm trong layout chính, có menu tài khoản riêng bên trong. Chỉ chủ cửa hàng được mở hồ sơ cửa hàng, quản lý nhân viên, doanh thu và đánh giá.
 
 Route chính khác: `/` là homepage công khai; `/customer` là homepage khi đăng nhập. `/batches` và `/batches/:batchId` cho cả khách chưa đăng nhập xem danh sách/chi tiết túi; thêm giỏ yêu cầu đăng nhập. `/customer/batches` và `/customer/batches/:batchId` giữ đường cũ cho khách đã đăng nhập. Các route còn lại gồm `/register`, `/change-password`, `/me`, `/customer/cart`, `/customer/orders`, `/customer/orders/:orderId`, `/store/orders`, `/store/pickup`, `/store/batches`, `/admin/users`, `/payment/result`. `/store/register` dành cho khách đã đăng nhập và lưu hồ sơ mẫu trong trình duyệt, chưa gửi dữ liệu lên store-service.
 

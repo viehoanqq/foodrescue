@@ -15,7 +15,9 @@ export function ProtectedRoute() {
   const location = useLocation();
   const state = SessionState({ loading, error, retry: refresh });
   if (state) return state;
-  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!user) return <Navigate to={location.pathname.startsWith('/admin/') ? '/admin/login'
+    : location.pathname.startsWith('/store/') && location.pathname !== '/store/register' ? '/store/login' : '/login'}
+    replace state={{ from: location }} />;
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
   return <Outlet />;
 }
