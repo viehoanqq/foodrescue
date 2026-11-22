@@ -23,6 +23,8 @@ management:
     web:
       exposure:
         include: health,info
+outbox:
+  poll-ms: ${OUTBOX_POLL_MS:1000}
 app:
   jwt:
     secret: ${JWT_SECRET:}
