@@ -44,6 +44,22 @@ class IdentityServiceStaffTest {
     }
 
     @Test
+    void creatingStaffWritesOneAuditRowForTheOwner() {
+        when(users.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(users.save(any())).thenAnswer(invocation -> {
+            UserAccount draft = invocation.getArgument(0);
+            return new UserAccount(20L, draft.email(), draft.passwordHash(), draft.fullName(), draft.phone(),
+                    draft.role(), draft.storeId(), draft.status(), draft.mustChangePassword(),
+                    draft.createdAt(), draft.tokenVersion());
+        });
+
+        IdentityService.StaffResult result = service.createStaff(1L, 5L, "new@example.com", "New Staff", "0123456789");
+
+        assertEquals(20L, result.user().id());
+        verify(audit).record(1L, "STORE_STAFF_CREATED", "USER", 20L, "storeId=5");
+    }
+
+    @Test
     void refusesStaffFromAnotherStore() {
         IdentityException error = assertThrows(IdentityException.class,
                 () -> service.setStaffLocked(1L, 6L, 9L, true));
