@@ -1,8 +1,8 @@
 .app-shell { min-height: 100vh; background: #f5f5f5; }
 .app-desktop-sidebar { border-right: 1px solid #e8e8e8; }
-.app-sidebar-inner { position: sticky; top: 0; display: flex; flex-direction: column; min-height: 100vh; padding: 22px 12px 16px; }
-.app-brand { display: flex; align-items: center; justify-content: center; width: calc(100% + 24px); height: 90px; margin: -22px -12px 18px; overflow: hidden; background: #245b45; }
-.app-brand img { display: block; width: 230px; height: 82px; max-width: none; object-fit: cover; transform: scale(1.1); }
+.app-sidebar-inner { position: sticky; top: 0; display: flex; flex-direction: column; min-height: 100vh; padding: 0 12px 16px; }
+.app-brand { display: flex; flex: 0 0 68px; align-items: center; justify-content: center; width: calc(100% + 24px); margin: 0 -12px 22px; background: #245b45; }
+.app-brand img { display: block; width: 215px; height: 62px; object-fit: contain; }
 .app-sidebar-subtitle { padding: 2px 12px 24px; font-size: 13px; }
 .app-sidebar-heading { padding: 0 12px 8px; color: #8c8c8c; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .app-sidebar-inner .ant-menu { flex: 1; border-inline-end: 0 !important; }
@@ -16,7 +16,7 @@
 .app-shell-side .app-topbar-inner { width: 100%; }
 .app-page-name { flex: 1; color: #fff !important; font-size: 17px; }
 .app-top-brand { display: flex; align-items: center; justify-content: center; flex: 0 0 205px; height: 68px; overflow: hidden; }
-.app-top-brand img { display: block; width: 210px; height: 72px; max-width: none; object-fit: cover; transform: scale(1.1); }
+.app-top-brand img { display: block; width: 205px; height: 64px; object-fit: contain; }
 .app-top-menu { flex: 1; min-width: 0; justify-content: center; border-bottom: 0; }
 .app-top-menu.ant-menu-dark { background: transparent !important; }
 .app-top-menu.ant-menu-dark .ant-menu-item-selected { color: #fff !important; background: #34775a !important; }
@@ -56,7 +56,7 @@
 @media (max-width: 600px) {
   .app-topbar-inner { gap: 8px; }
   .app-top-brand { flex-basis: 160px; }
-  .app-top-brand img { width: 170px; height: 62px; }
+  .app-top-brand img { width: 160px; height: 58px; }
   .app-current-user { max-width: 110px; font-size: 12px; }
   .app-top-logout { display: none; }
   .app-footer { display: block; }

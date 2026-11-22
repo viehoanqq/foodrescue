@@ -96,7 +96,7 @@ export default function AppLayout() {
         </div>
       </Layout.Header>
       <Layout.Content className="app-content"><Outlet /></Layout.Content>
-      {user.role !== 'ADMIN' && <Layout.Footer className="app-footer">
+      {!sideLayout && <Layout.Footer className="app-footer">
         <div><strong>FoodRescue</strong><span>Giải cứu thực phẩm còn tốt, cùng giảm lãng phí mỗi ngày.</span></div>
         <span>© 2026 FoodRescue</span>
       </Layout.Footer>}
