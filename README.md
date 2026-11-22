@@ -42,6 +42,22 @@ Chỉnh các mật khẩu và secret trong `.env` theo máy local. Script bật 
 | `http://localhost:8080/api/health` | Kiểm tra 5 service và DB |
 | `http://localhost:15672` | RabbitMQ Management |
 
+## Swagger UI
+
+Sau khi các service khởi động, mở Swagger UI trực tiếp trên cổng của từng service:
+
+| Service | Swagger UI | OpenAPI JSON |
+|---|---|---|
+| Identity | `http://localhost:8082/swagger-ui.html` | `http://localhost:8082/v3/api-docs` |
+| Store | `http://localhost:8083/swagger-ui.html` | `http://localhost:8083/v3/api-docs` |
+| Catalog & Inventory | `http://localhost:8084/swagger-ui.html` | `http://localhost:8084/v3/api-docs` |
+| Order | `http://localhost:8085/swagger-ui.html` | `http://localhost:8085/v3/api-docs` |
+| Payment & Finance | `http://localhost:8086/swagger-ui.html` | `http://localhost:8086/v3/api-docs` |
+
+Swagger hiển thị các endpoint **đã có trong code** của từng service. Gọi `/api/auth/login` ở Identity lấy JWT rồi bấm **Authorize** trong Swagger của service cần thử và nhập token. API `/internal/**` yêu cầu `X-Internal-Key` khi endpoint có khai báo header này; chỉ dùng để thử tích hợp giữa các service trong môi trường local. Swagger không đi qua API Gateway.
+
+Các API `/api/**` có Bearer token ở Store, Catalog, Order và Finance xác minh chữ ký/hạn token rồi gọi Identity lấy `status`, `role`, `tokenVersion`, `mustChangePassword` và `fullName` hiện tại. Nếu Identity không sẵn sàng, API cần đăng nhập trả 503. Quyền sở hữu store/order vẫn do service chứa dữ liệu kiểm tra. Frontend gửi JWT qua Gateway; Gateway đã khai báo route cho cả 5 service. Sau khi Identity đổi cách ký cố định sang HS256, hãy đăng nhập lại để lấy token mới.
+
 Nếu muốn chạy backend bằng Docker Compose:
 
 ```powershell

@@ -31,15 +31,20 @@ public class JwtTokenAdapter implements TokenPort {
         Instant now = Instant.now();
         return Jwts.builder().subject(userId.toString()).claim("ver", version)
                 .issuedAt(Date.from(now)).expiration(Date.from(now.plus(lifetime)))
-                .signWith(key).compact();
+                .signWith(key, Jwts.SIG.HS256).compact();
     }
 
     @Override public Optional<TokenIdentity> read(String token) {
         try {
-            var claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            var signed = Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+            if (!"HS256".equals(signed.getHeader().getAlgorithm())) return Optional.empty();
+            var claims = signed.getPayload();
             Object version = claims.get("ver");
-            return Optional.of(new TokenIdentity(Long.valueOf(claims.getSubject()),
-                    version instanceof Number number ? number.longValue() : 0));
+            if (claims.getExpiration() == null || claims.getSubject() == null
+                    || !(version instanceof Number number)) return Optional.empty();
+            long userId = Long.parseLong(claims.getSubject());
+            if (userId <= 0 || number.longValue() < 0) return Optional.empty();
+            return Optional.of(new TokenIdentity(userId, number.longValue()));
         } catch (JwtException | IllegalArgumentException ex) {
             return Optional.empty();
         }

@@ -94,6 +94,8 @@ services:
       context: .
       dockerfile: services/identity-service/Dockerfile
     profiles: ["services"]
+    ports:
+      - "127.0.0.1:8082:8082"
     environment:
       DB_URL: jdbc:mysql://mysql:3306/identity_db?serverTimezone=Asia/Ho_Chi_Minh
       DB_USERNAME: identity_app
@@ -116,10 +118,15 @@ services:
       context: .
       dockerfile: services/store-service/Dockerfile
     profiles: ["services"]
+    ports:
+      - "127.0.0.1:8083:8083"
     environment:
       DB_URL: jdbc:mysql://mysql:3306/store_db?serverTimezone=Asia/Ho_Chi_Minh
       DB_USERNAME: store_app
       DB_PASSWORD: ${STORE_DB_PASSWORD:?Set STORE_DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+      IDENTITY_SERVICE_URL: http://identity-service:8082
       RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
     depends_on:
@@ -137,6 +144,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/catalog_db
       DB_USERNAME: catalog_app
       DB_PASSWORD: ${CATALOG_DB_PASSWORD:?Set CATALOG_DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      IDENTITY_SERVICE_URL: http://identity-service:8082
       RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
@@ -155,6 +164,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/order_db
       DB_USERNAME: order_app
       DB_PASSWORD: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      IDENTITY_SERVICE_URL: http://identity-service:8082
       RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
@@ -168,10 +179,15 @@ services:
       context: .
       dockerfile: services/payment-finance-service/Dockerfile
     profiles: ["services"]
+    ports:
+      - "127.0.0.1:8086:8086"
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/finance_db
       DB_USERNAME: finance_app
       DB_PASSWORD: ${FINANCE_DB_PASSWORD:?Set FINANCE_DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+      IDENTITY_SERVICE_URL: http://identity-service:8082
       RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
     depends_on:

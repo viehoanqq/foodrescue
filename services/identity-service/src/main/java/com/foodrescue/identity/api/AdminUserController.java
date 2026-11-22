@@ -3,6 +3,7 @@ package com.foodrescue.identity.api;
 import com.foodrescue.identity.application.usecase.IdentityService;
 import com.foodrescue.identity.domain.model.PageResult;
 import com.foodrescue.identity.infrastructure.security.IdentityPrincipal;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.Map;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Validated
+@SecurityRequirement(name = "bearerAuth")
 public class AdminUserController {
     private final IdentityService service;
 

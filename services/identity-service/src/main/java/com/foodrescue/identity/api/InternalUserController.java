@@ -32,7 +32,7 @@ public class InternalUserController {
     public UserStatus status(@RequestHeader("X-Internal-Key") String key, @PathVariable Long id) {
         verifier.verify(key);
         var user = service.find(id);
-        return new UserStatus(user.id(), user.status(), user.role(), user.storeId(),
+        return new UserStatus(user.id(), user.status(), user.role(), user.fullName(), user.storeId(),
                 user.tokenVersion(), user.mustChangePassword());
     }
 
@@ -54,7 +54,7 @@ public class InternalUserController {
                 user.storeId(), user.status(), user.mustChangePassword(), result.temporaryPassword());
     }
 
-    public record UserStatus(Long userId, String status, String role, Long storeId,
+    public record UserStatus(Long userId, String status, String role, String fullName, Long storeId,
                              long tokenVersion, boolean mustChangePassword) {}
     public record CreateStaffRequest(@NotNull @Positive Long actorId, @NotNull @Positive Long storeId,
                                      @NotBlank @Email @Size(max = 100) String email,

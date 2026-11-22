@@ -3,6 +3,7 @@ package com.foodrescue.identity.api;
 import com.foodrescue.identity.application.usecase.IdentityService;
 import com.foodrescue.identity.domain.model.UserAccount;
 import com.foodrescue.identity.infrastructure.security.IdentityPrincipal;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -35,17 +36,20 @@ public class IdentityController {
     }
 
     @GetMapping("/api/me")
+    @SecurityRequirement(name = "bearerAuth")
     public UserView me(@AuthenticationPrincipal IdentityPrincipal principal) {
         return UserView.from(service.find(principal.id()));
     }
 
     @PutMapping("/api/me")
+    @SecurityRequirement(name = "bearerAuth")
     public UserView update(@AuthenticationPrincipal IdentityPrincipal principal,
                            @Valid @RequestBody ProfileRequest request) {
         return UserView.from(service.updateProfile(principal.id(), request.fullName(), request.phone()));
     }
 
     @PutMapping("/api/me/password")
+    @SecurityRequirement(name = "bearerAuth")
     public void changePassword(@AuthenticationPrincipal IdentityPrincipal principal,
                                @Valid @RequestBody PasswordRequest request) {
         service.changePassword(principal.id(), request.oldPassword(), request.newPassword());

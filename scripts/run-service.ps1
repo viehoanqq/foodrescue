@@ -27,6 +27,7 @@ Set-LocalEnv 'RABBITMQ_USER' $settings['RABBITMQ_USER']
 Set-LocalEnv 'RABBITMQ_PASSWORD' $settings['RABBITMQ_PASSWORD']
 Set-LocalEnv 'INTERNAL_API_KEY' $settings['INTERNAL_API_KEY']
 Set-LocalEnv 'JWT_SECRET' $settings['JWT_SECRET']
+Set-LocalEnv 'IDENTITY_SERVICE_URL' 'http://localhost:8082'
 
 switch ($Service) {
     'identity-service' {
