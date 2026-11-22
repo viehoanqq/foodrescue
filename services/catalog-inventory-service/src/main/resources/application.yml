@@ -1,0 +1,28 @@
+server:
+  port: ${SERVER_PORT:8084}
+spring:
+  application:
+    name: catalog-inventory-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/catalog_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:foodrescue}
+    password: ${RABBITMQ_PASSWORD:}
+    publisher-confirm-type: correlated
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+app:
+  internal-api-key: ${INTERNAL_API_KEY:}
+

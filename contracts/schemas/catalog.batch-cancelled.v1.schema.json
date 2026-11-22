@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/catalog.batch-cancelled.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "catalog.batch-cancelled.v1"
+        },
+        "aggregateType": {
+          "const": "RescueBatch"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "batchId",
+            "storeId",
+            "reason",
+            "cancelledAt"
+          ],
+          "properties": {
+            "batchId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "storeId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cancelledAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

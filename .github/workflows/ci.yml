@@ -12,26 +12,9 @@ concurrency:
 
 
 jobs:
-  backend:
-    name: Backend (build + test)
+  services:
+    name: Microservices (build + test)
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
-
-    env:
-      DB_USERNAME: root
-      DB_PASSWORD: root
 
     steps:
       - name: Lấy code
@@ -44,17 +27,8 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Tạo CSDL từ foodrescue_schema.sql
-        run: mysql -h 127.0.0.1 -uroot -proot --default-character-set=utf8mb4 < database/foodrescue_schema.sql
-
-      - name: Kiểm tra dữ liệu mẫu (chênh lệch đối soát phải bằng 0)
-        run: |
-          DIFF=$(mysql -N -h 127.0.0.1 -uroot -proot --default-character-set=utf8mb4 < database/foodrescue_checks.sql | head -1 | awk '{print $NF}')
-          echo "Chênh lệch đối soát: $DIFF"
-          test "$DIFF" = "0"
-
       - name: Build và chạy test
-        working-directory: backend
+        working-directory: services
         run: mvn -B verify
 
   frontend:

@@ -1,0 +1,5 @@
+frontend/
+docs/
+contracts/
+services/*/target/
+.git/

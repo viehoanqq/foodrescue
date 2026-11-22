@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/audit.action.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "audit.action.v1"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "entityType",
+            "entityId"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "minLength": 1
+            },
+            "entityType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "entityId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "amount": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "detail": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        }
+      }
+    }
+  ]
+}

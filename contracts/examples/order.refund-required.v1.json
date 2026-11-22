@@ -1,0 +1,18 @@
+{
+  "eventId": "22b50d8d-cfe3-487a-bd6d-8533fda2d7e1",
+  "eventType": "order.refund-required.v1",
+  "schemaVersion": 1,
+  "aggregateType": "Order",
+  "aggregateId": "123",
+  "aggregateVersion": 4,
+  "occurredAt": "2026-11-22T09:00:00Z",
+  "correlationId": "28f0c48d-e2e1-4fab-96bd-52a163913209",
+  "causationId": null,
+  "actorId": null,
+  "payload": {
+    "orderId": 123,
+    "amount": 80000,
+    "reason": "LATE_PAYMENT",
+    "cancelledAt": "2026-11-22T08:55:00Z"
+  }
+}

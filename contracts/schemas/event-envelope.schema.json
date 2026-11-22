@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/event-envelope.v1.json",
+  "title": "FoodRescue event envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "schemaVersion", "aggregateType", "aggregateId", "aggregateVersion", "occurredAt", "correlationId", "causationId", "actorId", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"type": "string", "pattern": "^[a-z]+\\.[a-z]+(?:-[a-z]+)*\\.v[1-9][0-9]*$"},
+    "schemaVersion": {"const": 1},
+    "aggregateType": {"type": "string", "minLength": 1, "maxLength": 80},
+    "aggregateId": {"type": "string", "minLength": 1, "maxLength": 80},
+    "aggregateVersion": {"type": "integer", "minimum": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "correlationId": {"type": "string", "format": "uuid"},
+    "causationId": {"type": ["string", "null"], "format": "uuid"},
+    "actorId": {"type": ["integer", "null"], "minimum": 1},
+    "payload": {"type": "object"}
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "eventId": "22b50d8d-cfe3-487a-bd6d-8535fda2d7e1",
+  "eventType": "payment.failed.v1",
+  "schemaVersion": 1,
+  "aggregateType": "Payment",
+  "aggregateId": "457",
+  "aggregateVersion": 2,
+  "occurredAt": "2026-11-22T09:00:00Z",
+  "correlationId": "28f0c48d-e2e1-4fab-96bd-52a163913209",
+  "causationId": null,
+  "actorId": null,
+  "payload": {
+    "paymentId": 457,
+    "orderId": 124,
+    "txnRef": "FR-124-1",
+    "responseCode": "24",
+    "failedAt": "2026-11-22T09:00:00Z"
+  }
+}

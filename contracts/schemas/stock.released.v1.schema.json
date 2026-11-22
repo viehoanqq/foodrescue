@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/stock.released.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "stock.released.v1"
+        },
+        "aggregateType": {
+          "const": "StockReservation"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reservationId",
+            "orderId",
+            "reason"
+          ],
+          "properties": {
+            "reservationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "orderId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "releasedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

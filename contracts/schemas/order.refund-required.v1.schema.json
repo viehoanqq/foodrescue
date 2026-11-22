@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/order.refund-required.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "order.refund-required.v1"
+        },
+        "aggregateType": {
+          "const": "Order"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "orderId",
+            "amount",
+            "reason",
+            "cancelledAt"
+          ],
+          "properties": {
+            "orderId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "amount": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "enum": [
+                "CUSTOMER_CANCELLED",
+                "STORE_CANCELLED",
+                "BATCH_CANCELLED",
+                "ADMIN_CANCELLED",
+                "LATE_PAYMENT"
+              ]
+            },
+            "cancelledAt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

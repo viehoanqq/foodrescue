@@ -1,0 +1,20 @@
+{
+  "eventId": "22b50d8d-cfe3-487a-bd6d-8528fda2d7e1",
+  "eventType": "store.status-changed.v1",
+  "schemaVersion": 1,
+  "aggregateType": "Store",
+  "aggregateId": "12",
+  "aggregateVersion": 2,
+  "occurredAt": "2026-11-22T09:00:00Z",
+  "correlationId": "28f0c48d-e2e1-4fab-96bd-52a163913209",
+  "causationId": null,
+  "actorId": 1,
+  "payload": {
+    "storeId": 12,
+    "ownerId": 8,
+    "status": "APPROVED",
+    "commissionRate": 15,
+    "version": 2,
+    "changedAt": "2026-11-22T09:00:00Z"
+  }
+}

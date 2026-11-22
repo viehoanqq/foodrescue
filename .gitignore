@@ -1,5 +1,9 @@
 # Backend
 backend/target/
+services/*/target/
+services/identity-service/*/target/
+scripts/.runtime/
+/.env
 backend/src/main/resources/application-local.yml
 uploads/
 # Frontend
@@ -7,8 +11,6 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 frontend/.env.local
-frontend/package-lock.json
-frontend/package.json
 # IDE, hệ điều hành
 .idea/
 *.iml

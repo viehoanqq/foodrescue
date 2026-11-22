@@ -6,8 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:8080',
-      '/uploads': 'http://localhost:8080',
+      '/api': process.env.FOODRESCUE_API_GATEWAY || 'http://localhost:8080',
+      '/uploads': process.env.FOODRESCUE_API_GATEWAY || 'http://localhost:8080',
     },
   },
 });

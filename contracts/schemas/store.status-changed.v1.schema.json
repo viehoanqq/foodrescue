@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/store.status-changed.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "store.status-changed.v1"
+        },
+        "aggregateType": {
+          "const": "Store"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "storeId",
+            "ownerId",
+            "status",
+            "commissionRate",
+            "version",
+            "changedAt"
+          ],
+          "properties": {
+            "storeId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ownerId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "status": {
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "LOCKED"
+              ]
+            },
+            "commissionRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 50
+            },
+            "version": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "changedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

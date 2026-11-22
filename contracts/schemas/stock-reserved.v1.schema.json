@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/stock-reserved.v1.json",
+  "allOf": [
+    {"$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"},
+    {
+      "properties": {
+        "eventType": {"const": "stock.reserved.v1"},
+        "aggregateType": {"const": "StockReservation"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reservationId", "orderId", "storeId", "items", "expiresAt"],
+          "properties": {
+            "reservationId": {"type": "string", "format": "uuid"},
+            "orderId": {"type": "integer", "minimum": 1},
+            "storeId": {"type": "integer", "minimum": 1},
+            "expiresAt": {"type": "string", "format": "date-time"},
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["batchId", "quantity", "unitPrice"],
+                "properties": {
+                  "batchId": {"type": "integer", "minimum": 1},
+                  "quantity": {"type": "integer", "minimum": 1, "maximum": 5},
+                  "unitPrice": {"type": "integer", "minimum": 1}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "eventId": "22b50d8d-cfe3-487a-bd6d-8538fda2d7e1",
+  "eventType": "audit.action.v1",
+  "schemaVersion": 1,
+  "aggregateType": "AuditAction",
+  "aggregateId": "789",
+  "aggregateVersion": 1,
+  "occurredAt": "2026-11-22T09:00:00Z",
+  "correlationId": "28f0c48d-e2e1-4fab-96bd-52a163913209",
+  "causationId": null,
+  "actorId": 1,
+  "payload": {
+    "action": "REFUND_COMPLETED",
+    "entityType": "REFUND",
+    "entityId": 789,
+    "amount": 80000,
+    "detail": "Admin confirmed refund"
+  }
+}

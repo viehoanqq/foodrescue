@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/refund.completed.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "refund.completed.v1"
+        },
+        "aggregateType": {
+          "const": "Refund"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "refundId",
+            "orderId",
+            "amount",
+            "gatewayRef",
+            "processedAt"
+          ],
+          "properties": {
+            "refundId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "orderId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "amount": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "gatewayRef": {
+              "type": "string",
+              "minLength": 1
+            },
+            "processedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

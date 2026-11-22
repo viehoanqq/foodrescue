@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/payment.failed.v1.json",
+  "allOf": [
+    {
+      "$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"
+    },
+    {
+      "properties": {
+        "eventType": {
+          "const": "payment.failed.v1"
+        },
+        "aggregateType": {
+          "const": "Payment"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "paymentId",
+            "orderId",
+            "txnRef",
+            "responseCode",
+            "failedAt"
+          ],
+          "properties": {
+            "paymentId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "orderId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "txnRef": {
+              "type": "string",
+              "minLength": 1
+            },
+            "responseCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "failedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

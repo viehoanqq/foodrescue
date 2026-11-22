@@ -1,0 +1,17 @@
+{
+  "eventId": "22b50d8d-cfe3-487a-bd6d-8531fda2d7e1",
+  "eventType": "stock.released.v1",
+  "schemaVersion": 1,
+  "aggregateType": "StockReservation",
+  "aggregateId": "f6db40f0-bdb3-4b5e-8098-b06e8836439e",
+  "aggregateVersion": 2,
+  "occurredAt": "2026-11-22T09:00:00Z",
+  "correlationId": "28f0c48d-e2e1-4fab-96bd-52a163913209",
+  "causationId": null,
+  "actorId": null,
+  "payload": {
+    "reservationId": "f6db40f0-bdb3-4b5e-8098-b06e8836439e",
+    "orderId": 123,
+    "reason": "ORDER_RELEASED"
+  }
+}

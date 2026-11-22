@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foodrescue.local/contracts/events/order-state-changed.v1.json",
+  "allOf": [
+    {"$ref": "https://foodrescue.local/contracts/events/event-envelope.v1.json"},
+    {
+      "properties": {
+        "eventType": {"const": "order.state-changed.v1"},
+        "aggregateType": {"const": "Order"},
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["orderId", "storeId", "customerId", "status", "paymentStatus", "totalAmount", "commissionAmount", "storeEarning", "completedAt", "reservationId", "items"],
+          "properties": {
+            "orderId": {"type": "integer", "minimum": 1},
+            "storeId": {"type": "integer", "minimum": 1},
+            "customerId": {"type": "integer", "minimum": 1},
+            "status": {"enum": ["CREATING", "PENDING_PAYMENT", "CONFIRMED", "COMPLETED", "NO_SHOW", "EXPIRED", "CANCELLED"]},
+            "paymentStatus": {"enum": ["UNPAID", "PAID", "REFUND_PENDING", "REFUNDED"]},
+            "totalAmount": {"type": "integer", "minimum": 1},
+            "commissionAmount": {"type": "integer", "minimum": 0},
+            "storeEarning": {"type": "integer", "minimum": 0},
+            "completedAt": {"type": ["string", "null"], "format": "date-time"},
+            "reservationId": {"type": ["string", "null"], "format": "uuid"},
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["batchId", "quantity"],
+                "properties": {
+                  "batchId": {"type": "integer", "minimum": 1},
+                  "quantity": {"type": "integer", "minimum": 1, "maximum": 5}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

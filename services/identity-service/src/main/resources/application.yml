@@ -1,0 +1,42 @@
+server:
+  port: ${SERVER_PORT:8082}
+spring:
+  application:
+    name: identity-service
+  datasource:
+    url: ${DB_URL:jdbc:mysql://mysql:3306/identity_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:foodrescue}
+    password: ${RABBITMQ_PASSWORD:}
+    publisher-confirm-type: correlated
+    listener:
+      simple:
+        default-requeue-rejected: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration-hours: 24
+  internal-api-key: ${INTERNAL_API_KEY:}
+  seed:
+    enabled: ${SEED_ACCOUNTS_ENABLED:false}
+    admin:
+      email: ${SEED_ADMIN_EMAIL:}
+      password: ${SEED_ADMIN_PASSWORD:}
+    owner:
+      email: ${SEED_OWNER_EMAIL:}
+      password: ${SEED_OWNER_PASSWORD:}
+
