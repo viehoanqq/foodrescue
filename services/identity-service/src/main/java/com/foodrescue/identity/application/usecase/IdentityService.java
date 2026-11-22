@@ -64,6 +64,32 @@ public class IdentityService {
         return users.findById(id).orElseThrow(() -> new IdentityException(404, "NOT_FOUND", "Không tìm thấy người dùng"));
     }
 
+    public UserCounts countUsers() {
+        return new UserCounts(users.countActiveCustomers(), users.countAll());
+    }
+
+    public StaffResult createStaff(Long actorId, Long storeId, String email, String fullName, String phone) {
+        return unitOfWork.execute(() -> createStaffTransaction(actorId, storeId, email, fullName, phone));
+    }
+
+    private StaffResult createStaffTransaction(Long actorId, Long storeId, String email,
+                                               String fullName, String phone) {
+        UserAccount actor = find(actorId);
+        if (!"STORE_OWNER".equals(actor.role()) || !"ACTIVE".equals(actor.status())) {
+            throw new IdentityException(403, "FORBIDDEN", "Chỉ chủ cửa hàng đang hoạt động được tạo nhân viên");
+        }
+        String normalized = normalize(email);
+        if (users.findByEmail(normalized).isPresent()) {
+            throw new IdentityException(409, "EMAIL_EXISTS", "Email đã được sử dụng");
+        }
+        String temporaryPassword = randomPassword();
+        UserAccount saved = users.save(new UserAccount(null, normalized, passwords.hash(temporaryPassword),
+                fullName.trim(), phone.trim(), "STORE_STAFF", storeId, "ACTIVE", true,
+                LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));
+        audit.record(actorId, "STORE_STAFF_CREATED", "USER", saved.id(), "storeId=" + storeId);
+        return new StaffResult(saved, temporaryPassword);
+    }
+
     public UserAccount updateProfile(Long id, String fullName, String phone) {
         return unitOfWork.execute(() -> updateProfileTransaction(id, fullName, phone));
     }
@@ -153,4 +179,6 @@ public class IdentityService {
 
     public record AuthResult(UserAccount user, String token) {}
     public record ResetResult(Long userId, String temporaryPassword, boolean mustChangePassword) {}
+    public record UserCounts(long activeCustomers, long totalUsers) {}
+    public record StaffResult(UserAccount user, String temporaryPassword) {}
 }

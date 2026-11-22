@@ -22,7 +22,7 @@ public class IdentitySecurity {
                 .httpBasic(b -> b.disable()).formLogin(f -> f.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers("/internal/health/db", "/actuator/health", "/internal/users/**").permitAll()
+                        .requestMatchers("/internal/health/db", "/actuator/health", "/internal/users/**", "/internal/staff").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me", "/api/me/**").authenticated()
                         .anyRequest().denyAll())

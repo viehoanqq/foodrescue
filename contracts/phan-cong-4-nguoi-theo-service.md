@@ -16,14 +16,12 @@
 
 **DB sở hữu:** MySQL `identity_db`: `users`, `audit_logs`, `outbox_events`, `inbox_events`. `users.store_id` dành cho nhân viên; chủ cửa hàng liên kết qua `stores.owner_id` của Store. Không tạo user mới khi khách gửi hồ sơ mở cửa hàng.
 
-**Đã có:** đăng ký/đăng nhập JWT, `/api/me`, đổi mật khẩu, admin user lock/unlock/reset, danh sách audit; `GET /internal/users/{id}/status`; audit thao tác identity ghi cùng transaction; listener `audit.action.v1` với Inbox và DLQ. Seed admin/owner local. Cần giữ nguyên hành vi này khi thêm event.
+**Đã có:** đăng ký/đăng nhập JWT, `/api/me`, đổi mật khẩu, admin user lock/unlock/reset, danh sách audit; `GET /internal/users/{id}/status`, `GET /internal/users/count`, `POST /internal/staff`; audit thao tác identity ghi cùng transaction; listener `audit.action.v1` với Inbox và DLQ. Seed admin/owner local. Cần giữ nguyên hành vi này khi thêm event.
 
 **API phải làm/hoàn thiện:**
 
 | API | Việc cần làm |
 |---|---|
-| `GET /internal/users/count` | Đếm khách đang hoạt động và tổng user cho Finance dashboard |
-| `POST /internal/staff` | Store yêu cầu tạo user `STORE_STAFF`, `store_id` bắt buộc, mật khẩu tạm + `must_change_password=true`; chống email trùng |
 | Lệnh khóa/mở staff nội bộ | Chỉ Store gọi sau khi kiểm tra quyền chủ với cửa hàng tương ứng; identity cập nhật status/tokenVersion |
 | `GET /api/admin/audit-logs` | Bổ sung lọc theo actor, action, entity, thời gian và phân trang nếu FE cần |
 

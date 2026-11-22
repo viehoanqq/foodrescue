@@ -9,4 +9,6 @@ public interface UserRepository {
     Optional<UserAccount> findByEmail(String email);
     UserAccount save(UserAccount user);
     PageResult<UserAccount> search(String role, String status, String keyword, int page, int size);
+    long countAll();
+    long countActiveCustomers();
 }

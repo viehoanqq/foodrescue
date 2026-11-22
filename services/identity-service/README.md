@@ -2,7 +2,16 @@
 
 Một ứng dụng Spring Boot, sở hữu MySQL `identity_db`. Các lớp nằm trong `api/`, `application/`, `domain/`, `infrastructure/`; Flyway migration ở `src/main/resources/db/migration/`.
 
-Đã có đăng ký/đăng nhập, hồ sơ, đổi mật khẩu, quản trị user, audit và `GET /internal/users/{id}/status`. Thao tác identity ghi audit cùng transaction; listener `audit.action.v1` nhận audit từ các service khác và dùng Inbox để chống xử lý lặp.
+Đã có đăng ký/đăng nhập, hồ sơ, đổi mật khẩu, quản trị user, audit, `GET /internal/users/{id}/status`, `GET /internal/users/count` và `POST /internal/staff`. Thao tác identity ghi audit cùng transaction; listener `audit.action.v1` nhận audit từ các service khác và dùng Inbox để chống xử lý lặp.
+
+## API nội bộ cho Store và Finance
+
+Hai endpoint mới yêu cầu header `X-Internal-Key`; service gọi trực tiếp Identity, không đi qua Gateway.
+
+- `GET /internal/users/count` trả `{ "activeCustomers": 12, "totalUsers": 20 }`. `activeCustomers` chỉ đếm `role=CUSTOMER` và `status=ACTIVE`; `totalUsers` đếm tất cả tài khoản, gồm cả tài khoản bị khóa.
+- `POST /internal/staff` nhận `{ "actorId": 2, "storeId": 5, "email": "staff@example.com", "fullName": "Nhân viên", "phone": "0901234567" }`. Trả HTTP 201 với `userId`, thông tin staff, `role=STORE_STAFF`, `status=ACTIVE`, `mustChangePassword=true` và `temporaryPassword` được sinh ngẫu nhiên. Chỉ trả mật khẩu tạm khi tạo; Identity chỉ lưu bản băm. Email được chuẩn hóa chữ thường và kiểm tra trùng (HTTP 409, `EMAIL_EXISTS`).
+
+Store phải xác nhận `actorId` là chủ đang được phép quản lý đúng `storeId` trước khi gọi. Identity kiểm tra actor còn `ACTIVE` và có role `STORE_OWNER`; không thể tự xác nhận quan hệ chủ/cửa hàng vì quan hệ này thuộc DB của Store. Tạo user và ghi `STORE_STAFF_CREATED` vào audit cùng transaction. Người dùng phải đổi mật khẩu trước khi gọi các API khác.
 
 ## Tài khoản demo local
 

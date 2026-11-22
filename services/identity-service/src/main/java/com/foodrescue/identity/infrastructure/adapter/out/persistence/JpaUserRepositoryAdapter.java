@@ -23,6 +23,12 @@ public class JpaUserRepositoryAdapter implements UserRepository {
         return repository.findByEmailIgnoreCase(email).map(this::toDomain);
     }
 
+    @Override public long countAll() { return repository.count(); }
+
+    @Override public long countActiveCustomers() {
+        return repository.countByRoleAndStatus("CUSTOMER", "ACTIVE");
+    }
+
     @Override public UserAccount save(UserAccount user) {
         UserEntity entity = user.id() == null ? new UserEntity() : repository.findById(user.id()).orElseThrow();
         entity.setRole(user.role());
