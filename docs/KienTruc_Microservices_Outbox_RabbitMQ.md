@@ -129,131 +129,135 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 - JWT ở `Authorization: Bearer <token>`; lấy `userId`/role từ context đã xác thực, không tin field ID từ form. Lệnh tạo đơn/thanh toán/payout nên dùng `Idempotency-Key` UUID. `X-Correlation-Id` đi xuyên các lời gọi/sự kiện.
 - JSON dùng `camelCase`, tiền VND số nguyên (`BigDecimal` scale 0), thời gian ISO-8601. DTO dự kiến dùng thời gian có offset/UTC; API identity hiện trả `LocalDateTime` không offset, cần chuyển có kiểm soát.
 - Lỗi thống nhất `{code,message,details,timestamp,path}`; 400 dữ liệu sai, 401 chưa xác thực, 403 cấm/khóa, 404 không thấy, 409 xung đột, 422 sai quy tắc, 502/503 dependency lỗi. Không trả stack trace/SQL/secret.
+- Cột **Event / Outbox** ghi tác động của API khi xử lý thành công. `Không` nghĩa là API không tạo message; `Audit trực tiếp` ghi vào DB Identity; `Dự kiến Outbox` là thiết kế chưa triển khai. Publisher quét Outbox sau commit và gửi qua RabbitMQ, không gửi trực tiếp từ controller.
 - Bảng dưới dùng **Req → Res** là field quan trọng, không phải JSON Schema hoàn chỉnh. `content[]`/`totalElements` là phân trang identity **đang có**; endpoint mới dự kiến có thể dùng cùng shape để FE nhất quán.
 
 ### 5.1 Identity API
 
-| Trạng thái | Method + URL | Quyền | Req | Res |
-|---|---|---|---|---|
-| Đã có | `POST /api/auth/register` | Công khai | `{email,password,fullName,phone}` (password 8–72 ký tự) | `{token,user}` |
-| Đã có | `POST /api/auth/login` | Công khai | `{email,password}` | `{token,user}` |
-| Đã có | `GET /api/me` | Đăng nhập | Không có body | `user` |
-| Đã có | `PUT /api/me` | Đăng nhập | `{fullName,phone}` | `user` |
-| Đã có | `PUT /api/me/password` | Đăng nhập | `{oldPassword,newPassword}` | Không có body; token cũ hết hiệu lực |
-| Đã có | `GET /api/admin/users?role&status&keyword&page&size` | ADMIN | Query, `page≥0`, `1≤size≤100` | `{content:[user],page,size,totalElements,totalPages}` |
-| Đã có | `POST /api/admin/users/{id}/lock` hoặc `/unlock` | ADMIN | Path `id` | `user` |
-| Đã có | `POST /api/admin/users/{id}/reset-password` | ADMIN | Path `id` | `{userId,temporaryPassword,mustChangePassword:true}` |
-| Đã có | `GET /api/admin/audit-logs?page&size` | ADMIN | Query phân trang | `{content:[audit],page,size,totalElements,totalPages}` |
-| Đã có | `GET /internal/users/{id}/status` | Service | `X-Internal-Key` | `{userId,status,role,storeId,tokenVersion,mustChangePassword}` |
-| Dự kiến | `GET /internal/users/count` | Service | `X-Internal-Key` | `{totalCustomers,totalActive}` |
-| Dự kiến | `POST /internal/staff` | Store-service | `{storeId,email,temporaryPassword,fullName,phone}` | `{userId,role:"STORE_STAFF",mustChangePassword:true}` |
+| Trạng thái | Method + URL | Quyền | Req | Res | Event / Outbox |
+|---|---|---|---|---|---|
+| Đã có | `POST /api/auth/register` | Công khai | `{email,password,fullName,phone}` (password 8–72 ký tự) | `{token,user}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `POST /api/auth/login` | Công khai | `{email,password}` | `{token,user}` | Không |
+| Đã có | `GET /api/me` | Đăng nhập | Không có body | `user` | Không |
+| Đã có | `PUT /api/me` | Đăng nhập | `{fullName,phone}` | `user` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `PUT /api/me/password` | Đăng nhập | `{oldPassword,newPassword}` | Không có body; token cũ hết hiệu lực | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `GET /api/admin/users?role&status&keyword&page&size` | ADMIN | Query, `page≥0`, `1≤size≤100` | `{content:[user],page,size,totalElements,totalPages}` | Không |
+| Đã có | `POST /api/admin/users/{id}/lock` hoặc `/unlock` | ADMIN | Path `id` | `user` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `POST /api/admin/users/{id}/reset-password` | ADMIN | Path `id` | `{userId,temporaryPassword,mustChangePassword:true}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `GET /api/admin/audit-logs?page&size` | ADMIN | Query phân trang | `{content:[audit],page,size,totalElements,totalPages}` | Không |
+| Đã có | `GET /internal/users/{id}/status` | Service | `X-Internal-Key` | `{userId,status,role,fullName,storeId,tokenVersion,mustChangePassword}` | Không |
+| Đã có | `GET /internal/users/count` | Service | `X-Internal-Key` | `{activeCustomers,totalUsers}` | Không |
+| Đã có | `POST /internal/staff` | Store-service | `{actorId,storeId,email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `POST /internal/staff/{id}/lock` hoặc `/unlock` | Store-service | `{actorId,storeId}` + `X-Internal-Key` | `{userId,storeId,status,tokenVersion}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
 
 `user` hiện là `{id,email,fullName,phone,role,storeId,status,mustChangePassword,createdAt}`; không có password hash. Giao diện đã gọi login/register/me/update/password và admin users/audit qua Gateway. `AuditPort` ghi thao tác identity vào `audit_logs` trong transaction của use case; event audit từ service khác do listener của identity ghi sau khi Inbox dedup.
 
 **Luồng identity:** đăng ký khách hàng ghi `users` + audit cùng transaction; đăng nhập đối chiếu BCrypt, kiểm tra `ACTIVE`, phát JWT có `tokenVersion`. Mỗi request bảo vệ xác nhận token và trạng thái user; khóa/reset/đổi mật khẩu tăng version để vô hiệu token cũ. Người dùng có `mustChangePassword=true` chỉ được vào hồ sơ và API đổi mật khẩu trước khi dùng các chức năng khác. Khi store được duyệt trong thiết kế mục tiêu, consumer identity cấp quyền chủ cho **user đã tồn tại**, không tạo tài khoản mới.
 
-### 5.2 Store API (dự kiến)
+### 5.2 Store API
 
-| Method + URL | Quyền | Req | Res |
-|---|---|---|---|
-| `POST /api/store/registration` | CUSTOMER đã đăng nhập | `multipart`: `data={storeName,description,storePhone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountNo,bankAccountName}`, `license` bắt buộc, `image?` | `201 {storeId,ownerId,status:"PENDING",createdAt}` |
-| `GET /api/store/registration` | Người nộp | Không có body | `{storeId,status,rejectReason?,createdAt}` |
-| `GET /api/stores?lat&lon&radiusKm&page&size` | Công khai | Tọa độ/bán kính/query | `{content:[storeSummary],page,size,totalElements,totalPages}`; chỉ APPROVED |
-| `GET /api/stores/{id}` | Công khai | Path `id` | `{id,name,address,latitude,longitude,rating,openTime,closeTime}` |
-| `GET /api/store/profile` | STORE_OWNER | Không có body | Hồ sơ cửa hàng của chủ, ẩn bớt thông tin ngân hàng khi không cần |
-| `PUT /api/store/profile` | STORE_OWNER | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bank...}` | Hồ sơ mới; cập nhật vị trí/trạng thái liên quan qua event |
-| `GET /api/store/staff` | STORE_OWNER | Không có body | `{content:[{id,email,fullName,status}],...}` |
-| `POST /api/store/staff` | STORE_OWNER | `{email,fullName,phone}` | `{userId,temporaryPassword,mustChangePassword:true}`; identity tạo tài khoản |
-| `POST /api/store/staff/{id}/lock` hoặc `/unlock` | STORE_OWNER | Path `id` | `{userId,status}`; identity thực thi sau khi store xác minh quyền chủ |
-| `POST /api/stores/{id}/reviews` | CUSTOMER có đơn COMPLETED | `{orderId,rating:1..5,comment?}` | `{id,orderId,rating,comment,createdAt}`; một đơn một lần |
-| `GET /api/stores/{id}/reviews?page&size` | Công khai | Query phân trang | `{content:[review],averageRating,totalElements,...}` |
-| `GET /api/admin/stores?status&page&size` | ADMIN | Query | Trang hồ sơ cửa hàng |
-| `POST /api/admin/stores/{id}/approve` | ADMIN | `{commissionRate}` (mặc định 15%) | `{id,status:"APPROVED",commissionRate}` |
-| `POST /api/admin/stores/{id}/reject` | ADMIN | `{reason}` | `{id,status:"REJECTED",rejectReason}` |
-| `POST /api/admin/stores/{id}/lock` hoặc `/unlock` | ADMIN | Path `id`, lý do nếu khóa | `{id,status}` |
-| `PUT /api/admin/stores/{id}/commission` | ADMIN | `{commissionRate}` | `{id,commissionRate}` |
-| `GET /internal/stores/{id}/checkout-policy` | Order/Catalog | `X-Internal-Key` | `{storeId,status,commissionRate,version,updatedAt}` |
-| `GET /internal/stores/{id}/payout-account` | Finance | `X-Internal-Key` | Tài khoản nhận tiền của cửa hàng; chỉ service tài chính gọi |
-| `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key` | `{approved,locked,pending}` |
+Hiện đã có `POST /api/store/staff`; các API khác trong bảng là dự kiến.
 
-**Luồng store:** khách đang đăng nhập bấm “Tạo cửa hàng”; store lấy `ownerId` từ token và ghi hồ sơ `PENDING`. Admin đọc hồ sơ tại store, duyệt/từ chối. Khi APPROVED, store ghi `store.status-changed.v1` vào Outbox. Identity nhận để cấp vai trò `STORE_OWNER` cho user hiện có và tăng `tokenVersion`; catalog/order nhận để cập nhật chính sách bán. Khóa store phải chặn đơn mới nhưng không tự xóa đơn đã thanh toán. Đăng ký/duyệt không tạo user mới.
+| Method + URL | Quyền | Req | Res | Event / Outbox |
+|---|---|---|---|---|
+| `POST /api/store/registration` | CUSTOMER đã đăng nhập | `multipart`: `data={storeName,description,storePhone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountNo,bankAccountName}`, `license` bắt buộc, `image?` | `201 {storeId,ownerId,status:"PENDING",createdAt}` | Không |
+| `GET /api/store/registration` | Người nộp | Không có body | `{storeId,status,rejectReason?,createdAt}` | Không |
+| `GET /api/stores?lat&lon&radiusKm&page&size` | Công khai | Tọa độ/bán kính/query | `{content:[storeSummary],page,size,totalElements,totalPages}`; chỉ APPROVED | Không |
+| `GET /api/stores/{id}` | Công khai | Path `id` | `{id,name,address,latitude,longitude,rating,openTime,closeTime}` | Không |
+| `GET /api/store/profile` | STORE_OWNER | Không có body | Hồ sơ cửa hàng của chủ, ẩn bớt thông tin ngân hàng khi không cần | Không |
+| `PUT /api/store/profile` | STORE_OWNER | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bank...}` | Hồ sơ mới; V1 chỉ dự kiến phát audit, không có `store.profile-changed.v1` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `GET /api/store/staff` | STORE_OWNER | Không có body | `{content:[{id,email,fullName,status}],...}` | Không |
+| `POST /api/store/staff` | STORE_OWNER | `{email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}`; Identity tạo tài khoản và ghi audit | Store không phát event; Identity ghi audit `STORE_STAFF_CREATED` trực tiếp |
+| `POST /api/store/staff/{id}/lock` hoặc `/unlock` | STORE_OWNER | Path `id` | `{userId,status}`; identity thực thi sau khi store xác minh quyền chủ | Store không phát event; Identity ghi audit khóa/mở staff trực tiếp |
+| `POST /api/stores/{id}/reviews` | CUSTOMER có đơn COMPLETED | `{orderId,rating:1..5,comment?}` | `{id,orderId,rating,comment,createdAt}`; một đơn một lần | Không |
+| `GET /api/stores/{id}/reviews?page&size` | Công khai | Query phân trang | `{content:[review],averageRating,totalElements,...}` | Không |
+| `GET /api/admin/stores?status&page&size` | ADMIN | Query | Trang hồ sơ cửa hàng | Không |
+| `POST /api/admin/stores/{id}/approve` | ADMIN | `{commissionRate}` (mặc định 15%) | `{id,status:"APPROVED",commissionRate}` | Dự kiến Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
+| `POST /api/admin/stores/{id}/reject` | ADMIN | `{reason}` | `{id,status:"REJECTED",rejectReason}` | Dự kiến Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
+| `POST /api/admin/stores/{id}/lock` hoặc `/unlock` | ADMIN | Path `id`, lý do nếu khóa | `{id,status}` | Dự kiến Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
+| `PUT /api/admin/stores/{id}/commission` | ADMIN | `{commissionRate}` | `{id,commissionRate}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `GET /internal/stores/{id}/checkout-policy` | Order/Catalog | `X-Internal-Key` | `{storeId,status,commissionRate,version,updatedAt}` | Không |
+| `GET /internal/stores/{id}/payout-account` | Finance | `X-Internal-Key` | Tài khoản nhận tiền của cửa hàng; chỉ service tài chính gọi | Không |
+| `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key` | `{approved,locked,pending}` | Không |
+
+**Luồng store:** khách đang đăng nhập bấm “Tạo cửa hàng”; store lấy `ownerId` từ token và ghi hồ sơ `PENDING`. Admin đọc hồ sơ tại store, duyệt/từ chối. Khi APPROVED, store ghi `store.status-changed.v1` vào Outbox. Identity nhận để cấp vai trò `STORE_OWNER` cho user hiện có và tăng `tokenVersion`; Catalog/Order gọi Store HTTP để kiểm tra chính sách bán trong V1. Khóa store phải chặn đơn mới nhưng không tự xóa đơn đã thanh toán. Đăng ký/duyệt không tạo user mới.
 
 ### 5.3 Catalog/Inventory API
 
-| Trạng thái | Method + URL | Quyền | Req | Res |
-|---|---|---|---|---|
-| Dự kiến | `GET /api/categories` | Công khai | Không có body | `[{id,name,imageUrl,sortOrder}]` |
-| Dự kiến | `POST /api/admin/categories` | ADMIN | `{name,imageUrl?,sortOrder}` | `{id,name,imageUrl,sortOrder}` |
-| Dự kiến | `PUT /api/admin/categories/{id}` / `DELETE .../{id}` | ADMIN | Field cần sửa/path ID | Category mới / `204` nếu không còn batch tham chiếu |
-| Dự kiến | `GET /api/batches?categoryId&lat&lon&radiusKm&sort&page&size` | Công khai | Bộ lọc 1/3/5/10 km, gần/rẻ/sắp hết giờ | `{content:[batchSummary],page,size,totalElements,totalPages}`; chỉ túi đang bán của store APPROVED |
-| Dự kiến | `GET /api/batches/{id}` | Công khai | Path ID | `{id,storeId,categoryId,title,description,imageUrl,originalPrice,rescuePrice,remainingQuantity,pickupStart,pickupEnd,status,distanceKm?,travelMinutes?}` |
-| Dự kiến | `GET /api/store/batches?status&page&size` | OWNER/STAFF | Query | Danh sách túi của store trong token/context |
-| Dự kiến | `POST /api/store/batches` | STORE_OWNER | `multipart data={categoryId,title,description,originalPrice,rescuePrice,quantity,pickupStart,pickupEnd},image?` | `201 batch`; đồng thời ghi sổ kho `LISTED` |
-| Dự kiến | `PUT /api/store/batches/{id}` | STORE_OWNER | Field mô tả/ảnh/giá/giờ được phép sửa | Batch mới; chặn đổi giá/giờ khi đã có đơn |
-| Dự kiến | `PATCH /api/store/batches/{id}/quantity` | OWNER/STAFF | `{changeQty,reason:"ADDED"|"REMOVED",note?}` | `{batchId,quantity,remainingQuantity}`; không bớt quá số còn |
-| Dự kiến | `GET /api/store/batches/{id}/stock-movements` | OWNER/STAFF | Path ID, phân trang | `{content:[{reason,changeQty,remainingAfter,actorId,createdAt}],...}` |
-| Dự kiến | `POST /api/store/batches/{id}/cancel` | STORE_OWNER | `{reason}` | `{id,status:"CANCELLED"}`; phát `catalog.batch-cancelled.v1` |
-| **Đã có** | `POST /internal/reservations` | Order-service | `{reservationId:UUID,orderId,storeId,actorId,items:[{batchId,quantity}]}` + `X-Internal-Key` | `{reservationId,status:"HELD",items:[{batchId,quantity,unitPrice}],pickupStart,pickupEnd}` |
-| **Đã có** | `GET /internal/reservations/{id}` | Order-service | `X-Internal-Key` | Reservation hiện tại |
-| **Đã có** | `POST /internal/reservations/{id}/release` | Order-service | `X-Internal-Key` | Reservation `RELEASED`; gọi lặp không cộng kho lần hai |
-| Dự kiến | `GET /internal/batches/{id}` | Order-service | `X-Internal-Key` | `{batchId,storeId,status,rescuePrice,remainingQuantity,pickupEnd}` |
+| Trạng thái | Method + URL | Quyền | Req | Res | Event / Outbox |
+|---|---|---|---|---|---|
+| Dự kiến | `GET /api/categories` | Công khai | Không có body | `[{id,name,imageUrl,sortOrder}]` | Không |
+| Dự kiến | `POST /api/admin/categories` | ADMIN | `{name,imageUrl?,sortOrder}` | `{id,name,imageUrl,sortOrder}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `PUT /api/admin/categories/{id}` / `DELETE .../{id}` | ADMIN | Field cần sửa/path ID | Category mới / `204` nếu không còn batch tham chiếu | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `GET /api/batches?categoryId&lat&lon&radiusKm&sort&page&size` | Công khai | Bộ lọc 1/3/5/10 km, gần/rẻ/sắp hết giờ | `{content:[batchSummary],page,size,totalElements,totalPages}`; chỉ túi đang bán của store APPROVED | Không |
+| Dự kiến | `GET /api/batches/{id}` | Công khai | Path ID | `{id,storeId,categoryId,title,description,imageUrl,originalPrice,rescuePrice,remainingQuantity,pickupStart,pickupEnd,status,distanceKm?,travelMinutes?}` | Không |
+| Dự kiến | `GET /api/store/batches?status&page&size` | OWNER/STAFF | Query | Danh sách túi của store trong token/context | Không |
+| Dự kiến | `POST /api/store/batches` | STORE_OWNER | `multipart data={categoryId,title,description,originalPrice,rescuePrice,quantity,pickupStart,pickupEnd},image?` | `201 batch`; đồng thời ghi sổ kho `LISTED` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `PUT /api/store/batches/{id}` | STORE_OWNER | Field mô tả/ảnh/giá/giờ được phép sửa | Batch mới; chặn đổi giá/giờ khi đã có đơn | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `PATCH /api/store/batches/{id}/quantity` | OWNER/STAFF | `{changeQty,reason:"ADDED"/"REMOVED",note?}` | `{batchId,quantity,remainingQuantity}`; không bớt quá số còn | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `GET /api/store/batches/{id}/stock-movements` | OWNER/STAFF | Path ID, phân trang | `{content:[{reason,changeQty,remainingAfter,actorId,createdAt}],...}` | Không |
+| Dự kiến | `POST /api/store/batches/{id}/cancel` | STORE_OWNER | `{reason}` | `{id,status:"CANCELLED"}`; phát `catalog.batch-cancelled.v1` | Dự kiến Outbox `catalog.batch-cancelled.v1` → `order.batch-cancelled` + `audit.action.v1` → `identity.audit-events` |
+| **Đã có** | `POST /internal/reservations` | Order-service | `{reservationId:UUID,orderId,storeId,actorId,items:[{batchId,quantity}]}` + `X-Internal-Key` | `{reservationId,status:"HELD",items:[{batchId,quantity,unitPrice}],pickupStart,pickupEnd}` | Đã có Outbox `stock.reserved.v1`; V1 chưa có consumer nghiệp vụ |
+| **Đã có** | `GET /internal/reservations/{id}` | Order-service | `X-Internal-Key` | Reservation hiện tại | Không |
+| **Đã có** | `POST /internal/reservations/{id}/release` | Order-service | `X-Internal-Key` | Reservation `RELEASED`; gọi lặp không cộng kho lần hai | Đã có Outbox `stock.released.v1`; V1 chưa có consumer nghiệp vụ (chỉ khi thực sự release) |
+| Dự kiến | `GET /internal/batches/{id}` | Order-service | `X-Internal-Key` | `{batchId,storeId,status,rescuePrice,remainingQuantity,pickupEnd}` | Không |
 
 **Luồng catalog:** chủ tạo túi → kiểm tra store APPROVED, giá cứu ≤ 60% giá gốc, giờ lấy hợp lệ → lưu batch và `stock_movements.LISTED`. Khi order yêu cầu giữ nhiều túi, catalog khóa row theo thứ tự batch ID, kiểm tra toàn bộ rồi trừ `remaining_quantity` trong **một transaction**, ghi `stock_reservations`, `stock_reservation_items`, `stock_movements.ORDERED` và `stock.reserved.v1` vào Outbox. Khi hủy/hết hạn, `release` cộng trả đúng một lần, ghi `RETURNED` và `stock.released.v1`. Code giữ/trả kho đã có; **kiểm tra store APPROVED và luồng commit/expire reservation chưa có**. OSRM chỉ tính thời gian đi đường/tìm kiếm, không tham gia quyết định còn hàng.
 
 ### 5.4 Order API
 
-| Trạng thái | Method + URL | Quyền | Req | Res |
-|---|---|---|---|---|
-| Dự kiến | `GET /api/cart` | CUSTOMER | Không có body | `{storeId?,items:[{batchId,quantity,available,unitPrice}],totalAmount}` |
-| Dự kiến | `POST /api/cart` | CUSTOMER | `{batchId,quantity:1..5}` | Giỏ mới; thêm túi store khác trả 409 để FE hỏi xóa giỏ |
-| Dự kiến | `PUT /api/cart/{batchId}` | CUSTOMER | `{quantity:1..5}` | Giỏ mới |
-| Dự kiến | `DELETE /api/cart/{batchId}` / `DELETE /api/cart` | CUSTOMER | Path ID hoặc không body | Giỏ sau xóa / `204` |
-| Dự kiến | `POST /api/orders` | CUSTOMER | `Idempotency-Key`; giỏ đang lưu DB, không nhận giá từ browser | `201 {id,orderCode,status:"PENDING_PAYMENT",totalAmount,pickupStart,pickupEnd,paymentExpiresAt}` |
-| Dự kiến | `GET /api/orders?status&page&size` | CUSTOMER | Query | Trang đơn của chính khách, gồm payment/refund status đọc qua projection |
-| Dự kiến | `GET /api/orders/{id}` | Chủ đơn | Path ID | Đơn + items giá chụp, mã/QR chỉ sau khi đã thanh toán |
-| Dự kiến | `POST /api/orders/{id}/cancel` | Chủ đơn | `{reason}` | `{id,status:"CANCELLED",paymentStatus,refundStatus?}` |
-| Dự kiến | `GET /api/store/orders?date&status&page&size` | OWNER/STAFF | Query | Đơn của store đã xác minh |
-| Dự kiến | `GET /api/store/orders/{id}` | OWNER/STAFF | Path ID | Chi tiết đơn và item |
-| Dự kiến | `POST /api/store/orders/{id}/cancel` | OWNER | `{reason}` | Đơn hủy; phát yêu cầu trả kho/hoàn tiền |
-| Dự kiến | `GET /api/store/pickup/lookup?code=...` | OWNER/STAFF | Mã 6 ký tự | `{orderId,customerName,items,pickupWindow,status}` |
-| Dự kiến | `POST /api/store/pickup/handover` | OWNER/STAFF | `{pickupCode}` | `{orderId,status:"COMPLETED",handledBy,completedAt}` |
-| Dự kiến | `GET /api/admin/orders?code&status&page&size` | ADMIN | Query | Trang đơn toàn hệ thống |
-| Dự kiến | `GET /api/admin/orders/{id}` / `POST .../{id}/cancel` | ADMIN | Path ID, `{reason}` khi hủy | Chi tiết hoặc đơn hủy |
-| **Đã có** | `POST /internal/order/reservations` | Chỉ service/test nội bộ | Cùng body reservation ở catalog | Kết quả catalog; **không tạo order** |
-| **Đã có** | `GET /internal/order/reservations/{id}` / `POST .../{id}/release` | Chỉ service/test nội bộ | ID + `X-Internal-Key` | Kết quả catalog |
-| Dự kiến | `GET /internal/orders/{id}/payment-intent` | Finance | `X-Internal-Key` | `{orderId,orderCode,customerId,totalAmount,paymentExpiresAt,status}` |
-| Dự kiến | `GET /internal/orders/{id}/review-eligibility` | Store | `X-Internal-Key`, customer ID | `{eligible,storeId,customerId,status}` |
+| Trạng thái | Method + URL | Quyền | Req | Res | Event / Outbox |
+|---|---|---|---|---|---|
+| Dự kiến | `GET /api/cart` | CUSTOMER | Không có body | `{storeId?,items:[{batchId,quantity,available,unitPrice}],totalAmount}` | Không |
+| Dự kiến | `POST /api/cart` | CUSTOMER | `{batchId,quantity:1..5}` | Giỏ mới; thêm túi store khác trả 409 để FE hỏi xóa giỏ | Không |
+| Dự kiến | `PUT /api/cart/{batchId}` | CUSTOMER | `{quantity:1..5}` | Giỏ mới | Không |
+| Dự kiến | `DELETE /api/cart/{batchId}` / `DELETE /api/cart` | CUSTOMER | Path ID hoặc không body | Giỏ sau xóa / `204` | Không |
+| Dự kiến | `POST /api/orders` | CUSTOMER | `Idempotency-Key`; giỏ đang lưu DB, không nhận giá từ browser | `201 {id,orderCode,status:"PENDING_PAYMENT",totalAmount,pickupStart,pickupEnd,paymentExpiresAt}` | Dự kiến Outbox `order.state-changed.v1` → `finance.order-snapshots` |
+| Dự kiến | `GET /api/orders?status&page&size` | CUSTOMER | Query | Trang đơn của chính khách, gồm payment/refund status đọc qua projection | Không |
+| Dự kiến | `GET /api/orders/{id}` | Chủ đơn | Path ID | Đơn + items giá chụp, mã/QR chỉ sau khi đã thanh toán | Không |
+| Dự kiến | `POST /api/orders/{id}/cancel` | Chủ đơn | `{reason}` | `{id,status:"CANCELLED",paymentStatus,refundStatus?}` | Dự kiến `order.state-changed.v1` → `finance.order-snapshots`; nếu đã thu tiền thêm `order.refund-required.v1` → `finance.refund-required` |
+| Dự kiến | `GET /api/store/orders?date&status&page&size` | OWNER/STAFF | Query | Đơn của store đã xác minh | Không |
+| Dự kiến | `GET /api/store/orders/{id}` | OWNER/STAFF | Path ID | Chi tiết đơn và item | Không |
+| Dự kiến | `POST /api/store/orders/{id}/cancel` | OWNER | `{reason}` | Đơn hủy; phát yêu cầu trả kho/hoàn tiền | Dự kiến `order.state-changed.v1` → `finance.order-snapshots`; nếu đã thu tiền thêm `order.refund-required.v1` → `finance.refund-required`; `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `GET /api/store/pickup/lookup?code=...` | OWNER/STAFF | Mã 6 ký tự | `{orderId,customerName,items,pickupWindow,status}` | Không |
+| Dự kiến | `POST /api/store/pickup/handover` | OWNER/STAFF | `{pickupCode}` | `{orderId,status:"COMPLETED",handledBy,completedAt}` | Dự kiến Outbox `order.state-changed.v1` → `finance.order-snapshots` |
+| Dự kiến | `GET /api/admin/orders?code&status&page&size` | ADMIN | Query | Trang đơn toàn hệ thống | Không |
+| Dự kiến | `GET /api/admin/orders/{id}` / `POST .../{id}/cancel` | ADMIN | Path ID, `{reason}` khi hủy | Chi tiết hoặc đơn hủy | Chỉ nhánh POST hủy: dự kiến `order.state-changed.v1`; nếu đã thu tiền thêm `order.refund-required.v1`; `audit.action.v1` |
+| **Đã có** | `POST /internal/order/reservations` | Chỉ service/test nội bộ | Cùng body reservation ở catalog | Kết quả catalog; **không tạo order** | Order không phát; Catalog ghi Outbox `stock.reserved.v1` khi giữ kho |
+| **Đã có** | `GET /internal/order/reservations/{id}` / `POST .../{id}/release` | Chỉ service/test nội bộ | ID + `X-Internal-Key` | Kết quả catalog | GET: không; POST release: Catalog ghi Outbox `stock.released.v1` nếu thực sự trả kho |
+| Dự kiến | `GET /internal/orders/{id}/payment-intent` | Finance | `X-Internal-Key` | `{orderId,orderCode,customerId,totalAmount,paymentExpiresAt,status}` | Không |
+| Dự kiến | `GET /internal/orders/{id}/review-eligibility` | Store | `X-Internal-Key`, customer ID | `{eligible,storeId,customerId,status}` | Không |
 
 **Luồng order:** giỏ lưu tại `order_db`, không giữ hàng. Đặt đơn: xác nhận store APPROVED → catalog giữ toàn bộ túi → order tạo `orders`/`order_items` với giá, phí và giờ lấy đã chụp → xóa giỏ → ghi `order.state-changed.v1` vào Outbox. Browser gọi Finance đồng bộ để nhận URL VNPay; Finance xác minh payment intent từ Order. Nếu ghi order thất bại sau khi catalog giữ, gửi release idempotent; xử lý timeout bằng cách hỏi lại reservation ID. Khi finance báo thanh toán thành công, order xác nhận đơn và mở mã/QR; khi thất bại/quá hạn thì hủy và trả kho. Giao hàng chuyển `COMPLETED`; scheduler chuyển `NO_SHOW` sau hạn. Hủy đơn đã thu tiền phát `order.refund-required.v1` đúng một lần.
 
 ### 5.5 Payment/Finance API (dự kiến)
 
-| Method + URL | Quyền | Req | Res |
-|---|---|---|---|
-| `POST /api/payments/create-url` | Chủ đơn | `{orderId}` + `Idempotency-Key` | `{paymentId,orderId,paymentUrl,txnRef,expiresAt}`; số tiền lấy từ order |
-| `GET /api/payments/vnpay/return?vnp_*` | Browser callback | Query VNPay | `{success,orderCode,amount,message}`; hiển thị kết quả, không là nguồn quyết định cuối |
-| `GET /api/payments/vnpay/ipn?vnp_*` | VNPay callback | Query có chữ ký | Mã phản hồi VNPay; kiểm chữ ký, `txnRef`, số tiền, chống lặp |
-| `GET /api/store/revenue?from&to` | STORE_OWNER | Khoảng ngày | `{orderCount,batchCount,gross,commission,net,byDay:[...]}` |
-| `GET /api/store/statement?from&to&page&size` | STORE_OWNER | Khoảng ngày/phân trang | Đơn và số tiền đã/chưa đưa vào payout |
-| `GET /api/store/payouts` | STORE_OWNER | Query | Danh sách kỳ chi trả của store |
-| `POST /api/store/payouts/request` | STORE_OWNER | `{periodFrom?,periodTo?}` + idempotency key | `{payoutId,status:"PENDING",netAmount}` |
-| `GET /api/admin/refunds?status&page&size` | ADMIN | Query | Trang hoàn tiền |
-| `POST /api/admin/refunds/{id}/complete` | ADMIN | `{gatewayRef,note?}` | `{refundId,status:"COMPLETED",processedAt}` |
-| `GET /api/admin/payouts?status&page&size` | ADMIN | Query | Trang payout |
-| `POST /api/admin/payouts` | ADMIN | `{storeId,periodFrom,periodTo}` + idempotency key | `{payoutId,status:"PENDING",netAmount}` |
-| `POST /api/admin/payouts/{id}/paid` | ADMIN | `{transferRef,note?}` | `{payoutId,status:"PAID",paidAt}` |
-| `GET /api/admin/finance/reconciliation?from&to` | ADMIN | Khoảng ngày | 7 khoản tiền, `difference`, `asOf`, cảnh báo dữ liệu thiếu |
-| `GET /api/admin/dashboard?from&to` | ADMIN | Khoảng ngày | `{gmv,commission,completedOrders,cancelledOrders,pendingRefund,unpaidStoreAmount,customerCount,storeCount,byDay,asOf}` |
-| `GET /internal/payments/orders/{orderId}/status` | Service | `X-Internal-Key` | `{orderId,paymentStatus,paidAmount,refundStatus?}` |
+| Method + URL | Quyền | Req | Res | Event / Outbox |
+|---|---|---|---|---|
+| `POST /api/payments/create-url` | Chủ đơn | `{orderId}` + `Idempotency-Key` | `{paymentId,orderId,paymentUrl,txnRef,expiresAt}`; số tiền lấy từ order | Không |
+| `GET /api/payments/vnpay/return?vnp_*` | Browser callback | Query VNPay | `{success,orderCode,amount,message}`; hiển thị kết quả, không là nguồn quyết định cuối | Không |
+| `GET /api/payments/vnpay/ipn?vnp_*` | VNPay callback | Query có chữ ký | Mã phản hồi VNPay; kiểm chữ ký, `txnRef`, số tiền, chống lặp | Dự kiến Outbox `payment.succeeded.v1` hoặc `payment.failed.v1` → `order.payment-results` khi IPN hợp lệ làm đổi trạng thái |
+| `GET /api/store/revenue?from&to` | STORE_OWNER | Khoảng ngày | `{orderCount,batchCount,gross,commission,net,byDay:[...]}` | Không |
+| `GET /api/store/statement?from&to&page&size` | STORE_OWNER | Khoảng ngày/phân trang | Đơn và số tiền đã/chưa đưa vào payout | Không |
+| `GET /api/store/payouts` | STORE_OWNER | Query | Danh sách kỳ chi trả của store | Không |
+| `POST /api/store/payouts/request` | STORE_OWNER | `{periodFrom?,periodTo?}` + idempotency key | `{payoutId,status:"PENDING",netAmount}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `GET /api/admin/refunds?status&page&size` | ADMIN | Query | Trang hoàn tiền | Không |
+| `POST /api/admin/refunds/{id}/complete` | ADMIN | `{gatewayRef,note?}` | `{refundId,status:"COMPLETED",processedAt}` | Dự kiến Outbox `refund.completed.v1` → `order.refund-status` + `audit.action.v1` → `identity.audit-events` |
+| `GET /api/admin/payouts?status&page&size` | ADMIN | Query | Trang payout | Không |
+| `POST /api/admin/payouts` | ADMIN | `{storeId,periodFrom,periodTo}` + idempotency key | `{payoutId,status:"PENDING",netAmount}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `POST /api/admin/payouts/{id}/paid` | ADMIN | `{transferRef,note?}` | `{payoutId,status:"PAID",paidAt}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `GET /api/admin/finance/reconciliation?from&to` | ADMIN | Khoảng ngày | 7 khoản tiền, `difference`, `asOf`, cảnh báo dữ liệu thiếu | Không |
+| `GET /api/admin/dashboard?from&to` | ADMIN | Khoảng ngày | `{gmv,commission,completedOrders,cancelledOrders,pendingRefund,unpaidStoreAmount,customerCount,storeCount,byDay,asOf}` | Không |
+| `GET /internal/payments/orders/{orderId}/status` | Service | `X-Internal-Key` | `{orderId,paymentStatus,paidAmount,refundStatus?}` | Không |
 
 **Luồng finance:** API tạo link VNPay gọi Order xác minh payment intent, lưu `payments.PENDING` rồi trả URL ngay. VNPay IPN được xác minh chữ ký và cập nhật `payments` idempotent; thành công phát `payment.succeeded.v1`, thất bại phát `payment.failed.v1`. `order.state-changed.v1` cập nhật `order_snapshots` theo `aggregateVersion`, không đọc lại giá hiện tại. `order.refund-required.v1` yêu cầu tạo một `refunds` theo `order_id UNIQUE` sau khi kiểm tra payment SUCCESS; admin nhập mã hoàn để xác nhận. Payout khóa các snapshot đủ điều kiện, chụp tài khoản ngân hàng từ store, tạo `payouts` và `payout_items` trong một transaction; mã chuyển khoản đưa kỳ sang `PAID`. Dashboard/đối soát đọc dữ liệu finance, gọi hai API count nhẹ của identity/store nếu cần.
 
 ### 5.6 Gateway và health
 
-| Trạng thái | Method + URL | Req | Res |
-|---|---|---|---|
-| Đã có | `GET /api/health` | Không có body | `200 {status:"UP",services:{"identity-service":{database:"UP"},...}}` nếu cả 5 DB lên; `503` và từng service `DOWN` khi lỗi |
-| Đã có ở 5 service | `GET /internal/health/db` | Nội bộ | Kiểm tra kết nối DB của service đó |
+| Trạng thái | Method + URL | Req | Res | Event / Outbox |
+|---|---|---|---|---|
+| Đã có | `GET /api/health` | Không có body | `200 {status:"UP",services:{"identity-service":{database:"UP"},...}}` nếu cả 5 DB lên; `503` và từng service `DOWN` khi lỗi | Không |
+| Đã có ở 5 service | `GET /internal/health/db` | Nội bộ | Kiểm tra kết nối DB của service đó | Không |
 
 Gateway hiện đã định tuyến các API identity; route đến store/catalog/order/finance phải chuyển khi API mới và frontend tương ứng hoàn tất. Gateway không có DB nghiệp vụ.
 
