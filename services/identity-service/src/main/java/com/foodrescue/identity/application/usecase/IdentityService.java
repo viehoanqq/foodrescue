@@ -10,7 +10,9 @@ import com.foodrescue.identity.application.port.out.TokenPort;
 import com.foodrescue.identity.application.port.out.UnitOfWork;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Map;
 
@@ -90,6 +92,28 @@ public class IdentityService {
         return new StaffResult(saved, temporaryPassword);
     }
 
+    public UserAccount setStaffLocked(Long actorId, Long storeId, Long staffId, boolean locked) {
+        return unitOfWork.execute(() -> setStaffLockedTransaction(actorId, storeId, staffId, locked));
+    }
+
+    private UserAccount setStaffLockedTransaction(Long actorId, Long storeId, Long staffId, boolean locked) {
+        UserAccount actor = find(actorId);
+        if (!"STORE_OWNER".equals(actor.role()) || !"ACTIVE".equals(actor.status())) {
+            throw new IdentityException(403, "FORBIDDEN", "Chỉ chủ cửa hàng đang hoạt động được quản lý nhân viên");
+        }
+        UserAccount staff = find(staffId);
+        if (!"STORE_STAFF".equals(staff.role()) || !storeId.equals(staff.storeId())) {
+            throw new IdentityException(404, "STAFF_NOT_FOUND", "Không tìm thấy nhân viên của cửa hàng");
+        }
+        String nextStatus = locked ? "LOCKED" : "ACTIVE";
+        if (nextStatus.equals(staff.status())) return staff;
+        UserAccount saved = users.save(copy(staff, staff.passwordHash(), staff.fullName(), staff.phone(),
+                nextStatus, staff.mustChangePassword(), staff.tokenVersion() + 1));
+        audit.record(actorId, locked ? "STORE_STAFF_LOCKED" : "STORE_STAFF_UNLOCKED", "USER", staffId,
+                "storeId=" + storeId);
+        return saved;
+    }
+
     public UserAccount updateProfile(Long id, String fullName, String phone) {
         return unitOfWork.execute(() -> updateProfileTransaction(id, fullName, phone));
     }
@@ -156,11 +180,40 @@ public class IdentityService {
         return new ResetResult(targetId, temporary, true);
     }
 
-    public PageResult<Map<String, Object>> auditLogs(int page, int size) {
+    public PageResult<Map<String, Object>> auditLogs(Long actorId, String action, String entityType,
+            Long entityId, String from, String to, int page, int size) {
         if (page < 0 || size < 1 || size > 100) {
             throw new IdentityException(400, "VALIDATION_ERROR", "page hoặc size không hợp lệ");
         }
-        return audit.search(page, size);
+        if (actorId != null && actorId <= 0 || entityId != null && entityId <= 0) {
+            throw new IdentityException(400, "VALIDATION_ERROR", "actorId hoặc entityId không hợp lệ");
+        }
+        String normalizedAction = normalizeAuditFilter(action, 40);
+        String normalizedEntityType = normalizeAuditFilter(entityType, 20);
+        LocalDateTime fromTime = parseAuditTime(from);
+        LocalDateTime toTime = parseAuditTime(to);
+        if (fromTime != null && toTime != null && fromTime.isAfter(toTime)) {
+            throw new IdentityException(400, "VALIDATION_ERROR", "from phải trước hoặc bằng to");
+        }
+        return audit.search(actorId, normalizedAction, normalizedEntityType, entityId, fromTime, toTime, page, size);
+    }
+
+    private String normalizeAuditFilter(String value, int maxLength) {
+        if (value == null || value.isBlank()) return null;
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        if (normalized.length() > maxLength) {
+            throw new IdentityException(400, "VALIDATION_ERROR", "Bộ lọc audit quá dài");
+        }
+        return normalized;
+    }
+
+    private LocalDateTime parseAuditTime(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDateTime.ofInstant(OffsetDateTime.parse(value).toInstant(), ZoneId.of("Asia/Ho_Chi_Minh"));
+        } catch (DateTimeParseException ex) {
+            throw new IdentityException(400, "VALIDATION_ERROR", "from/to phải là thời gian ISO-8601 có múi giờ");
+        }
     }
 
     private UserAccount copy(UserAccount old, String passwordHash, String fullName, String phone,

@@ -2,6 +2,7 @@ package com.foodrescue.identity.api;
 
 import com.foodrescue.buildingblocks.http.InternalKeyVerifier;
 import com.foodrescue.identity.application.usecase.IdentityService;
+import com.foodrescue.identity.domain.model.UserAccount;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -54,6 +55,20 @@ public class InternalUserController {
                 user.storeId(), user.status(), user.mustChangePassword(), result.temporaryPassword());
     }
 
+    @PostMapping("/internal/staff/{id}/lock")
+    public StaffStatusResponse lockStaff(@RequestHeader("X-Internal-Key") String key,
+            @PathVariable Long id, @Valid @RequestBody StaffStatusRequest request) {
+        verifier.verify(key);
+        return StaffStatusResponse.from(service.setStaffLocked(request.actorId(), request.storeId(), id, true));
+    }
+
+    @PostMapping("/internal/staff/{id}/unlock")
+    public StaffStatusResponse unlockStaff(@RequestHeader("X-Internal-Key") String key,
+            @PathVariable Long id, @Valid @RequestBody StaffStatusRequest request) {
+        verifier.verify(key);
+        return StaffStatusResponse.from(service.setStaffLocked(request.actorId(), request.storeId(), id, false));
+    }
+
     public record UserStatus(Long userId, String status, String role, String fullName, Long storeId,
                              long tokenVersion, boolean mustChangePassword) {}
     public record CreateStaffRequest(@NotNull @Positive Long actorId, @NotNull @Positive Long storeId,
@@ -63,4 +78,10 @@ public class InternalUserController {
     public record StaffResponse(Long userId, String email, String fullName, String phone, String role,
                                 Long storeId, String status, boolean mustChangePassword,
                                 String temporaryPassword) {}
+    public record StaffStatusRequest(@NotNull @Positive Long actorId, @NotNull @Positive Long storeId) {}
+    public record StaffStatusResponse(Long userId, Long storeId, String status, long tokenVersion) {
+        public static StaffStatusResponse from(UserAccount user) {
+            return new StaffStatusResponse(user.id(), user.storeId(), user.status(), user.tokenVersion());
+        }
+    }
 }

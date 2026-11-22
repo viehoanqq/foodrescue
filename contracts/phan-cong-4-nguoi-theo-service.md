@@ -16,14 +16,14 @@
 
 **DB sở hữu:** MySQL `identity_db`: `users`, `audit_logs`, `outbox_events`, `inbox_events`. `users.store_id` dành cho nhân viên; chủ cửa hàng liên kết qua `stores.owner_id` của Store. Không tạo user mới khi khách gửi hồ sơ mở cửa hàng.
 
-**Đã có:** đăng ký/đăng nhập JWT, `/api/me`, đổi mật khẩu, admin user lock/unlock/reset, danh sách audit; `GET /internal/users/{id}/status`, `GET /internal/users/count`, `POST /internal/staff`; audit thao tác identity ghi cùng transaction; listener `audit.action.v1` với Inbox và DLQ. Seed admin/owner local. Cần giữ nguyên hành vi này khi thêm event.
+**Đã có:** đăng ký/đăng nhập JWT, `/api/me`, đổi mật khẩu, admin user lock/unlock/reset, danh sách audit có lọc; `GET /internal/users/{id}/status`, `GET /internal/users/count`, `POST /internal/staff`, `POST /internal/staff/{id}/lock` và `/unlock`; audit thao tác identity ghi cùng transaction; listener `audit.action.v1` với Inbox và DLQ. Seed admin/owner local. Cần giữ nguyên hành vi này khi thêm event.
 
-**API phải làm/hoàn thiện:**
+**API Identity đã có; việc nối Store/FE còn lại:**
 
 | API | Việc cần làm |
 |---|---|
-| Lệnh khóa/mở staff nội bộ | Chỉ Store gọi sau khi kiểm tra quyền chủ với cửa hàng tương ứng; identity cập nhật status/tokenVersion |
-| `GET /api/admin/audit-logs` | Bổ sung lọc theo actor, action, entity, thời gian và phân trang nếu FE cần |
+| `POST /internal/staff/{id}/lock`, `/unlock` | Đã có ở Identity; Store cần nối sau khi kiểm tra quyền chủ với cửa hàng tương ứng |
+| `GET /api/admin/audit-logs` | Đã có lọc actor/action/entity/thời gian và phân trang; FE admin có thể nối bộ lọc |
 
 **Consumer phải làm:** `identity.store-status` bind `store.status-changed.v1` từ Store. Khi `APPROVED`, kiểm tra `ownerId` tồn tại và hợp lệ, đổi **user hiện có** sang `STORE_OWNER`, tăng `token_version`, ghi Inbox; user đăng nhập lại để nhận role mới. `REJECTED` không cấp quyền. Cần chốt chính sách LOCKED/UNLOCKED của store trước khi tự đổi quyền user. `identity.audit-events` nhận `audit.action.v1` từ bốn service đã có; bổ sung kiểm tra envelope/schema, retry hữu hạn và quan sát DLQ theo mẫu chung.
 

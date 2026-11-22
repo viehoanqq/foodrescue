@@ -4,15 +4,12 @@ import com.foodrescue.identity.application.usecase.IdentityService;
 import com.foodrescue.identity.domain.model.PageResult;
 import com.foodrescue.identity.infrastructure.security.IdentityPrincipal;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -49,8 +46,14 @@ public class AdminUserController {
     }
 
     @GetMapping("/api/admin/audit-logs")
-    public PageResult<Map<String, Object>> logs(@RequestParam(defaultValue = "0") int page,
-                                                  @RequestParam(defaultValue = "20") int size) {
-        return service.auditLogs(page, size);
+    public PageResult<Map<String, Object>> logs(@RequestParam(required = false) Long actorId,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) Long entityId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return service.auditLogs(actorId, action, entityType, entityId, from, to, page, size);
     }
 }

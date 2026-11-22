@@ -23,7 +23,7 @@ public class IdentitySecurity {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/internal/health/db", "/actuator/health", "/internal/users/**", "/internal/staff").permitAll()
+                        .requestMatchers("/internal/health/db", "/actuator/health", "/internal/users/**", "/internal/staff", "/internal/staff/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me", "/api/me/**").authenticated()
                         .anyRequest().denyAll())
