@@ -1,5 +1,6 @@
 package com.foodrescue.finance.infrastructure.messaging.outbox;
 
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ public class OutboxPublisher {
             String routingKey = (String) row.get("type");
             String payload = (String) row.get("payload");
             rabbit.invoke(ops -> {
-                ops.convertAndSend("foodrescue.events", routingKey, payload,
+                ops.convertAndSend(MessagingNames.EVENTS_EXCHANGE, routingKey, payload,
                     message -> { message.getMessageProperties().setMessageId(id); return message; });
                 ops.waitForConfirmsOrDie(5000);
                 return null;

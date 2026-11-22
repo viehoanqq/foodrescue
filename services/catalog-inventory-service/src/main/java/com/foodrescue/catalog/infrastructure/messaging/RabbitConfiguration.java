@@ -1,5 +1,6 @@
 package com.foodrescue.catalog.infrastructure.messaging;
 
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.Binding;
@@ -11,15 +12,15 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitConfiguration {
     @Bean
     public TopicExchange foodrescueEvents() {
-        return new TopicExchange("foodrescue.events", true, false);
+        return new TopicExchange(MessagingNames.EVENTS_EXCHANGE, true, false);
     }
 
     // Temporary durable catch-all until business consumers are migrated.
     @Bean
-    public Queue migrationEvents() { return new Queue("foodrescue.migration-events", true); }
+    public Queue migrationEvents() { return new Queue(MessagingNames.MIGRATION_QUEUE, true); }
 
     @Bean
     public Binding migrationBinding(Queue migrationEvents, TopicExchange foodrescueEvents) {
-        return BindingBuilder.bind(migrationEvents).to(foodrescueEvents).with("#");
+        return BindingBuilder.bind(migrationEvents).to(foodrescueEvents).with(MessagingNames.ALL_EVENTS_ROUTING_KEY);
     }
 }

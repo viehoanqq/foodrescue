@@ -1,5 +1,6 @@
 package com.foodrescue.identity.infrastructure.messaging;
 
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -23,12 +24,12 @@ public class AuditEventListener {
         this.json = json;
     }
 
-    @RabbitListener(queues = "identity.audit-events")
+    @RabbitListener(queues = MessagingNames.IDENTITY_AUDIT_QUEUE)
     @Transactional
     public void receive(String message) throws Exception {
         JsonNode event = json.readTree(message);
         UUID eventId = UUID.fromString(requiredText(event, "eventId"));
-        if (!"audit.action.v1".equals(requiredText(event, "eventType"))) {
+        if (!MessagingNames.AUDIT_ACTION_EVENT.equals(requiredText(event, "eventType"))) {
             throw new IllegalArgumentException("Unsupported audit event type");
         }
         JsonNode payload = event.path("payload");
@@ -43,7 +44,7 @@ public class AuditEventListener {
         String detail = payload.path("detail").isTextual() ? payload.path("detail").textValue() : null;
         if (detail != null && detail.length() > 500) throw new IllegalArgumentException("Audit detail too long");
         int inserted = jdbc.update("INSERT IGNORE INTO inbox_events(consumer_name,event_id,processed_at) VALUES (?,?,?)",
-                "identity.audit", eventId.toString(), Timestamp.valueOf(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))));
+                MessagingNames.IDENTITY_AUDIT_CONSUMER, eventId.toString(), Timestamp.valueOf(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))));
         if (inserted == 0) return;
         jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,amount,detail,created_at) " +
                         "VALUES (?,?,?,?,?,?,?)", actorId, action, entityType, entityId, amount, detail,
