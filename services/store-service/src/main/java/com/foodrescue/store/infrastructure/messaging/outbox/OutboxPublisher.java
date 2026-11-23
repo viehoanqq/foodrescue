@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -33,16 +34,19 @@ public class OutboxPublisher {
         if (batch == null) return;
         for (PendingEvent event : batch) {
             try {
+                CorrelationData correlation = new CorrelationData(event.eventId());
                 rabbit.invoke(ops -> {
                     ops.convertAndSend(MessagingNames.EVENTS_EXCHANGE, event.eventType(), event.payload(), message -> {
                         message.getMessageProperties().setMessageId(event.eventId());
                         message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
                         message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
                         return message;
-                    });
+                    }, correlation);
                     ops.waitForConfirmsOrDie(5000);
                     return null;
                 });
+                if (correlation.getReturned() != null)
+                    throw new IllegalStateException("RabbitMQ returned unroutable event " + event.eventId());
                 jdbc.update("UPDATE outbox_events SET published_at=CURRENT_TIMESTAMP(6), " +
                                 "claim_token=NULL, claim_until=NULL, next_attempt_at=NULL, last_error=NULL " +
                                 "WHERE event_id=? AND claim_token=? AND published_at IS NULL",

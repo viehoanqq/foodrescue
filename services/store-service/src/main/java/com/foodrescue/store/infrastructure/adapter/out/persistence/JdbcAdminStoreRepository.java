@@ -86,8 +86,10 @@ public class JdbcAdminStoreRepository implements IAdminStoreRepository {
                 version, correlationId, null, actorId, Map.of("storeId", id, "ownerId", ownerId,
                         "status", nextStatus, "commissionRate", rate, "version", version,
                         "changedAt", Instant.now().toString())));
+        String action = "LOCKED".equals(expectedStatus) && "APPROVED".equals(nextStatus)
+                ? "STORE_UNLOCKED" : "STORE_" + nextStatus;
         outbox.append(EventEnvelope.create(MessagingNames.AUDIT_ACTION_EVENT, "Store", id.toString(),
-                version, correlationId, null, actorId, Map.of("action", "STORE_" + nextStatus,
+                version, correlationId, null, actorId, Map.of("action", action,
                         "entityType", "STORE", "entityId", id, "detail",
                         rejectReason == null ? "status=" + nextStatus : rejectReason)));
         return findForAdminById(id).orElseThrow();

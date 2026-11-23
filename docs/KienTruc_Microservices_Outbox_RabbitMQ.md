@@ -99,13 +99,13 @@ Mỗi service nghiệp vụ là **một Maven project và một Spring Boot JAR*
 
 | DB | Engine/container | Bảng chính | Dữ liệu chỉ service đó được ghi |
 |---|---|---|---|
-| `identity_db` | MySQL 8.4, host `localhost:3307` | `users`, `audit_logs`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Email/BCrypt hash, role, `token_version`, audit |
+| `identity_db` | MySQL 8.4, host `localhost:3307` | `users`, `audit_logs`, `store_status_projection`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Email/BCrypt hash, role, `token_version`, audit, trạng thái store đã nhận qua RabbitMQ |
 | `store_db` | MySQL 8.4, host `localhost:3307` | `stores`, `reviews`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Hồ sơ, trạng thái duyệt, hoa hồng, tài khoản nhận tiền, đánh giá |
 | `catalog_db` | PostgreSQL 17, host `localhost:5433` | `categories`, `rescue_batches`, `stock_movements`, `stock_reservations`, `stock_reservation_items`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Giá/túi hiện hành, số còn lại, sổ kho, reservation |
 | `order_db` | PostgreSQL 17, host `localhost:5433` | `cart_items`, `orders`, `order_items`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Giỏ, trạng thái đơn, giá đã chụp, mã nhận hàng |
 | `finance_db` | PostgreSQL 17, host `localhost:5433` | `payments`, `refunds`, `payouts`, `payout_items`, `order_snapshots`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Giao dịch, hoàn tiền, kỳ chi trả, bản sao đơn cho đối soát |
 
-Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sql`; bốn service còn lại có `V1__baseline.sql`. Mỗi thay đổi DB sau đó tạo file `V3__...` hoặc `V2__...` trong service sở hữu. Không sửa lại migration đã áp dụng. `stock_movements` và `audit_logs` là sổ chỉ thêm; không UPDATE/DELETE lịch sử. `stores.owner_id` và `reviews.order_id` unique. `refunds.order_id` unique; `payout_items` chặn một đơn nằm trong hai kỳ còn hiệu lực.
+Migration identity hiện có `V1__baseline.sql`, `V2__user_token_version.sql` và `V3__store_status_projection.sql`. Mỗi thay đổi DB sau đó tạo migration mới trong service sở hữu; không sửa lại migration đã áp dụng. `stock_movements` và `audit_logs` là sổ chỉ thêm; không UPDATE/DELETE lịch sử. `stores.owner_id` và `reviews.order_id` unique. `refunds.order_id` unique; `payout_items` chặn một đơn nằm trong hai kỳ còn hiệu lực.
 
 `users.store_id` hiện dùng cho nhân viên (`STORE_STAFF`); chủ cửa hàng được liên kết bằng `stores.owner_id`. Khi admin duyệt hồ sơ, identity đổi role của user hiện có sang `STORE_OWNER`, tăng `token_version`, và user đăng nhập lại để nhận quyền mới. Không tạo tài khoản thứ hai khi đăng ký cửa hàng.
 
@@ -113,8 +113,8 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 
 | Thành phần | Đã triển khai | Chưa hoàn thành |
 |---|---|---|
-| Identity | Đăng ký/đăng nhập, JWT, `/api/me`, đổi mật khẩu, khóa/mở khóa, reset tạm, danh sách user/audit; ghi audit cùng transaction; Inbox consumer `audit.action.v1` | Cấp role chủ sau duyệt, tài khoản nhân viên, filter audit theo nhiều trường, producer Outbox identity |
-| Store | DB schema/JPA entity, Outbox publisher | Đăng ký/duyệt/hồ sơ/staff/review, consumer status, API công khai |
+| Identity | Đăng ký/đăng nhập, JWT, `/api/me`, đổi mật khẩu, khóa/mở khóa, reset tạm, danh sách user/audit; consumer `audit.action.v1` và `store.status-changed.v1` | Filter audit theo nhiều trường, producer Outbox identity |
+| Store | Đăng ký/duyệt/hồ sơ/staff/review, API công khai, Outbox publisher status và audit | API nội bộ policy/tài khoản chi trả/count |
 | Catalog | API nội bộ giữ/trả reservation nhiều túi, khóa row/trừ kho atomic, sổ kho, producer `stock.reserved.v1` và `stock.released.v1` | Category/batch API, kiểm tra cửa hàng APPROVED trước giữ kho, OSRM, consumer store status |
 | Order | `IInventoryPort` và HTTP adapter gọi catalog; endpoint nội bộ để thử giữ/trả kho | Giỏ, đơn thật, mã nhận, saga, các consumer/producer nghiệp vụ |
 | Finance | DB schema/JPA entity, Outbox publisher | VNPay, refunds, payout, snapshot, dashboard, consumer/producer nghiệp vụ |
@@ -185,6 +185,8 @@ Trong `store-service`, API được chia theo nhóm: `StoreController` (đăng k
 | `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key` | `{approved,locked,pending}` | Không |
 
 **Luồng store:** khách đang đăng nhập bấm “Tạo cửa hàng”; store lấy `ownerId` từ token và ghi hồ sơ `PENDING`. Admin đọc hồ sơ tại store, duyệt/từ chối. Khi APPROVED, store ghi `store.status-changed.v1` vào Outbox. Identity nhận để cấp vai trò `STORE_OWNER` cho user hiện có và tăng `tokenVersion`; Catalog/Order gọi Store HTTP để kiểm tra chính sách bán trong V1. Khóa store phải chặn đơn mới nhưng không tự xóa đơn đã thanh toán. Đăng ký/duyệt không tạo user mới.
+
+Approve, reject, lock và unlock đều cập nhật `stores.status` cùng hai Outbox event trong một transaction: `store.status-changed.v1` và `audit.action.v1`. Store publisher gửi vào topic exchange `foodrescue.events` theo `eventType`; Identity bind `identity.store-status` và `identity.audit-events` theo hai routing key tương ứng. Identity ghi Inbox và `store_status_projection` theo `aggregateVersion` để bỏ qua event cũ; `REJECTED` không cấp role, `APPROVED` cấp `STORE_OWNER` cho user hiện có với `users.store_id = NULL` theo ràng buộc DB, `LOCKED` tăng token version của owner/staff để vô hiệu phiên hiện tại. Audit khi mở khóa có action `STORE_UNLOCKED`.
 
 ### 5.3 Catalog/Inventory API
 
