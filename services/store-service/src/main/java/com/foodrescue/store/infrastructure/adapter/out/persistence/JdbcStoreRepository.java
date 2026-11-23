@@ -3,6 +3,9 @@ package com.foodrescue.store.infrastructure.adapter.out.persistence;
 import com.foodrescue.store.application.port.out.IStoreRepository;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreRegistration;
+import com.foodrescue.store.domain.model.StoreView;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import org.springframework.dao.DuplicateKeyException;
@@ -22,6 +25,59 @@ public class JdbcStoreRepository implements IStoreRepository {
         return jdbc.query("SELECT id,owner_id,status FROM stores WHERE owner_id=?", (rs, row) ->
                 new OwnedStore(rs.getLong("id"), rs.getLong("owner_id"), rs.getString("status")), ownerId)
                 .stream().findFirst();
+    }
+
+    @Override
+    public Optional<StoreView.Registration> findRegistration(Long ownerId) {
+        return jdbc.query("SELECT id,status,reject_reason,created_at FROM stores WHERE owner_id=?",
+                (rs, row) -> new StoreView.Registration(rs.getLong("id"), rs.getString("status"),
+                        rs.getString("reject_reason"), rs.getTimestamp("created_at").toLocalDateTime()), ownerId)
+                .stream().findFirst();
+    }
+
+    private static final String RATINGS = " LEFT JOIN (SELECT store_id,ROUND(AVG(rating),2) rating," +
+            "COUNT(*) review_count FROM reviews GROUP BY store_id) r ON r.store_id=s.id ";
+
+    @Override
+    public Optional<StoreView.Detail> findApprovedById(Long storeId) {
+        String sql = "SELECT s.id,s.name,s.description,s.phone,s.address,s.image_url,s.latitude," +
+                "s.longitude,s.open_time,s.close_time,COALESCE(r.rating,0) rating," +
+                "COALESCE(r.review_count,0) review_count FROM stores s" + RATINGS +
+                "WHERE s.status='APPROVED' AND s.id=?";
+        return jdbc.query(sql, (rs, row) -> new StoreView.Detail(rs.getLong("id"), rs.getString("name"),
+                rs.getString("description"), rs.getString("phone"), rs.getString("address"),
+                rs.getString("image_url"), rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"),
+                rs.getBigDecimal("rating"), rs.getLong("review_count"),
+                rs.getTime("open_time").toLocalTime(), rs.getTime("close_time").toLocalTime()), storeId)
+                .stream().findFirst();
+    }
+
+    @Override
+    public StoreView.Page findApproved(BigDecimal latitude, BigDecimal longitude, BigDecimal radiusKm,
+                                       int page, int size) {
+        boolean hasLocation = latitude != null;
+        String distance = "ST_Distance_Sphere(POINT(s.longitude,s.latitude),POINT(?,?))/1000";
+        String filter = "s.status='APPROVED'" +
+                (radiusKm == null ? "" : " AND " + distance + " <= ?");
+        var countArgs = new ArrayList<Object>();
+        if (radiusKm != null) { countArgs.add(longitude); countArgs.add(latitude); countArgs.add(radiusKm); }
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM stores s WHERE " + filter,
+                Long.class, countArgs.toArray());
+        String sql = "SELECT s.id,s.name,s.address,s.image_url,s.latitude,s.longitude," +
+                "COALESCE(r.rating,0) rating,COALESCE(r.review_count,0) review_count," +
+                (hasLocation ? distance : "NULL") + " distance_km FROM stores s" + RATINGS +
+                "WHERE " + filter + (hasLocation ? " ORDER BY distance_km,s.id" : " ORDER BY s.id DESC") +
+                " LIMIT ? OFFSET ?";
+        var args = new ArrayList<Object>();
+        if (hasLocation) { args.add(longitude); args.add(latitude); }
+        args.addAll(countArgs);
+        args.add(size); args.add((long) page * size);
+        var content = jdbc.query(sql, (rs, row) -> new StoreView.Summary(rs.getLong("id"),
+                rs.getString("name"), rs.getString("address"), rs.getString("image_url"),
+                rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"), rs.getBigDecimal("rating"),
+                rs.getLong("review_count"), hasLocation ? rs.getDouble("distance_km") : null), args.toArray());
+        long elements = total == null ? 0 : total;
+        return new StoreView.Page(content, page, size, elements, (elements + size - 1) / size);
     }
 
     @Override
