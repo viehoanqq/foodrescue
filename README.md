@@ -35,6 +35,8 @@ powershell -ExecutionPolicy Bypass -File scripts/restart-services.ps1
 
 Chỉnh các mật khẩu và secret trong `.env` theo máy local. Script bật MySQL, PostgreSQL, RabbitMQ bằng Docker, build các service và mở terminal riêng cho từng service, API Gateway và frontend. Chạy lại cùng lệnh để khởi động lại. Nếu Docker volume đã được tạo trước đó, mật khẩu DB/RabbitMQ trong `.env` phải khớp với tài khoản trong volume.
 
+`FINANCE_STORE_API_KEY` là khóa riêng để Finance đọc tài khoản nhận tiền từ Store; đặt khác `INTERNAL_API_KEY`. Các API `/internal/stores/**` không được định tuyến qua Gateway.
+
 | Địa chỉ | Nội dung |
 |---|---|
 | `http://localhost:5173` | Giao diện web |

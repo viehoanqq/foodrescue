@@ -107,6 +107,8 @@ Mỗi service nghiệp vụ là **một Maven project và một Spring Boot JAR*
 
 Migration identity hiện có `V1__baseline.sql`, `V2__user_token_version.sql` và `V3__store_status_projection.sql`. Mỗi thay đổi DB sau đó tạo migration mới trong service sở hữu; không sửa lại migration đã áp dụng. `stock_movements` và `audit_logs` là sổ chỉ thêm; không UPDATE/DELETE lịch sử. `stores.owner_id` và `reviews.order_id` unique. `refunds.order_id` unique; `payout_items` chặn một đơn nằm trong hai kỳ còn hiệu lực.
 
+Store có `V4__store_updated_at.sql` thêm `stores.updated_at`, tự cập nhật khi hồ sơ, trạng thái hoặc hoa hồng thay đổi. Ba API `/internal/stores/**` do controller/use case/repository riêng phụ trách; endpoint tài khoản chi trả dùng `FINANCE_STORE_API_KEY` khác khóa nội bộ dùng chung.
+
 Catalog có `V2__store_owned_categories.sql`: `categories.store_id` bắt buộc; mỗi danh mục có `name`, `description`, `image_url`, `sort_order`, và tên chỉ cần duy nhất trong mỗi cửa hàng (`UNIQUE(store_id,name)`). Khóa ngoại ghép `rescue_batches(category_id,store_id)` bảo đảm túi chỉ dùng danh mục của chính cửa hàng. Migration tách danh mục cũ từng được nhiều cửa hàng sử dụng; danh mục cũ chưa có túi được giữ trong `legacy_unassigned_categories` để xử lý thủ công. Giao diện danh mục hiện dùng dữ liệu mẫu; API backend danh mục chưa được đổi theo hợp đồng mới.
 
 `users.store_id` hiện dùng cho nhân viên (`STORE_STAFF`); chủ cửa hàng được liên kết bằng `stores.owner_id`. Khi admin duyệt hồ sơ, identity đổi role của user hiện có sang `STORE_OWNER`, tăng `token_version`, và user đăng nhập lại để nhận quyền mới. Không tạo tài khoản thứ hai khi đăng ký cửa hàng.
@@ -183,9 +185,9 @@ Trong `store-service`, API được chia theo nhóm: `StoreController` (đăng k
 | `POST /api/admin/stores/{id}/lock` hoặc `/unlock` | ADMIN | Path `id`, `{reason}` khi khóa | `{id,status,...}` | Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
 | `PUT /api/admin/stores/{id}/commission` | ADMIN | `{commissionRate}` | `{id,commissionRate,...}` | Outbox `audit.action.v1` → `identity.audit-events` |
 | `PUT /api/admin/stores/{id}` | ADMIN | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountName,bankAccountNo?}`; bỏ trống số tài khoản để giữ nguyên | Hồ sơ cửa hàng đã cập nhật, số tài khoản vẫn được che | Outbox `audit.action.v1` → `identity.audit-events` (`STORE_PROFILE_UPDATED_BY_ADMIN`) |
-| `GET /internal/stores/{id}/checkout-policy` | Order/Catalog | `X-Internal-Key` | `{storeId,status,commissionRate,version,updatedAt}` | Không |
-| `GET /internal/stores/{id}/payout-account` | Finance | `X-Internal-Key` | Tài khoản nhận tiền của cửa hàng; chỉ service tài chính gọi | Không |
-| `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key` | `{approved,locked,pending}` | Không |
+| `GET /internal/stores/{id}/checkout-policy` | Order/Catalog | `X-Internal-Key: INTERNAL_API_KEY` | `{storeId,status,commissionRate,version,updatedAt}`; Order/Catalog chỉ tiếp tục khi `APPROVED` | Không |
+| `GET /internal/stores/{id}/payout-account` | Finance | `X-Internal-Key: FINANCE_STORE_API_KEY` | `{storeId,status,bankName,bankAccountNo,bankAccountName,updatedAt}`; số tài khoản đầy đủ, `Cache-Control: no-store` | Không |
+| `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key: INTERNAL_API_KEY` | `{approved,locked,pending}`; không tính `REJECTED` | Không |
 
 **Luồng store:** khách đang đăng nhập bấm “Tạo cửa hàng”; store lấy `ownerId` từ token và ghi hồ sơ `PENDING`. Admin đọc hồ sơ tại store, duyệt/từ chối. Khi APPROVED, store ghi `store.status-changed.v1` vào Outbox. Identity nhận để cấp vai trò `STORE_OWNER` cho user hiện có và tăng `tokenVersion`; Catalog/Order gọi Store HTTP để kiểm tra chính sách bán trong V1. Khóa store phải chặn đơn mới nhưng không tự xóa đơn đã thanh toán. Đăng ký/duyệt không tạo user mới.
 
