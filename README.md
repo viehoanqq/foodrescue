@@ -18,7 +18,7 @@ Hệ thống có **5 service nghiệp vụ**, mỗi service sở hữu một dat
 |---|---|---|
 | `identity-service` | MySQL `identity_db` | Tài khoản, đăng nhập, phân quyền, nhật ký thao tác |
 | `store-service` | MySQL `store_db` | Cửa hàng, nhân viên, đánh giá |
-| `catalog-inventory-service` | PostgreSQL `catalog_db` | Danh mục, túi giải cứu, tồn kho |
+| `catalog-inventory-service` | PostgreSQL `catalog_db` | Danh mục theo cửa hàng, túi giải cứu, tồn kho |
 | `order-service` | PostgreSQL `order_db` | Giỏ hàng, đơn hàng, mã nhận hàng |
 | `payment-finance-service` | PostgreSQL `finance_db` | Thanh toán, hoàn tiền, chi trả, thống kê |
 
@@ -111,4 +111,4 @@ foodrescue/
 └── .env.example
 ```
 
-Chi tiết: [kiến trúc hệ thống](docs/KienTruc_Microservices_Outbox_RabbitMQ.md), [quy định chung v1](contracts/quyet-dinh-tich-hop-v1.md), [phân công và các bước thực hiện](contracts/phan-cong-4-nguoi-theo-service.md), [hướng dẫn Docker](docs/Docker.md).
+Chi tiết: [kiến trúc hệ thống](https://github.com/viehoanqq/foodrescue/blob/main/docs/KienTruc_Microservices_Outbox_RabbitMQ.md)

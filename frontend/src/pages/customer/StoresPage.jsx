@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Empty, InputNumber, Pagination, Row, Spin, Tag } from 'antd';
-import { ArrowLeftOutlined, EnvironmentOutlined, ShopOutlined, StarFilled } from '@ant-design/icons';
+import { ArrowLeftOutlined, ClockCircleOutlined, EnvironmentOutlined, PhoneOutlined, ShopOutlined, StarFilled } from '@ant-design/icons';
 import { Link, useParams } from 'react-router-dom';
 import { storeApi } from '../../services/storeApi';
 import StoreReviews from '../store/StoreReviews';
+import { useDemo } from '../../demo/useDemo';
+import { money } from '../../demo/data';
 import '../store/storePages.css';
 
 export default function StoresPage() {
@@ -40,19 +42,47 @@ export default function StoresPage() {
 
 export function StoreDetailPage() {
   const { id } = useParams();
+  const demo = useDemo();
   const [store, setStore] = useState(null);
   const [error, setError] = useState('');
+  const [categoryId, setCategoryId] = useState(null);
+  const storeId = Number(id);
+  const categories = demo.categories.filter(category => category.storeId === storeId);
+  const batches = demo.batches.filter(batch => batch.storeId === storeId && batch.status === 'AVAILABLE' && batch.remaining > 0);
+  const visibleBatches = categoryId == null ? batches : batches.filter(batch => batch.categoryId === categoryId);
   useEffect(() => {
     let active = true;
-    setStore(null); setError('');
+    setStore(null); setError(''); setCategoryId(null);
     storeApi.store(id).then((result) => { if (active) setStore(result); })
       .catch((failure) => { if (active) setError(failure.status === 404 ? 'Không tìm thấy cửa hàng đã được duyệt' : failure.message); });
     return () => { active = false; };
   }, [id]);
-  return <main className="store-page"><Link to="/stores"><ArrowLeftOutlined /> Tất cả cửa hàng</Link>{error ? <Alert style={{ marginTop: 20 }} type="error" showIcon message={error} /> : !store ? <div className="store-center"><Spin size="large" /></div> : <Card className="store-card store-detail-card">
-    {store.imageUrl && <img className="store-detail-image" src={store.imageUrl} alt={store.name} />}
-    <div className="store-page-heading"><span>CỬA HÀNG ĐỐI TÁC</span><h1>{store.name}</h1><p>{store.description || 'Cửa hàng đối tác FoodRescue'}</p></div>
-    <p><EnvironmentOutlined /> {store.address}</p><p>Giờ mở cửa: {store.openTime?.slice(0, 5)} – {store.closeTime?.slice(0, 5)}</p><p><StarFilled style={{ color: '#d97928' }} /> {store.rating ?? 0} ({store.reviewCount} đánh giá)</p><p>Số điện thoại: {store.phone}</p>
-  </Card>}{store && <StoreReviews storeId={store.id} allowCreate />}
+  return <main className="store-page store-detail-page"><Link className="store-back-link" to="/stores"><ArrowLeftOutlined /> Tất cả cửa hàng</Link>
+    {error ? <Alert style={{ marginTop: 20 }} type="error" showIcon message={error} /> : !store ? <div className="store-center"><Spin size="large" /></div> : <>
+      <section className="store-overview">
+        {store.imageUrl ? <img className="store-overview-image" src={store.imageUrl} alt={store.name} /> : <div className="store-overview-placeholder"><ShopOutlined /></div>}
+        <div className="store-overview-content"><span className="store-eyebrow">CỬA HÀNG ĐỐI TÁC</span><h1>{store.name}</h1>
+          <p className="store-overview-description">{store.description || 'Cửa hàng đối tác FoodRescue'}</p>
+          <div className="store-overview-meta"><span><EnvironmentOutlined /> {store.address}</span><span><ClockCircleOutlined /> {store.openTime?.slice(0, 5)} – {store.closeTime?.slice(0, 5)}</span>
+            <span><PhoneOutlined /> {store.phone}</span><span><StarFilled /> {store.rating ?? 0} · {store.reviewCount} đánh giá</span></div>
+        </div>
+      </section>
+      <section className="store-catalog-section"><div className="store-section-heading"><h2>Túi giải cứu của cửa hàng</h2><span>{batches.length} túi đang bán</span></div>
+        <div className="store-catalog-layout"><aside className="store-category-sidebar"><h3>Danh mục</h3>
+          <button className={categoryId == null ? 'active' : ''} onClick={() => setCategoryId(null)}>Tất cả <span>{batches.length}</span></button>
+          {categories.map(category => <button key={category.id} className={categoryId === category.id ? 'active' : ''} onClick={() => setCategoryId(category.id)}>
+            <img src={category.imageUrl || '/category-meal.svg'} alt="" /><span>{category.name}</span><small>{batches.filter(batch => batch.categoryId === category.id).length}</small>
+          </button>)}
+        </aside><div className="store-product-grid">{visibleBatches.length ? visibleBatches.map(batch => {
+          const category = categories.find(item => item.id === batch.categoryId);
+          return <Link className="store-product-card" to={`/batches/${batch.id}`} key={batch.id}>
+            <div className="store-product-image"><img src={category?.imageUrl || '/category-meal.svg'} alt={batch.title} /><span>{Math.round((1 - batch.rescuePrice / batch.originalPrice) * 100)}% giảm</span></div>
+            <div className="store-product-info"><small>{category?.name || 'Túi giải cứu'}</small><h3>{batch.title}</h3><p><ClockCircleOutlined /> Nhận {batch.pickup} · Còn {batch.remaining} túi</p>
+              <strong>{money(batch.rescuePrice)}</strong><del>{money(batch.originalPrice)}</del></div>
+          </Link>;
+        }) : <Empty description="Chưa có túi trong danh mục này" />}</div></div>
+      </section>
+      <StoreReviews storeId={store.id} allowCreate compact />
+    </>}
   </main>;
 }

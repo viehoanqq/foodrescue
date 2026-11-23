@@ -16,7 +16,7 @@ import StoreStaffPage from '../pages/store/StoreStaffPage';
 import OwnerReviewsPage from '../pages/store/OwnerReviewsPage';
 import { AnonymousRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from './RouteGuards';
 import { STORE_ROLES } from './paths';
-import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoCart, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue } from '../demo/DemoPages';
+import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoCart, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoStoreCategories } from '../demo/DemoPages';
 
 export default function AppRoutes() {
   return <Routes>
@@ -64,6 +64,7 @@ export default function AppRoutes() {
         <Route element={<RoleRoute roles={['STORE_OWNER']} />}>
           <Route path="/store/profile" element={<StoreProfilePage />} />
           <Route path="/store/staff" element={<StoreStaffPage />} />
+          <Route path="/store/categories" element={<DemoStoreCategories />} />
           <Route path="/store/revenue" element={<DemoRevenue />} />
           <Route path="/store/reviews" element={<OwnerReviewsPage />} />
         </Route>
@@ -71,7 +72,8 @@ export default function AppRoutes() {
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/audit" element={<AdminAuditLogsPage />} />
           <Route path="/admin/stores" element={<AdminStoresPage />} />
-          {['dashboard', 'categories', 'orders', 'refunds', 'payouts', 'finance'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdmin section={section} />} />)}
+          <Route path="/admin/categories" element={<Navigate to="/admin/stores" replace />} />
+          {['dashboard', 'orders', 'refunds', 'payouts', 'finance'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdmin section={section} />} />)}
         </Route>
       </Route>
     </Route>

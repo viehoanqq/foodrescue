@@ -4,7 +4,7 @@
 
 ## 1. Bài toán và phạm vi
 
-FoodRescue cho khách hàng mua túi thực phẩm cuối ngày tại cửa hàng gần mình. Khách xem túi, thêm giỏ, đặt đơn, thanh toán VNPay và nhận bằng mã/QR. Cửa hàng đăng túi, quản lý kho, giao hàng và theo dõi doanh thu. Admin duyệt cửa hàng, quản lý tài khoản, danh mục, hoàn tiền, chi trả kỳ và đối soát. Tác vụ định kỳ xử lý đơn quá hạn, túi hết giờ và khách không đến lấy.
+FoodRescue cho khách hàng mua túi thực phẩm cuối ngày tại cửa hàng gần mình. Khách xem túi, thêm giỏ, đặt đơn, thanh toán VNPay và nhận bằng mã/QR. Cửa hàng quản lý danh mục riêng, đăng túi, quản lý kho, giao hàng và theo dõi doanh thu. Admin duyệt cửa hàng, quản lý tài khoản, hoàn tiền, chi trả kỳ và đối soát. Tác vụ định kỳ xử lý đơn quá hạn, túi hết giờ và khách không đến lấy.
 
 Năm miền nghiệp vụ có quyền ghi dữ liệu độc lập:
 
@@ -101,11 +101,13 @@ Mỗi service nghiệp vụ là **một Maven project và một Spring Boot JAR*
 |---|---|---|---|
 | `identity_db` | MySQL 8.4, host `localhost:3307` | `users`, `audit_logs`, `store_status_projection`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Email/BCrypt hash, role, `token_version`, audit, trạng thái store đã nhận qua RabbitMQ |
 | `store_db` | MySQL 8.4, host `localhost:3307` | `stores`, `reviews`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Hồ sơ, trạng thái duyệt, hoa hồng, tài khoản nhận tiền, đánh giá |
-| `catalog_db` | PostgreSQL 17, host `localhost:5433` | `categories`, `rescue_batches`, `stock_movements`, `stock_reservations`, `stock_reservation_items`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Giá/túi hiện hành, số còn lại, sổ kho, reservation |
+| `catalog_db` | PostgreSQL 17, host `localhost:5433` | `categories`, `legacy_unassigned_categories`, `rescue_batches`, `stock_movements`, `stock_reservations`, `stock_reservation_items`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Danh mục theo cửa hàng, giá/túi hiện hành, số còn lại, sổ kho, reservation |
 | `order_db` | PostgreSQL 17, host `localhost:5433` | `cart_items`, `orders`, `order_items`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Giỏ, trạng thái đơn, giá đã chụp, mã nhận hàng |
 | `finance_db` | PostgreSQL 17, host `localhost:5433` | `payments`, `refunds`, `payouts`, `payout_items`, `order_snapshots`, `outbox_events`, `inbox_events`, `flyway_schema_history` | Giao dịch, hoàn tiền, kỳ chi trả, bản sao đơn cho đối soát |
 
 Migration identity hiện có `V1__baseline.sql`, `V2__user_token_version.sql` và `V3__store_status_projection.sql`. Mỗi thay đổi DB sau đó tạo migration mới trong service sở hữu; không sửa lại migration đã áp dụng. `stock_movements` và `audit_logs` là sổ chỉ thêm; không UPDATE/DELETE lịch sử. `stores.owner_id` và `reviews.order_id` unique. `refunds.order_id` unique; `payout_items` chặn một đơn nằm trong hai kỳ còn hiệu lực.
+
+Catalog có `V2__store_owned_categories.sql`: `categories.store_id` bắt buộc; mỗi danh mục có `name`, `description`, `image_url`, `sort_order`, và tên chỉ cần duy nhất trong mỗi cửa hàng (`UNIQUE(store_id,name)`). Khóa ngoại ghép `rescue_batches(category_id,store_id)` bảo đảm túi chỉ dùng danh mục của chính cửa hàng. Migration tách danh mục cũ từng được nhiều cửa hàng sử dụng; danh mục cũ chưa có túi được giữ trong `legacy_unassigned_categories` để xử lý thủ công. Giao diện danh mục hiện dùng dữ liệu mẫu; API backend danh mục chưa được đổi theo hợp đồng mới.
 
 `users.store_id` hiện dùng cho nhân viên (`STORE_STAFF`); chủ cửa hàng được liên kết bằng `stores.owner_id`. Khi admin duyệt hồ sơ, identity đổi role của user hiện có sang `STORE_OWNER`, tăng `token_version`, và user đăng nhập lại để nhận quyền mới. Không tạo tài khoản thứ hai khi đăng ký cửa hàng.
 
@@ -193,13 +195,14 @@ Approve, reject, lock và unlock đều cập nhật `stores.status` cùng hai O
 
 | Trạng thái | Method + URL | Quyền | Req | Res | Event / Outbox |
 |---|---|---|---|---|---|
-| Dự kiến | `GET /api/categories` | Công khai | Không có body | `[{id,name,imageUrl,sortOrder}]` | Không |
-| Dự kiến | `POST /api/admin/categories` | ADMIN | `{name,imageUrl?,sortOrder}` | `{id,name,imageUrl,sortOrder}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
-| Dự kiến | `PUT /api/admin/categories/{id}` / `DELETE .../{id}` | ADMIN | Field cần sửa/path ID | Category mới / `204` nếu không còn batch tham chiếu | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `GET /api/categories?storeId` | Công khai | `storeId` để lọc theo cửa hàng | `[{id,storeId,name,description,imageUrl,sortOrder}]` | Không |
+| Dự kiến | `GET /api/store/categories` | STORE_OWNER/STORE_STAFF | Không có body; lấy cửa hàng từ context | Danh mục của cửa hàng hiện tại | Không |
+| Dự kiến | `POST /api/store/categories` | STORE_OWNER | `{name,description,image?,sortOrder}`; ảnh tải lên, `imageUrl` do server lưu | `{id,storeId,name,description,imageUrl,sortOrder}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `PUT /api/store/categories/{id}` / `DELETE .../{id}` | STORE_OWNER | Field cần sửa/path ID | Danh mục mới / `204` nếu không còn túi tham chiếu; phải thuộc cửa hàng của caller | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
 | Dự kiến | `GET /api/batches?categoryId&lat&lon&radiusKm&sort&page&size` | Công khai | Bộ lọc 1/3/5/10 km, gần/rẻ/sắp hết giờ | `{content:[batchSummary],page,size,totalElements,totalPages}`; chỉ túi đang bán của store APPROVED | Không |
 | Dự kiến | `GET /api/batches/{id}` | Công khai | Path ID | `{id,storeId,categoryId,title,description,imageUrl,originalPrice,rescuePrice,remainingQuantity,pickupStart,pickupEnd,status,distanceKm?,travelMinutes?}` | Không |
 | Dự kiến | `GET /api/store/batches?status&page&size` | OWNER/STAFF | Query | Danh sách túi của store trong token/context | Không |
-| Dự kiến | `POST /api/store/batches` | STORE_OWNER | `multipart data={categoryId,title,description,originalPrice,rescuePrice,quantity,pickupStart,pickupEnd},image?` | `201 batch`; đồng thời ghi sổ kho `LISTED` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Dự kiến | `POST /api/store/batches` | STORE_OWNER | `multipart data={categoryId,title,description,originalPrice,rescuePrice,quantity,pickupStart,pickupEnd},image?`; `categoryId` phải thuộc cùng cửa hàng | `201 batch`; đồng thời ghi sổ kho `LISTED` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
 | Dự kiến | `PUT /api/store/batches/{id}` | STORE_OWNER | Field mô tả/ảnh/giá/giờ được phép sửa | Batch mới; chặn đổi giá/giờ khi đã có đơn | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
 | Dự kiến | `PATCH /api/store/batches/{id}/quantity` | OWNER/STAFF | `{changeQty,reason:"ADDED"/"REMOVED",note?}` | `{batchId,quantity,remainingQuantity}`; không bớt quá số còn | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
 | Dự kiến | `GET /api/store/batches/{id}/stock-movements` | OWNER/STAFF | Path ID, phân trang | `{content:[{reason,changeQty,remainingAfter,actorId,createdAt}],...}` | Không |
