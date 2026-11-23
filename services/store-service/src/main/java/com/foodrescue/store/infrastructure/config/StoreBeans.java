@@ -1,6 +1,7 @@
 package com.foodrescue.store.infrastructure.config;
 
 import com.foodrescue.store.application.port.out.IStoreRepository;
+import com.foodrescue.store.application.port.out.IAdminStoreRepository;
 import com.foodrescue.store.application.port.out.IImageStorage;
 import com.foodrescue.store.application.port.out.IStaffIdentityPort;
 import com.foodrescue.store.application.port.out.IReviewRepository;
@@ -8,7 +9,8 @@ import com.foodrescue.store.application.port.out.IOrderEligibilityPort;
 import com.foodrescue.store.application.usecase.StoreStaffUseCase;
 import com.foodrescue.store.application.usecase.RegisterStoreUseCase;
 import com.foodrescue.store.application.usecase.ReadStoreUseCase;
-import com.foodrescue.store.application.usecase.ReviewStoreUseCase;
+import com.foodrescue.store.application.usecase.ReadAdminStoreUseCase;
+import com.foodrescue.store.application.usecase.AdminStoreUseCase;
 import com.foodrescue.store.application.usecase.StoreReviewUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,7 +38,12 @@ public class StoreBeans {
     }
 
     @Bean
-    ReviewStoreUseCase reviewStoreUseCase(IStoreRepository stores) {
-        return new ReviewStoreUseCase(stores);
+    ReadAdminStoreUseCase readAdminStoreUseCase(IAdminStoreRepository stores) {
+        return new ReadAdminStoreUseCase(stores);
+    }
+
+    @Bean
+    AdminStoreUseCase adminStoreUseCase(IAdminStoreRepository stores) {
+        return new AdminStoreUseCase(stores);
     }
 }

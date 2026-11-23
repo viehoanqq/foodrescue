@@ -7,6 +7,7 @@ import com.foodrescue.store.application.port.out.IStaffIdentityPort.StaffPage;
 import com.foodrescue.store.application.port.out.IStaffIdentityPort.StaffStatus;
 import com.foodrescue.store.application.usecase.StoreStaffUseCase;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Nhân viên cửa hàng", description = "Chủ cửa hàng quản lý tài khoản nhân viên")
 public class StoreStaffController {
     private final StoreStaffUseCase staffUseCase;
 

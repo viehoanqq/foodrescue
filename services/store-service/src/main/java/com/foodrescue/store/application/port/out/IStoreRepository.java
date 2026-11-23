@@ -13,11 +13,6 @@ public interface IStoreRepository {
     Optional<StoreView.Profile> findProfileByOwnerId(Long ownerId);
     Optional<StoreView.Detail> findApprovedById(Long storeId);
     StoreView.Page findApproved(BigDecimal latitude, BigDecimal longitude, BigDecimal radiusKm, int page, int size);
-    StoreView.AdminPage findForAdmin(String status, int page, int size);
-    Optional<StoreView.Admin> findForAdminById(Long id);
-    StoreView.Admin changeStatus(Long id, String expectedStatus, String nextStatus,
-                                 BigDecimal commissionRate, String rejectReason, Long actorId);
-    StoreView.Admin changeCommission(Long id, BigDecimal commissionRate, Long actorId);
     Registered save(Long ownerId, StoreRegistration data, String licenseUrl, String imageUrl);
     record Registered(Long storeId, LocalDateTime createdAt) {}
 }

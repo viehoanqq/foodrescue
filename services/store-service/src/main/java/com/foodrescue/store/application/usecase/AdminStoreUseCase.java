@@ -1,13 +1,13 @@
 package com.foodrescue.store.application.usecase;
 
-import com.foodrescue.store.application.port.out.IStoreRepository;
+import com.foodrescue.store.application.port.out.IAdminStoreRepository;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreView;
 import java.math.BigDecimal;
 
-public class ReviewStoreUseCase {
-    private final IStoreRepository stores;
-    public ReviewStoreUseCase(IStoreRepository stores) { this.stores = stores; }
+public class AdminStoreUseCase {
+    private final IAdminStoreRepository stores;
+    public AdminStoreUseCase(IAdminStoreRepository stores) { this.stores = stores; }
 
     public StoreView.Admin approve(Long id, Long actorId, BigDecimal commissionRate) {
         if (commissionRate == null) commissionRate = new BigDecimal("15.00");

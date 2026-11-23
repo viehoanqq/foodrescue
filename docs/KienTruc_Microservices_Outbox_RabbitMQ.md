@@ -159,6 +159,8 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 
 Đã có các API đăng ký, xem cửa hàng, hồ sơ chủ, nhân viên và Admin xem/duyệt/từ chối/khóa/mở khóa/sửa hoa hồng cửa hàng. Các dòng còn lại là dự kiến.
 
+Trong `store-service`, API được chia theo nhóm: `StoreController` (đăng ký, hồ sơ, cửa hàng công khai, đánh giá), `StoreStaffController` (nhân viên), `AdminStoreController` (quản trị). Phần Admin dùng `ReadAdminStoreUseCase`/`AdminStoreUseCase` và `IAdminStoreRepository`/`JdbcAdminStoreRepository`; phần cửa hàng dùng `ReadStoreUseCase` và `IStoreRepository`/`JdbcStoreRepository`. Các endpoint `/internal/stores/**` sẽ có controller riêng khi triển khai, không đặt vào ba controller công khai trên.
+
 | Method + URL | Quyền | Req | Res | Event / Outbox |
 |---|---|---|---|---|
 | `POST /api/store/registration` | CUSTOMER đã đăng nhập | `multipart`: `data={storeName,description,storePhone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountNo,bankAccountName}`, `license` bắt buộc, `image?` | `201 {storeId,ownerId,status:"PENDING",createdAt}` | Không |
