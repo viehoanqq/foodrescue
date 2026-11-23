@@ -18,3 +18,8 @@
   .home-public-footer-inner { flex-direction: column; gap: 20px; }
   .home-public-footer-inner > span { align-self: start; }
 }
+.home-public-header nav .home-header-logout{border:0;background:transparent;color:#fff;font:inherit;font-weight:600;cursor:pointer;padding:0}
+.home-public-header nav .home-header-logout:hover{color:#d9efdf}
+@media(max-width:700px){.home-public-header nav{flex-wrap:wrap;justify-content:flex-end;gap:8px 14px}.home-public-header nav a,.home-public-header nav button{font-size:13px}}
+.customer-shell{min-height:100vh;display:flex;flex-direction:column}
+.customer-shell-content{flex:1;min-width:0}

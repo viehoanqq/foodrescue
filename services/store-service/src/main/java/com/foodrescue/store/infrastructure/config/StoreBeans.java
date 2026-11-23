@@ -6,6 +6,7 @@ import com.foodrescue.store.application.port.out.IStaffIdentityPort;
 import com.foodrescue.store.application.usecase.StoreStaffUseCase;
 import com.foodrescue.store.application.usecase.RegisterStoreUseCase;
 import com.foodrescue.store.application.usecase.ReadStoreUseCase;
+import com.foodrescue.store.application.usecase.ReviewStoreUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -24,5 +25,10 @@ public class StoreBeans {
     @Bean
     ReadStoreUseCase readStoreUseCase(IStoreRepository stores) {
         return new ReadStoreUseCase(stores);
+    }
+
+    @Bean
+    ReviewStoreUseCase reviewStoreUseCase(IStoreRepository stores) {
+        return new ReviewStoreUseCase(stores);
     }
 }

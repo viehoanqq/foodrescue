@@ -157,12 +157,12 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 
 ### 5.2 Store API
 
-Hiện đã có `POST /api/store/staff`; các API khác trong bảng là dự kiến.
+Đã có các API đăng ký, xem cửa hàng, hồ sơ chủ, nhân viên và Admin xem/duyệt/từ chối/khóa/mở khóa/sửa hoa hồng cửa hàng. Các dòng còn lại là dự kiến.
 
 | Method + URL | Quyền | Req | Res | Event / Outbox |
 |---|---|---|---|---|
 | `POST /api/store/registration` | CUSTOMER đã đăng nhập | `multipart`: `data={storeName,description,storePhone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountNo,bankAccountName}`, `license` bắt buộc, `image?` | `201 {storeId,ownerId,status:"PENDING",createdAt}` | Không |
-| `GET /api/store/registration` | Người nộp | Không có body | `{storeId,status,rejectReason?,createdAt}` | Không |
+| `GET /api/store/registration` | Người nộp | Không có body | `{storeId,status,rejectReason?,createdAt,name,description,phone,address,latitude,longitude,imageUrl,openTime,closeTime,bankName,bankAccountNoMasked,bankAccountName}`; xem chi tiết hồ sơ đã nộp | Không |
 | `GET /api/stores?lat&lon&radiusKm&page&size` | Công khai | Tọa độ/bán kính/query | `{content:[storeSummary],page,size,totalElements,totalPages}`; chỉ APPROVED | Không |
 | `GET /api/stores/{id}` | Công khai | Path `id` | `{id,name,address,latitude,longitude,rating,openTime,closeTime}` | Không |
 | `GET /api/store/profile` | STORE_OWNER | Không có body | `{id,ownerId,name,description,phone,address,latitude,longitude,imageUrl,openTime,closeTime,status,rejectReason,commissionRate,bankName,bankAccountNoMasked,bankAccountName,createdAt}`; không trả ảnh giấy phép hoặc số tài khoản đầy đủ | Không |
@@ -173,10 +173,11 @@ Hiện đã có `POST /api/store/staff`; các API khác trong bảng là dự ki
 | `POST /api/stores/{id}/reviews` | CUSTOMER có đơn COMPLETED | `{orderId,rating:1..5,comment?}` | `{id,orderId,rating,comment,createdAt}`; một đơn một lần | Không |
 | `GET /api/stores/{id}/reviews?page&size` | Công khai | Query phân trang | `{content:[review],averageRating,totalElements,...}` | Không |
 | `GET /api/admin/stores?status&page&size` | ADMIN | Query | Trang hồ sơ cửa hàng | Không |
-| `POST /api/admin/stores/{id}/approve` | ADMIN | `{commissionRate}` (mặc định 15%) | `{id,status:"APPROVED",commissionRate}` | Dự kiến Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
-| `POST /api/admin/stores/{id}/reject` | ADMIN | `{reason}` | `{id,status:"REJECTED",rejectReason}` | Dự kiến Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
-| `POST /api/admin/stores/{id}/lock` hoặc `/unlock` | ADMIN | Path `id`, lý do nếu khóa | `{id,status}` | Dự kiến Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
-| `PUT /api/admin/stores/{id}/commission` | ADMIN | `{commissionRate}` | `{id,commissionRate}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `GET /api/admin/stores/{id}` / `GET /api/admin/stores/{id}/license` | ADMIN | Path `id` | Chi tiết hồ sơ / ảnh giấy phép (chỉ Admin) | Không |
+| `POST /api/admin/stores/{id}/approve` | ADMIN | `{commissionRate}` (mặc định 15%) | `{id,status:"APPROVED",commissionRate,...}` | Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
+| `POST /api/admin/stores/{id}/reject` | ADMIN | `{reason}` | `{id,status:"REJECTED",rejectReason,...}` | Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
+| `POST /api/admin/stores/{id}/lock` hoặc `/unlock` | ADMIN | Path `id`, `{reason}` khi khóa | `{id,status,...}` | Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
+| `PUT /api/admin/stores/{id}/commission` | ADMIN | `{commissionRate}` | `{id,commissionRate,...}` | Outbox `audit.action.v1` → `identity.audit-events` |
 | `GET /internal/stores/{id}/checkout-policy` | Order/Catalog | `X-Internal-Key` | `{storeId,status,commissionRate,version,updatedAt}` | Không |
 | `GET /internal/stores/{id}/payout-account` | Finance | `X-Internal-Key` | Tài khoản nhận tiền của cửa hàng; chỉ service tài chính gọi | Không |
 | `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key` | `{approved,locked,pending}` | Không |

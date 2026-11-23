@@ -42,4 +42,14 @@ public class LocalImageStorage implements IImageStorage {
         if (!target.startsWith(root)) return;
         try { Files.deleteIfExists(target); } catch (IOException ignored) { }
     }
+
+    @Override public byte[] readLicense(String url) {
+        if (url == null || !url.startsWith("/uploads/licenses/"))
+            throw new StoreException(404, "LICENSE_NOT_FOUND", "Không tìm thấy giấy phép");
+        Path target = root.resolve(url.substring("/uploads/".length())).normalize();
+        if (!target.startsWith(root.resolve("licenses")))
+            throw new StoreException(404, "LICENSE_NOT_FOUND", "Không tìm thấy giấy phép");
+        try { return Files.readAllBytes(target); }
+        catch (IOException ex) { throw new StoreException(404, "LICENSE_NOT_FOUND", "Không tìm thấy giấy phép"); }
+    }
 }

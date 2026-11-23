@@ -41,4 +41,17 @@ public class ReadStoreUseCase {
             throw new StoreException(400, "INVALID_RADIUS", "Bán kính phải lớn hơn 0 và không quá 100 km");
         return stores.findApproved(latitude, longitude, radiusKm, page, size);
     }
+
+    public StoreView.AdminPage adminList(String status, int page, int size) {
+        if (page < 0 || size < 1 || size > 100)
+            throw new StoreException(400, "INVALID_PAGINATION", "Phân trang không hợp lệ");
+        if (status != null && !java.util.Set.of("PENDING", "APPROVED", "REJECTED", "LOCKED").contains(status))
+            throw new StoreException(400, "INVALID_STATUS", "Trạng thái không hợp lệ");
+        return stores.findForAdmin(status, page, size);
+    }
+
+    public StoreView.Admin adminDetail(Long id) {
+        return stores.findForAdminById(id)
+                .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
+    }
 }

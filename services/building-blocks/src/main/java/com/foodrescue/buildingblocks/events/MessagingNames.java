@@ -9,6 +9,8 @@ public final class MessagingNames {
     public static final String ALL_EVENTS_ROUTING_KEY = "#";
 
     public static final String AUDIT_ACTION_EVENT = "audit.action.v1";
+    public static final String STORE_STATUS_CHANGED_EVENT = "store.status-changed.v1";
+    public static final String IDENTITY_STORE_STATUS_QUEUE = "identity.store-status";
     public static final String AUDIT_ACTION_DEAD_ROUTING_KEY = "audit.action.dead";
     public static final String IDENTITY_AUDIT_QUEUE = "identity.audit-events";
     public static final String IDENTITY_AUDIT_DEAD_QUEUE = "identity.audit-dead";

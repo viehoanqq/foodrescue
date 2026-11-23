@@ -1,0 +1,1 @@
+ALTER TABLE stores ADD COLUMN aggregate_version BIGINT NOT NULL DEFAULT 1;

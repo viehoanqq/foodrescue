@@ -23,7 +23,7 @@ export default function ProfilePage() {
     }
   }
 
-  return <Card style={{ maxWidth: 680, margin: '24px auto' }}>
+  return <div><Card>
     <Typography.Title level={4}>Hồ sơ cá nhân</Typography.Title>
     <Typography.Paragraph type="secondary">Thông tin này được dùng để hiển thị tên và liên hệ với bạn.</Typography.Paragraph>
     <Form form={form} layout="vertical" onFinish={submit}>
@@ -32,5 +32,6 @@ export default function ProfilePage() {
       <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, max: 20 }]}><Input /></Form.Item>
       <Button type="primary" htmlType="submit" loading={busy}>Lưu thay đổi</Button>
     </Form>
-  </Card>;
+  </Card>
+  </div>;
 }

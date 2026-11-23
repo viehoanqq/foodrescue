@@ -44,4 +44,13 @@ public class RabbitConfiguration {
     public Binding identityAuditDeadBinding(Queue identityAuditDeadLetters, TopicExchange foodrescueEvents) {
         return BindingBuilder.bind(identityAuditDeadLetters).to(foodrescueEvents).with(MessagingNames.AUDIT_ACTION_DEAD_ROUTING_KEY);
     }
+
+    @Bean
+    public Queue identityStoreStatus() { return new Queue(MessagingNames.IDENTITY_STORE_STATUS_QUEUE, true); }
+
+    @Bean
+    public Binding identityStoreStatusBinding(Queue identityStoreStatus, TopicExchange foodrescueEvents) {
+        return BindingBuilder.bind(identityStoreStatus).to(foodrescueEvents)
+                .with(MessagingNames.STORE_STATUS_CHANGED_EVENT);
+    }
 }
