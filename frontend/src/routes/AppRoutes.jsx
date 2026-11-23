@@ -13,9 +13,10 @@ import StoresPage, { StoreDetailPage } from '../pages/customer/StoresPage';
 import StoreRegistrationPage from '../pages/store/StoreRegistrationPage';
 import StoreProfilePage from '../pages/store/StoreProfilePage';
 import StoreStaffPage from '../pages/store/StoreStaffPage';
+import OwnerReviewsPage from '../pages/store/OwnerReviewsPage';
 import { AnonymousRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from './RouteGuards';
 import { STORE_ROLES } from './paths';
-import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoCart, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoReviews } from '../demo/DemoPages';
+import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoCart, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue } from '../demo/DemoPages';
 
 export default function AppRoutes() {
   return <Routes>
@@ -64,7 +65,7 @@ export default function AppRoutes() {
           <Route path="/store/profile" element={<StoreProfilePage />} />
           <Route path="/store/staff" element={<StoreStaffPage />} />
           <Route path="/store/revenue" element={<DemoRevenue />} />
-          <Route path="/store/reviews" element={<DemoReviews />} />
+          <Route path="/store/reviews" element={<OwnerReviewsPage />} />
         </Route>
         <Route element={<RoleRoute roles={['ADMIN']} />}>
           <Route path="/admin/users" element={<AdminUsersPage />} />

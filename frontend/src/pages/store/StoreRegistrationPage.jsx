@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Checkbox, Col, Descriptions, Form, Input, InputNumber, Modal, Row, Space, Spin, Tag, TimePicker, Typography, Upload, message } from 'antd';
 import { BankOutlined, CheckCircleOutlined, EnvironmentOutlined, FileImageOutlined, ShopOutlined, UploadOutlined } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { storeApi } from '../../services/storeApi';
+import { useAuth } from '../../auth/AuthProvider';
 import './storePages.css';
 
 const statusText = { PENDING: 'Đang chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Bị từ chối', LOCKED: 'Đã khóa' };
@@ -17,6 +18,8 @@ function validImage(file) {
 }
 
 export default function StoreRegistrationPage() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [form] = Form.useForm();
   const [existing, setExisting] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +43,14 @@ export default function StoreRegistrationPage() {
 
   async function submit(values) {
     if (!license) { message.error('Vui lòng tải ảnh giấy phép kinh doanh'); return; }
-    const { confirmed, ...fields } = values;
     const data = {
-      ...fields,
+      ...values,
       storeName: values.storeName.trim(), storePhone: values.storePhone.trim(),
       address: values.address.trim(), bankName: values.bankName.trim(),
       bankAccountNo: values.bankAccountNo.trim(), bankAccountName: values.bankAccountName.trim(),
       openTime: values.openTime.format('HH:mm'), closeTime: values.closeTime.format('HH:mm'),
     };
+    delete data.confirmed;
     if (data.closeTime <= data.openTime) { message.error('Giờ đóng cửa phải sau giờ mở cửa'); return; }
     Modal.confirm({
       title: 'Xác nhận gửi hồ sơ cửa hàng',
@@ -90,7 +93,7 @@ export default function StoreRegistrationPage() {
         { key: 'account', label: 'Số tài khoản', children: display(existing.bankAccountNoMasked) },
         { key: 'holder', label: 'Tên chủ tài khoản', children: display(existing.bankAccountName) },
         { key: 'date', label: 'Ngày nộp', children: existing.createdAt ? existing.createdAt.replace('T', ' ').slice(0, 16) : 'Chưa có' },
-      ]} />{existing.imageUrl && <img className="store-detail-image" style={{ marginTop: 20 }} src={existing.imageUrl} alt={existing.name} />}{existing.status === 'APPROVED' && <div style={{ marginTop: 20 }}><Link to="/store/profile"><Button type="primary">Vào hồ sơ cửa hàng</Button></Link></div>}</Card> :
+      ]} />{existing.imageUrl && <img className="store-detail-image" style={{ marginTop: 20 }} src={existing.imageUrl} alt={existing.name} />}{existing.status === 'APPROVED' && <div style={{ marginTop: 20 }}><Button type="primary" onClick={() => { logout(); navigate('/store/login'); }}>Đăng nhập trang quản trị cửa hàng</Button></div>}</Card> : error ? <Button onClick={() => window.location.reload()}>Tải lại hồ sơ</Button> :
       <Form form={form} layout="vertical" onFinish={submit} scrollToFirstError initialValues={{ openTime: null, closeTime: null }}>
         <Card className="store-card" title={<><ShopOutlined /> Thông tin cửa hàng</>}>
           <Row gutter={20}><Col xs={24} md={12}><Form.Item name="storeName" label="Tên cửa hàng" rules={[{ required: true, whitespace: true, message: 'Nhập tên cửa hàng' }, { max: 150 }]}><Input maxLength={150} placeholder="Ví dụ: Bánh mì An Phát" /></Form.Item></Col><Col xs={24} md={12}><Form.Item name="storePhone" label="Số điện thoại cửa hàng" rules={[{ required: true, message: 'Nhập số điện thoại' }, { pattern: /^0\d{9,10}$/, message: 'Nhập số điện thoại hợp lệ' }]}><Input maxLength={20} placeholder="09xxxxxxxx" /></Form.Item></Col></Row>

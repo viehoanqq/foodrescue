@@ -6,6 +6,7 @@ import com.foodrescue.store.application.port.out.IAdminStoreRepository;
 import com.foodrescue.store.application.port.out.IOutboxPort;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreView;
+import com.foodrescue.store.domain.model.StoreProfileUpdate;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -105,6 +106,25 @@ public class JdbcAdminStoreRepository implements IAdminStoreRepository {
         outbox.append(EventEnvelope.create(MessagingNames.AUDIT_ACTION_EVENT, "Store", id.toString(),
                 version, UUID.randomUUID(), null, actorId, Map.of("action", "STORE_COMMISSION_UPDATED",
                         "entityType", "STORE", "entityId", id, "detail", "commissionRate=" + commissionRate)));
+        return findForAdminById(id).orElseThrow();
+    }
+
+    @Override
+    @Transactional
+    public StoreView.Admin updateProfile(Long id, StoreProfileUpdate input, Long actorId) {
+        int changed = jdbc.update("UPDATE stores SET name=?,description=?,phone=?,address=?,latitude=?," +
+                        "longitude=?,open_time=?,close_time=?,bank_name=?," +
+                        "bank_account_no=COALESCE(?,bank_account_no),bank_account_name=?," +
+                        "aggregate_version=aggregate_version+1 WHERE id=?",
+                input.name(), input.description(), input.phone(), input.address(), input.latitude(),
+                input.longitude(), input.openTime(), input.closeTime(), input.bankName(),
+                input.bankAccountNo(), input.bankAccountName(), id);
+        if (changed != 1) throw new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng");
+        long version = jdbc.queryForObject("SELECT aggregate_version FROM stores WHERE id=?", Long.class, id);
+        outbox.append(EventEnvelope.create(MessagingNames.AUDIT_ACTION_EVENT, "Store", id.toString(),
+                version, UUID.randomUUID(), null, actorId,
+                Map.of("action", "STORE_PROFILE_UPDATED_BY_ADMIN", "entityType", "STORE",
+                        "entityId", id, "detail", "Admin updated store profile")));
         return findForAdminById(id).orElseThrow();
     }
 }

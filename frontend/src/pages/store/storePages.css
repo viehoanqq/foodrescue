@@ -25,4 +25,8 @@
 .store-list-card p { color: #5f6b65; min-height: 44px; }
 .store-detail-card { margin-top: 20px; }
 .store-detail-image { width: 100%; max-height: 380px; object-fit: cover; border-radius: 12px; margin-bottom: 24px; }
+.store-reviews { margin-top: 28px; }
+.store-reviews-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.store-reviews-heading h2 { margin: 0; color: #163c2d; }
+.store-review-date { margin-left: 14px; color: #66756c; }
 @media (max-width: 600px) { .store-page { width: calc(100% - 28px); margin-top: 20px; } .store-page-title { align-items: flex-start; flex-direction: column; } .store-filters .ant-input-number { flex: 1 1 42%; } }

@@ -5,6 +5,7 @@ import com.foodrescue.store.application.port.out.IImageStorage;
 import com.foodrescue.store.application.usecase.ReadAdminStoreUseCase;
 import com.foodrescue.store.application.usecase.AdminStoreUseCase;
 import com.foodrescue.store.domain.model.StoreView;
+import com.foodrescue.store.domain.model.StoreProfileUpdate;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
@@ -79,6 +80,12 @@ public class AdminStoreController {
     public StoreView.Admin commission(@AuthenticationPrincipal AuthenticatedUser admin,
             @PathVariable Long id, @RequestBody CommissionRequest request) {
         return adminStore.commission(id, admin.id(), request.commissionRate());
+    }
+
+    @PutMapping("/api/admin/stores/{id}")
+    public StoreView.Admin update(@AuthenticationPrincipal AuthenticatedUser admin,
+            @PathVariable Long id, @RequestBody StoreProfileUpdate request) {
+        return adminStore.updateProfile(id, admin.id(), request);
     }
 
     public record CommissionRequest(BigDecimal commissionRate) {}

@@ -180,6 +180,7 @@ Trong `store-service`, API được chia theo nhóm: `StoreController` (đăng k
 | `POST /api/admin/stores/{id}/reject` | ADMIN | `{reason}` | `{id,status:"REJECTED",rejectReason,...}` | Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
 | `POST /api/admin/stores/{id}/lock` hoặc `/unlock` | ADMIN | Path `id`, `{reason}` khi khóa | `{id,status,...}` | Outbox `store.status-changed.v1` → `identity.store-status` + `audit.action.v1` → `identity.audit-events` |
 | `PUT /api/admin/stores/{id}/commission` | ADMIN | `{commissionRate}` | `{id,commissionRate,...}` | Outbox `audit.action.v1` → `identity.audit-events` |
+| `PUT /api/admin/stores/{id}` | ADMIN | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountName,bankAccountNo?}`; bỏ trống số tài khoản để giữ nguyên | Hồ sơ cửa hàng đã cập nhật, số tài khoản vẫn được che | Outbox `audit.action.v1` → `identity.audit-events` (`STORE_PROFILE_UPDATED_BY_ADMIN`) |
 | `GET /internal/stores/{id}/checkout-policy` | Order/Catalog | `X-Internal-Key` | `{storeId,status,commissionRate,version,updatedAt}` | Không |
 | `GET /internal/stores/{id}/payout-account` | Finance | `X-Internal-Key` | Tài khoản nhận tiền của cửa hàng; chỉ service tài chính gọi | Không |
 | `GET /internal/stores/count` | Finance dashboard | `X-Internal-Key` | `{approved,locked,pending}` | Không |

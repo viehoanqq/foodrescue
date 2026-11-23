@@ -3,6 +3,7 @@ package com.foodrescue.store.application.usecase;
 import com.foodrescue.store.application.port.out.IAdminStoreRepository;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreView;
+import com.foodrescue.store.domain.model.StoreProfileUpdate;
 import java.math.BigDecimal;
 
 public class AdminStoreUseCase {
@@ -38,5 +39,11 @@ public class AdminStoreUseCase {
             throw new StoreException(400, "INVALID_COMMISSION", "Hoa hồng phải từ 0 đến 50%");
         stores.findForAdminById(id).orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
         return stores.changeCommission(id, commissionRate, actorId);
+    }
+
+    public StoreView.Admin updateProfile(Long id, Long actorId, StoreProfileUpdate input) {
+        StoreProfileUpdate normalized = StoreProfileUpdates.validateAndNormalize(input);
+        stores.findForAdminById(id).orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
+        return stores.updateProfile(id, normalized, actorId);
     }
 }

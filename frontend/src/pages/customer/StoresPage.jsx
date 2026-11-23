@@ -3,6 +3,7 @@ import { Alert, Button, Card, Col, Empty, InputNumber, Pagination, Row, Spin, Ta
 import { ArrowLeftOutlined, EnvironmentOutlined, ShopOutlined, StarFilled } from '@ant-design/icons';
 import { Link, useParams } from 'react-router-dom';
 import { storeApi } from '../../services/storeApi';
+import StoreReviews from '../store/StoreReviews';
 import '../store/storePages.css';
 
 export default function StoresPage() {
@@ -52,6 +53,6 @@ export function StoreDetailPage() {
     {store.imageUrl && <img className="store-detail-image" src={store.imageUrl} alt={store.name} />}
     <div className="store-page-heading"><span>CỬA HÀNG ĐỐI TÁC</span><h1>{store.name}</h1><p>{store.description || 'Cửa hàng đối tác FoodRescue'}</p></div>
     <p><EnvironmentOutlined /> {store.address}</p><p>Giờ mở cửa: {store.openTime?.slice(0, 5)} – {store.closeTime?.slice(0, 5)}</p><p><StarFilled style={{ color: '#d97928' }} /> {store.rating ?? 0} ({store.reviewCount} đánh giá)</p><p>Số điện thoại: {store.phone}</p>
-  </Card>}
+  </Card>}{store && <StoreReviews storeId={store.id} allowCreate />}
   </main>;
 }
