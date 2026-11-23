@@ -1,6 +1,6 @@
 package com.foodrescue.store.application.port.out;
 
-public interface StaffIdentityPort {
+public interface IStaffIdentityPort {
     CreatedStaff create(Long actorId, Long storeId, NewStaff staff);
 
     record NewStaff(String email, String fullName, String phone) {}

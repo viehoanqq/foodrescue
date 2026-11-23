@@ -1,12 +1,12 @@
 package com.foodrescue.identity.application.usecase;
 
-import com.foodrescue.identity.application.port.out.AuditPort;
-import com.foodrescue.identity.application.port.out.PasswordPort;
-import com.foodrescue.identity.application.port.out.TokenPort;
-import com.foodrescue.identity.application.port.out.UnitOfWork;
+import com.foodrescue.identity.application.port.out.IAuditRepository;
+import com.foodrescue.identity.application.port.out.IPasswordPort;
+import com.foodrescue.identity.application.port.out.ITokenPort;
+import com.foodrescue.identity.application.port.out.IUnitOfWork;
 import com.foodrescue.identity.domain.exception.IdentityException;
 import com.foodrescue.identity.domain.model.UserAccount;
-import com.foodrescue.identity.domain.repository.UserRepository;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -18,9 +18,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class IdentityServiceStaffTest {
-    private final UserRepository users = mock(UserRepository.class);
-    private final AuditPort audit = mock(AuditPort.class);
-    private final UnitOfWork transaction = mock(UnitOfWork.class);
+    private final IUserRepository users = mock(IUserRepository.class);
+    private final IAuditRepository audit = mock(IAuditRepository.class);
+    private final IUnitOfWork transaction = mock(IUnitOfWork.class);
     private IdentityService service;
 
     @BeforeEach
@@ -28,7 +28,7 @@ class IdentityServiceStaffTest {
         when(transaction.execute(any())).thenAnswer(invocation ->
                 ((Supplier<?>) invocation.getArgument(0)).get());
         when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        service = new IdentityService(users, mock(PasswordPort.class), mock(TokenPort.class), audit, transaction);
+        service = new IdentityService(users, mock(IPasswordPort.class), mock(ITokenPort.class), audit, transaction);
         when(users.findById(1L)).thenReturn(Optional.of(account(1L, "STORE_OWNER", null, "ACTIVE", 0)));
         when(users.findById(9L)).thenReturn(Optional.of(account(9L, "STORE_STAFF", 5L, "ACTIVE", 2)));
     }

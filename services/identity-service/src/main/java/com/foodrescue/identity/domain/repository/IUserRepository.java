@@ -4,7 +4,7 @@ import com.foodrescue.identity.domain.model.UserAccount;
 import com.foodrescue.identity.domain.model.PageResult;
 import java.util.Optional;
 
-public interface UserRepository {
+public interface IUserRepository {
     Optional<UserAccount> findById(Long id);
     Optional<UserAccount> findByEmail(String email);
     UserAccount save(UserAccount user);

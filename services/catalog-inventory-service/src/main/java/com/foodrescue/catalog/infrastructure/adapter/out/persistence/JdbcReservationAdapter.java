@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-public class JdbcReservationAdapter implements com.foodrescue.catalog.application.port.out.ReservationPort {
+public class JdbcReservationAdapter implements com.foodrescue.catalog.application.port.out.IReservationPort {
     private static final ZoneId VIETNAM = ZoneId.of("Asia/Ho_Chi_Minh");
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;

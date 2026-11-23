@@ -2,7 +2,7 @@ package com.foodrescue.store.infrastructure.adapter.out.http;
 
 import com.foodrescue.buildingblocks.http.InternalServiceClient;
 import com.foodrescue.buildingblocks.http.InternalServiceException;
-import com.foodrescue.store.application.port.out.StaffIdentityPort;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort;
 import com.foodrescue.store.domain.exception.StoreException;
 import java.net.URI;
 import java.util.UUID;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 
 @Component
-public class IdentityStaffClient implements StaffIdentityPort {
+public class IdentityStaffClient implements IStaffIdentityPort {
     private final InternalServiceClient client;
 
     public IdentityStaffClient(@Value("${app.identity-service-url}") String identityUrl,

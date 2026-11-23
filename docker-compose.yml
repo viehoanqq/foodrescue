@@ -120,7 +120,10 @@ services:
     profiles: ["services"]
     ports:
       - "127.0.0.1:8083:8083"
+    volumes:
+      - store_uploads:/app/uploads
     environment:
+      STORE_UPLOAD_DIR: /app/uploads
       DB_URL: jdbc:mysql://mysql:3306/store_db?serverTimezone=Asia/Ho_Chi_Minh
       DB_USERNAME: store_app
       DB_PASSWORD: ${STORE_DB_PASSWORD:?Set STORE_DB_PASSWORD in .env}
@@ -199,3 +202,4 @@ volumes:
   postgres_data:
   rabbitmq_data:
   mongo_data:
+  store_uploads:

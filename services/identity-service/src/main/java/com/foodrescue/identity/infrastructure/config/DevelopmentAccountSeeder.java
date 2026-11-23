@@ -1,8 +1,8 @@
 package com.foodrescue.identity.infrastructure.config;
 
-import com.foodrescue.identity.application.port.out.PasswordPort;
+import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.domain.model.UserAccount;
-import com.foodrescue.identity.domain.repository.UserRepository;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -13,8 +13,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Component
 public class DevelopmentAccountSeeder implements CommandLineRunner {
-    private final UserRepository users;
-    private final PasswordPort passwords;
+    private final IUserRepository users;
+    private final IPasswordPort passwords;
     private final TransactionTemplate transaction;
 
     @Value("${app.seed.enabled:false}") private boolean enabled;
@@ -23,7 +23,7 @@ public class DevelopmentAccountSeeder implements CommandLineRunner {
     @Value("${app.seed.owner.email:}") private String ownerEmail;
     @Value("${app.seed.owner.password:}") private String ownerPassword;
 
-    public DevelopmentAccountSeeder(UserRepository users, PasswordPort passwords,
+    public DevelopmentAccountSeeder(IUserRepository users, IPasswordPort passwords,
                                     TransactionTemplate transaction) {
         this.users = users;
         this.passwords = passwords;

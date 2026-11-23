@@ -1,16 +1,16 @@
 package com.foodrescue.store.application.usecase;
 
-import com.foodrescue.store.application.port.out.OwnedStorePort;
-import com.foodrescue.store.application.port.out.StaffIdentityPort;
-import com.foodrescue.store.application.port.out.StaffIdentityPort.CreatedStaff;
-import com.foodrescue.store.application.port.out.StaffIdentityPort.NewStaff;
+import com.foodrescue.store.application.port.out.IStoreRepository;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort.CreatedStaff;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort.NewStaff;
 import com.foodrescue.store.domain.exception.StoreException;
 
 public class CreateStaffUseCase {
-    private final OwnedStorePort stores;
-    private final StaffIdentityPort identity;
+    private final IStoreRepository stores;
+    private final IStaffIdentityPort identity;
 
-    public CreateStaffUseCase(OwnedStorePort stores, StaffIdentityPort identity) {
+    public CreateStaffUseCase(IStoreRepository stores, IStaffIdentityPort identity) {
         this.stores = stores;
         this.identity = identity;
     }

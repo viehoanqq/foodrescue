@@ -3,6 +3,10 @@ server:
 spring:
   application:
     name: store-service
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 11MB
   datasource:
     url: ${DB_URL:jdbc:mysql://mysql:3306/store_db}
     username: ${DB_USERNAME:postgres}
@@ -26,6 +30,7 @@ management:
 outbox:
   poll-ms: ${OUTBOX_POLL_MS:1000}
 app:
+  upload-dir: ${STORE_UPLOAD_DIR:uploads}
   jwt:
     secret: ${JWT_SECRET:}
   internal-api-key: ${INTERNAL_API_KEY:}

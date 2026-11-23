@@ -116,7 +116,7 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 | Identity | Đăng ký/đăng nhập, JWT, `/api/me`, đổi mật khẩu, khóa/mở khóa, reset tạm, danh sách user/audit; ghi audit cùng transaction; Inbox consumer `audit.action.v1` | Cấp role chủ sau duyệt, tài khoản nhân viên, filter audit theo nhiều trường, producer Outbox identity |
 | Store | DB schema/JPA entity, Outbox publisher | Đăng ký/duyệt/hồ sơ/staff/review, consumer status, API công khai |
 | Catalog | API nội bộ giữ/trả reservation nhiều túi, khóa row/trừ kho atomic, sổ kho, producer `stock.reserved.v1` và `stock.released.v1` | Category/batch API, kiểm tra cửa hàng APPROVED trước giữ kho, OSRM, consumer store status |
-| Order | `InventoryPort` và HTTP adapter gọi catalog; endpoint nội bộ để thử giữ/trả kho | Giỏ, đơn thật, mã nhận, saga, các consumer/producer nghiệp vụ |
+| Order | `IInventoryPort` và HTTP adapter gọi catalog; endpoint nội bộ để thử giữ/trả kho | Giỏ, đơn thật, mã nhận, saga, các consumer/producer nghiệp vụ |
 | Finance | DB schema/JPA entity, Outbox publisher | VNPay, refunds, payout, snapshot, dashboard, consumer/producer nghiệp vụ |
 | Gateway | Route identity, `/api/health` tổng hợp 5 DB, kiểm tra trạng thái token cho các route cần bảo vệ | Route từng API mới khi service tương ứng hoàn tất |
 | Frontend | React Router, AuthProvider, role guard, layout, identity API, trang hồ sơ/admin, API client tách theo miền | Form mở cửa hàng chưa gửi API; trang túi cửa hàng còn dữ liệu mẫu; các màn hình nghiệp vụ phải nối service mới |
@@ -150,7 +150,7 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 | Đã có | `POST /internal/staff` | Store-service | `{actorId,storeId,email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
 | Đã có | `POST /internal/staff/{id}/lock` hoặc `/unlock` | Store-service | `{actorId,storeId}` + `X-Internal-Key` | `{userId,storeId,status,tokenVersion}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
 
-`user` hiện là `{id,email,fullName,phone,role,storeId,status,mustChangePassword,createdAt}`; không có password hash. Giao diện đã gọi login/register/me/update/password và admin users/audit qua Gateway. `AuditPort` ghi thao tác identity vào `audit_logs` trong transaction của use case; event audit từ service khác do listener của identity ghi sau khi Inbox dedup.
+`user` hiện là `{id,email,fullName,phone,role,storeId,status,mustChangePassword,createdAt}`; không có password hash. Giao diện đã gọi login/register/me/update/password và admin users/audit qua Gateway. `IAuditRepository` ghi thao tác identity vào `audit_logs` trong transaction của use case; event audit từ service khác do listener của identity ghi sau khi Inbox dedup.
 
 **Luồng identity:** đăng ký khách hàng ghi `users` + audit cùng transaction; đăng nhập đối chiếu BCrypt, kiểm tra `ACTIVE`, phát JWT có `tokenVersion`. Mỗi request bảo vệ xác nhận token và trạng thái user; khóa/reset/đổi mật khẩu tăng version để vô hiệu token cũ. Người dùng có `mustChangePassword=true` chỉ được vào hồ sơ và API đổi mật khẩu trước khi dùng các chức năng khác. Khi store được duyệt trong thiết kế mục tiêu, consumer identity cấp quyền chủ cho **user đã tồn tại**, không tạo tài khoản mới.
 

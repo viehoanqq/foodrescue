@@ -31,6 +31,7 @@ public class StoreSecurity {
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
                                 "/internal/health/db", "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/images/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/stores/*/reviews").hasRole("CUSTOMER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/store/registration").hasRole("CUSTOMER")

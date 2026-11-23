@@ -1,15 +1,22 @@
 package com.foodrescue.store.infrastructure.config;
 
-import com.foodrescue.store.application.port.out.OwnedStorePort;
-import com.foodrescue.store.application.port.out.StaffIdentityPort;
+import com.foodrescue.store.application.port.out.IStoreRepository;
+import com.foodrescue.store.application.port.out.IImageStorage;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort;
 import com.foodrescue.store.application.usecase.CreateStaffUseCase;
+import com.foodrescue.store.application.usecase.RegisterStoreUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class StoreBeans {
     @Bean
-    CreateStaffUseCase createStaffUseCase(OwnedStorePort stores, StaffIdentityPort identity) {
+    CreateStaffUseCase createStaffUseCase(IStoreRepository stores, IStaffIdentityPort identity) {
         return new CreateStaffUseCase(stores, identity);
+    }
+
+    @Bean
+    RegisterStoreUseCase registerStoreUseCase(IStoreRepository stores, IImageStorage images) {
+        return new RegisterStoreUseCase(stores, images);
     }
 }

@@ -4,7 +4,7 @@ import com.foodrescue.catalog.domain.model.ReservationRequest;
 import com.foodrescue.catalog.domain.model.ReservationResult;
 import java.util.UUID;
 
-public interface ReservationPort {
+public interface IReservationPort {
     ReservationResult reserve(ReservationRequest request);
     ReservationResult release(UUID reservationId);
     ReservationResult load(UUID reservationId);

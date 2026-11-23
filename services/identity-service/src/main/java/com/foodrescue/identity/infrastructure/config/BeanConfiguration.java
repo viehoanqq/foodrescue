@@ -1,19 +1,19 @@
 package com.foodrescue.identity.infrastructure.config;
 
-import com.foodrescue.identity.application.port.out.AuditPort;
-import com.foodrescue.identity.application.port.out.PasswordPort;
-import com.foodrescue.identity.application.port.out.TokenPort;
-import com.foodrescue.identity.application.port.out.UnitOfWork;
+import com.foodrescue.identity.application.port.out.IAuditRepository;
+import com.foodrescue.identity.application.port.out.IPasswordPort;
+import com.foodrescue.identity.application.port.out.ITokenPort;
+import com.foodrescue.identity.application.port.out.IUnitOfWork;
 import com.foodrescue.identity.application.usecase.IdentityService;
-import com.foodrescue.identity.domain.repository.UserRepository;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class BeanConfiguration {
     @Bean
-    IdentityService identityService(UserRepository users, PasswordPort passwords, TokenPort tokens,
-                                    AuditPort audit, UnitOfWork unitOfWork) {
+    IdentityService identityService(IUserRepository users, IPasswordPort passwords, ITokenPort tokens,
+                                    IAuditRepository audit, IUnitOfWork unitOfWork) {
         return new IdentityService(users, passwords, tokens, audit, unitOfWork);
     }
 }

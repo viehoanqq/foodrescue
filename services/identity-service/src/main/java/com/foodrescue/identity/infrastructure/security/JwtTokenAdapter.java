@@ -1,6 +1,6 @@
 package com.foodrescue.identity.infrastructure.security;
 
-import com.foodrescue.identity.application.port.out.TokenPort;
+import com.foodrescue.identity.application.port.out.ITokenPort;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class JwtTokenAdapter implements TokenPort {
+public class JwtTokenAdapter implements ITokenPort {
     private final SecretKey key;
     private final Duration lifetime;
 

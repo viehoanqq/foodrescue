@@ -13,7 +13,7 @@ spring:
         - id: store-api
           uri: ${STORE_SERVICE_URL:http://store-service:8083}
           predicates:
-            - Path=/api/store/registration,/api/store/profile,/api/store/staff,/api/store/staff/**,/api/stores,/api/stores/**,/api/admin/stores,/api/admin/stores/**
+            - Path=/api/store/registration,/api/store/profile,/api/store/staff,/api/store/staff/**,/api/stores,/api/stores/**,/api/admin/stores,/api/admin/stores/**,/uploads/images/**
         - id: catalog-api
           uri: ${CATALOG_SERVICE_URL:http://catalog-inventory-service:8084}
           predicates:

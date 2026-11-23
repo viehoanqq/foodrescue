@@ -1,6 +1,6 @@
 package com.foodrescue.identity.infrastructure.adapter.out.persistence;
 
-import com.foodrescue.identity.application.port.out.AuditPort;
+import com.foodrescue.identity.application.port.out.IAuditRepository;
 import com.foodrescue.identity.domain.model.PageResult;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.AuditLogEntity;
 import java.time.LocalDateTime;
@@ -14,11 +14,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class JpaAuditStore implements AuditPort {
-    private final AuditJpaRepository repository;
+public class JpaAuditRepository implements IAuditRepository {
+    private final ISpringDataAuditRepository repository;
     private final NamedParameterJdbcTemplate jdbc;
 
-    public JpaAuditStore(AuditJpaRepository repository, JdbcTemplate jdbc) {
+    public JpaAuditRepository(ISpringDataAuditRepository repository, JdbcTemplate jdbc) {
         this.repository = repository;
         this.jdbc = new NamedParameterJdbcTemplate(jdbc);
     }

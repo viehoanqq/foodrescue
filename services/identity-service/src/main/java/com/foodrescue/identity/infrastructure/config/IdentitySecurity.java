@@ -1,8 +1,8 @@
 package com.foodrescue.identity.infrastructure.config;
 
 import com.foodrescue.identity.api.IdentityError;
-import com.foodrescue.identity.application.port.out.TokenPort;
-import com.foodrescue.identity.domain.repository.UserRepository;
+import com.foodrescue.identity.application.port.out.ITokenPort;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.infrastructure.security.IdentityAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class IdentitySecurity {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, TokenPort tokens, UserRepository users,
+    SecurityFilterChain securityFilterChain(HttpSecurity http, ITokenPort tokens, IUserRepository users,
                                            IdentityError errors) throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

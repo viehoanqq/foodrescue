@@ -1,7 +1,7 @@
 package com.foodrescue.order.infrastructure.adapter.out.http;
 
 import com.foodrescue.buildingblocks.http.InternalServiceClient;
-import com.foodrescue.order.application.port.out.InventoryPort;
+import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.domain.model.StockReservation;
 import com.foodrescue.order.domain.model.StockReservationCommand;
 import java.net.URI;
@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CatalogInventoryAdapter implements InventoryPort {
+public class CatalogInventoryAdapter implements IInventoryPort {
     private final InternalServiceClient client;
 
     public CatalogInventoryAdapter(@Value("${app.catalog-service-url}") String url,

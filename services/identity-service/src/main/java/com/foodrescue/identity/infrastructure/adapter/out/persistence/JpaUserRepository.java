@@ -1,10 +1,10 @@
 package com.foodrescue.identity.infrastructure.adapter.out.persistence;
 
 import com.foodrescue.identity.domain.model.PageResult;
-import com.foodrescue.identity.domain.repository.UserRepository;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.domain.model.UserAccount;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.UserEntity;
-import com.foodrescue.identity.infrastructure.adapter.out.persistence.SpringDataUserRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataUserRepository;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,10 +13,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class JpaUserRepositoryAdapter implements UserRepository {
-    private final SpringDataUserRepository repository;
+public class JpaUserRepository implements IUserRepository {
+    private final ISpringDataUserRepository repository;
 
-    public JpaUserRepositoryAdapter(SpringDataUserRepository repository) { this.repository = repository; }
+    public JpaUserRepository(ISpringDataUserRepository repository) { this.repository = repository; }
 
     @Override public Optional<UserAccount> findById(Long id) { return repository.findById(id).map(this::toDomain); }
     @Override public Optional<UserAccount> findByEmail(String email) {

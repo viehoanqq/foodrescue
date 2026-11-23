@@ -2,12 +2,12 @@ package com.foodrescue.identity.application.usecase;
 
 import com.foodrescue.identity.domain.model.UserAccount;
 import com.foodrescue.identity.domain.model.PageResult;
-import com.foodrescue.identity.domain.repository.UserRepository;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.domain.exception.IdentityException;
-import com.foodrescue.identity.application.port.out.AuditPort;
-import com.foodrescue.identity.application.port.out.PasswordPort;
-import com.foodrescue.identity.application.port.out.TokenPort;
-import com.foodrescue.identity.application.port.out.UnitOfWork;
+import com.foodrescue.identity.application.port.out.IAuditRepository;
+import com.foodrescue.identity.application.port.out.IPasswordPort;
+import com.foodrescue.identity.application.port.out.ITokenPort;
+import com.foodrescue.identity.application.port.out.IUnitOfWork;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -19,14 +19,14 @@ import java.util.Map;
 public class IdentityService {
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
-    private final UserRepository users;
-    private final PasswordPort passwords;
-    private final TokenPort tokens;
-    private final AuditPort audit;
-    private final UnitOfWork unitOfWork;
+    private final IUserRepository users;
+    private final IPasswordPort passwords;
+    private final ITokenPort tokens;
+    private final IAuditRepository audit;
+    private final IUnitOfWork unitOfWork;
 
-    public IdentityService(UserRepository users, PasswordPort passwords, TokenPort tokens, AuditPort audit,
-                           UnitOfWork unitOfWork) {
+    public IdentityService(IUserRepository users, IPasswordPort passwords, ITokenPort tokens, IAuditRepository audit,
+                           IUnitOfWork unitOfWork) {
         this.users = users;
         this.passwords = passwords;
         this.tokens = tokens;

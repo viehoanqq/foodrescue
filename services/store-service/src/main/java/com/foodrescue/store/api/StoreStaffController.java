@@ -1,8 +1,8 @@
 package com.foodrescue.store.api;
 
 import com.foodrescue.buildingblocks.security.AuthenticatedUser;
-import com.foodrescue.store.application.port.out.StaffIdentityPort.CreatedStaff;
-import com.foodrescue.store.application.port.out.StaffIdentityPort.NewStaff;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort.CreatedStaff;
+import com.foodrescue.store.application.port.out.IStaffIdentityPort.NewStaff;
 import com.foodrescue.store.application.usecase.CreateStaffUseCase;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;

@@ -1,8 +1,8 @@
 package com.foodrescue.identity.infrastructure.security;
 
 import com.foodrescue.identity.api.IdentityError;
-import com.foodrescue.identity.domain.repository.UserRepository;
-import com.foodrescue.identity.application.port.out.TokenPort;
+import com.foodrescue.identity.domain.repository.IUserRepository;
+import com.foodrescue.identity.application.port.out.ITokenPort;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,11 +15,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 public class IdentityAuthenticationFilter extends OncePerRequestFilter {
-    private final TokenPort tokens;
-    private final UserRepository users;
+    private final ITokenPort tokens;
+    private final IUserRepository users;
     private final IdentityError errors;
 
-    public IdentityAuthenticationFilter(TokenPort tokens, UserRepository users, IdentityError errors) {
+    public IdentityAuthenticationFilter(ITokenPort tokens, IUserRepository users, IdentityError errors) {
         this.tokens = tokens;
         this.users = users;
         this.errors = errors;
