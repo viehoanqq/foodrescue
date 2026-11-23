@@ -60,6 +60,12 @@ public class JpaUserRepository implements IUserRepository {
         return new PageResult<>(found.getContent(), page, size, found.getTotalElements(), found.getTotalPages());
     }
 
+    @Override public PageResult<UserAccount> findStaffByStoreId(Long storeId, int page, int size) {
+        Page<UserAccount> found = repository.findByRoleAndStoreId("STORE_STAFF", storeId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))).map(this::toDomain);
+        return new PageResult<>(found.getContent(), page, size, found.getTotalElements(), found.getTotalPages());
+    }
+
     private UserAccount toDomain(UserEntity e) {
         return new UserAccount(e.getId(), e.getEmail(), e.getPasswordHash(), e.getFullName(), e.getPhone(),
                 e.getRole(), e.getStoreId(), e.getStatus(), Boolean.TRUE.equals(e.getMustChangePassword()),

@@ -70,6 +70,18 @@ public class IdentityService {
         return new UserCounts(users.countActiveCustomers(), users.countAll());
     }
 
+    public com.foodrescue.identity.domain.model.PageResult<UserAccount> listStaff(
+            Long actorId, Long storeId, int page, int size) {
+        UserAccount actor = find(actorId);
+        if (!"STORE_OWNER".equals(actor.role()) || !"ACTIVE".equals(actor.status())) {
+            throw new IdentityException(403, "FORBIDDEN", "Chỉ chủ cửa hàng được xem nhân viên");
+        }
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IdentityException(400, "INVALID_PAGINATION", "Phân trang không hợp lệ");
+        }
+        return users.findStaffByStoreId(storeId, page, size);
+    }
+
     public StaffResult createStaff(Long actorId, Long storeId, String email, String fullName, String phone) {
         return unitOfWork.execute(() -> createStaffTransaction(actorId, storeId, email, fullName, phone));
     }

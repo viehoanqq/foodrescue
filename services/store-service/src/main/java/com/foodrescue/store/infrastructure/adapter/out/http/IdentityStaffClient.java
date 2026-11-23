@@ -43,5 +43,41 @@ public class IdentityStaffClient implements IStaffIdentityPort {
         }
     }
 
+    @Override
+    public StaffPage list(Long actorId, Long storeId, int page, int size) {
+        try {
+            StaffPage result = client.get("/internal/staff?actorId=" + actorId + "&storeId=" + storeId
+                    + "&page=" + page + "&size=" + size, UUID.randomUUID(), StaffPage.class);
+            if (result == null) throw new StoreException(502, "IDENTITY_ERROR", "Identity không trả danh sách nhân viên");
+            return result;
+        } catch (InternalServiceException ex) {
+            throw identityError(ex);
+        } catch (RestClientException ex) {
+            throw new StoreException(503, "IDENTITY_UNAVAILABLE", "Không kết nối được Identity");
+        }
+    }
+
+    @Override
+    public StaffStatus setLocked(Long actorId, Long storeId, Long staffId, boolean locked) {
+        try {
+            StaffStatus result = client.post("/internal/staff/" + staffId + (locked ? "/lock" : "/unlock"),
+                    new StaffStatusRequest(actorId, storeId), UUID.randomUUID(), StaffStatus.class);
+            if (result == null) throw new StoreException(502, "IDENTITY_ERROR", "Identity không trả trạng thái nhân viên");
+            return result;
+        } catch (InternalServiceException ex) {
+            throw identityError(ex);
+        } catch (RestClientException ex) {
+            throw new StoreException(503, "IDENTITY_UNAVAILABLE", "Không kết nối được Identity");
+        }
+    }
+
+    private StoreException identityError(InternalServiceException ex) {
+        if (ex.status() == 404) return new StoreException(404, "STAFF_NOT_FOUND", "Không tìm thấy nhân viên của cửa hàng");
+        if (ex.status() == 403) return new StoreException(403, "FORBIDDEN", "Không có quyền quản lý nhân viên");
+        if (ex.status() == 400) return new StoreException(400, "VALIDATION_ERROR", "Dữ liệu không hợp lệ");
+        return new StoreException(502, "IDENTITY_ERROR", "Identity không xử lý được yêu cầu nhân viên");
+    }
+
     private record InternalStaffRequest(Long actorId, Long storeId, String email, String fullName, String phone) {}
+    private record StaffStatusRequest(Long actorId, Long storeId) {}
 }

@@ -148,6 +148,7 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 | Đã có | `GET /internal/users/{id}/status` | Service | `X-Internal-Key` | `{userId,status,role,fullName,storeId,tokenVersion,mustChangePassword}` | Không |
 | Đã có | `GET /internal/users/count` | Service | `X-Internal-Key` | `{activeCustomers,totalUsers}` | Không |
 | Đã có | `POST /internal/staff` | Store-service | `{actorId,storeId,email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `GET /internal/staff?actorId&storeId&page&size` | Store-service | `X-Internal-Key`, phân trang | `{content:[{id,email,fullName,phone,status}],page,size,totalElements,totalPages}` | Không |
 | Đã có | `POST /internal/staff/{id}/lock` hoặc `/unlock` | Store-service | `{actorId,storeId}` + `X-Internal-Key` | `{userId,storeId,status,tokenVersion}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
 
 `user` hiện là `{id,email,fullName,phone,role,storeId,status,mustChangePassword,createdAt}`; không có password hash. Giao diện đã gọi login/register/me/update/password và admin users/audit qua Gateway. `IAuditRepository` ghi thao tác identity vào `audit_logs` trong transaction của use case; event audit từ service khác do listener của identity ghi sau khi Inbox dedup.
@@ -166,9 +167,9 @@ Hiện đã có `POST /api/store/staff`; các API khác trong bảng là dự ki
 | `GET /api/stores/{id}` | Công khai | Path `id` | `{id,name,address,latitude,longitude,rating,openTime,closeTime}` | Không |
 | `GET /api/store/profile` | STORE_OWNER | Không có body | `{id,ownerId,name,description,phone,address,latitude,longitude,imageUrl,openTime,closeTime,status,rejectReason,commissionRate,bankName,bankAccountNoMasked,bankAccountName,createdAt}`; không trả ảnh giấy phép hoặc số tài khoản đầy đủ | Không |
 | `PUT /api/store/profile` | STORE_OWNER | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bank...}` | Hồ sơ mới; V1 chỉ dự kiến phát audit, không có `store.profile-changed.v1` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
-| `GET /api/store/staff` | STORE_OWNER | Không có body | `{content:[{id,email,fullName,status}],...}` | Không |
+| `GET /api/store/staff?page&size` | STORE_OWNER | Query phân trang | `{content:[{id,email,fullName,phone,status}],page,size,totalElements,totalPages}` | Không |
 | `POST /api/store/staff` | STORE_OWNER | `{email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}`; Identity tạo tài khoản và ghi audit | Store không phát event; Identity ghi audit `STORE_STAFF_CREATED` trực tiếp |
-| `POST /api/store/staff/{id}/lock` hoặc `/unlock` | STORE_OWNER | Path `id` | `{userId,status}`; identity thực thi sau khi store xác minh quyền chủ | Store không phát event; Identity ghi audit khóa/mở staff trực tiếp |
+| `POST /api/store/staff/{id}/lock` hoặc `/unlock` | STORE_OWNER | Path `id` | `{userId,storeId,status,tokenVersion}`; Identity thực thi sau khi Store xác minh quyền chủ | Store không phát event; Identity ghi audit khóa/mở staff trực tiếp |
 | `POST /api/stores/{id}/reviews` | CUSTOMER có đơn COMPLETED | `{orderId,rating:1..5,comment?}` | `{id,orderId,rating,comment,createdAt}`; một đơn một lần | Không |
 | `GET /api/stores/{id}/reviews?page&size` | Công khai | Query phân trang | `{content:[review],averageRating,totalElements,...}` | Không |
 | `GET /api/admin/stores?status&page&size` | ADMIN | Query | Trang hồ sơ cửa hàng | Không |

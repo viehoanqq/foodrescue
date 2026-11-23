@@ -55,6 +55,19 @@ public class InternalUserController {
                 user.storeId(), user.status(), user.mustChangePassword(), result.temporaryPassword());
     }
 
+    @GetMapping("/internal/staff")
+    public StaffPage listStaff(@RequestHeader("X-Internal-Key") String key,
+            @org.springframework.web.bind.annotation.RequestParam Long actorId,
+            @org.springframework.web.bind.annotation.RequestParam Long storeId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        verifier.verify(key);
+        var result = service.listStaff(actorId, storeId, page, size);
+        return new StaffPage(result.content().stream().map(user -> new StaffSummary(user.id(), user.email(),
+                        user.fullName(), user.phone(), user.status())).toList(),
+                result.page(), result.size(), result.totalElements(), result.totalPages());
+    }
+
     @PostMapping("/internal/staff/{id}/lock")
     public StaffStatusResponse lockStaff(@RequestHeader("X-Internal-Key") String key,
             @PathVariable Long id, @Valid @RequestBody StaffStatusRequest request) {
@@ -78,6 +91,9 @@ public class InternalUserController {
     public record StaffResponse(Long userId, String email, String fullName, String phone, String role,
                                 Long storeId, String status, boolean mustChangePassword,
                                 String temporaryPassword) {}
+    public record StaffSummary(Long id, String email, String fullName, String phone, String status) {}
+    public record StaffPage(java.util.List<StaffSummary> content, int page, int size,
+                            long totalElements, int totalPages) {}
     public record StaffStatusRequest(@NotNull @Positive Long actorId, @NotNull @Positive Long storeId) {}
     public record StaffStatusResponse(Long userId, Long storeId, String status, long tokenVersion) {
         public static StaffStatusResponse from(UserAccount user) {

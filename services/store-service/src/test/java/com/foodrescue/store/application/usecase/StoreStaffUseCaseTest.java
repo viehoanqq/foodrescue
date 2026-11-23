@@ -12,10 +12,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class CreateStaffUseCaseTest {
+class StoreStaffUseCaseTest {
     private final IStoreRepository stores = mock(IStoreRepository.class);
     private final IStaffIdentityPort identity = mock(IStaffIdentityPort.class);
-    private final CreateStaffUseCase useCase = new CreateStaffUseCase(stores, identity);
+    private final StoreStaffUseCase useCase = new StoreStaffUseCase(stores, identity);
     private final NewStaff staff = new NewStaff("staff@example.com", "Nhân viên", "0123456789");
 
     @Test
