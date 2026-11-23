@@ -35,4 +35,5 @@ app:
     secret: ${JWT_SECRET:}
   internal-api-key: ${INTERNAL_API_KEY:}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://identity-service:8082}
+  order-service-url: ${ORDER_SERVICE_URL:http://order-service:8085}
 

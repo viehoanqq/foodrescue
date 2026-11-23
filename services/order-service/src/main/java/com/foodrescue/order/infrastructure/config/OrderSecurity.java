@@ -29,7 +29,8 @@ public class OrderSecurity {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
                                 "/internal/health/db", "/actuator/health",
-                                "/internal/order/reservations", "/internal/order/reservations/**").permitAll()
+                                "/internal/order/reservations", "/internal/order/reservations/**",
+                                "/internal/orders/*/review-eligibility").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/cart", "/api/cart/**", "/api/orders", "/api/orders/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/store/orders", "/api/store/orders/**", "/api/store/pickup", "/api/store/pickup/**")

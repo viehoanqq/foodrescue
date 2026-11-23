@@ -5,11 +5,13 @@ import com.foodrescue.buildingblocks.security.AuthenticatedUser;
 import com.foodrescue.store.application.usecase.RegisterStoreUseCase;
 import com.foodrescue.store.application.usecase.ReadStoreUseCase;
 import com.foodrescue.store.application.usecase.ReviewStoreUseCase;
+import com.foodrescue.store.application.usecase.StoreReviewUseCase;
 import com.foodrescue.store.application.port.out.IImageStorage.Upload;
 import com.foodrescue.store.application.port.out.IImageStorage;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreRegistration;
 import com.foodrescue.store.domain.model.StoreView;
+import com.foodrescue.store.domain.model.ReviewView;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -24,14 +26,17 @@ public class StoreController {
     private final RegisterStoreUseCase registerStore;
     private final ReadStoreUseCase readStore;
     private final ReviewStoreUseCase reviewStore;
+    private final StoreReviewUseCase storeReviews;
     private final IImageStorage images;
     private final ObjectMapper mapper;
 
     public StoreController(RegisterStoreUseCase registerStore, ReadStoreUseCase readStore,
-                           ReviewStoreUseCase reviewStore, IImageStorage images, ObjectMapper mapper) {
+                           ReviewStoreUseCase reviewStore, StoreReviewUseCase storeReviews,
+                           IImageStorage images, ObjectMapper mapper) {
         this.registerStore = registerStore;
         this.readStore = readStore;
         this.reviewStore = reviewStore;
+        this.storeReviews = storeReviews;
         this.images = images;
         this.mapper = mapper;
     }
@@ -77,6 +82,21 @@ public class StoreController {
 
     @GetMapping("/api/stores/{id}")
     public StoreView.Detail detail(@PathVariable Long id) { return readStore.detail(id); }
+
+    @PostMapping("/api/stores/{id}/reviews")
+    @SecurityRequirement(name = "bearerAuth")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReviewView.Item createReview(@AuthenticationPrincipal AuthenticatedUser customer,
+                                         @PathVariable Long id, @RequestBody ReviewView.Create request) {
+        return storeReviews.create(id, customer.id(), request);
+    }
+
+    @GetMapping("/api/stores/{id}/reviews")
+    public ReviewView.Page reviews(@PathVariable Long id,
+                                    @RequestParam(defaultValue = "0") int page,
+                                    @RequestParam(defaultValue = "20") int size) {
+        return storeReviews.list(id, page, size);
+    }
 
     @GetMapping("/api/admin/stores")
     @SecurityRequirement(name = "bearerAuth")
