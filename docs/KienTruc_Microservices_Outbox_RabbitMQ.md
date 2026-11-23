@@ -164,7 +164,7 @@ Hiện đã có `POST /api/store/staff`; các API khác trong bảng là dự ki
 | `GET /api/store/registration` | Người nộp | Không có body | `{storeId,status,rejectReason?,createdAt}` | Không |
 | `GET /api/stores?lat&lon&radiusKm&page&size` | Công khai | Tọa độ/bán kính/query | `{content:[storeSummary],page,size,totalElements,totalPages}`; chỉ APPROVED | Không |
 | `GET /api/stores/{id}` | Công khai | Path `id` | `{id,name,address,latitude,longitude,rating,openTime,closeTime}` | Không |
-| `GET /api/store/profile` | STORE_OWNER | Không có body | Hồ sơ cửa hàng của chủ, ẩn bớt thông tin ngân hàng khi không cần | Không |
+| `GET /api/store/profile` | STORE_OWNER | Không có body | `{id,ownerId,name,description,phone,address,latitude,longitude,imageUrl,openTime,closeTime,status,rejectReason,commissionRate,bankName,bankAccountNoMasked,bankAccountName,createdAt}`; không trả ảnh giấy phép hoặc số tài khoản đầy đủ | Không |
 | `PUT /api/store/profile` | STORE_OWNER | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bank...}` | Hồ sơ mới; V1 chỉ dự kiến phát audit, không có `store.profile-changed.v1` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
 | `GET /api/store/staff` | STORE_OWNER | Không có body | `{content:[{id,email,fullName,status}],...}` | Không |
 | `POST /api/store/staff` | STORE_OWNER | `{email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}`; Identity tạo tài khoản và ghi audit | Store không phát event; Identity ghi audit `STORE_STAFF_CREATED` trực tiếp |

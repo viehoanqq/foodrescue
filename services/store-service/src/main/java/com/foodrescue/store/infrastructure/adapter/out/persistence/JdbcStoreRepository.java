@@ -35,6 +35,28 @@ public class JdbcStoreRepository implements IStoreRepository {
                 .stream().findFirst();
     }
 
+    @Override
+    public Optional<StoreView.Profile> findProfileByOwnerId(Long ownerId) {
+        String sql = "SELECT id,owner_id,name,description,phone,address,latitude,longitude,image_url," +
+                "open_time,close_time,status,reject_reason,commission_rate,bank_name,bank_account_no," +
+                "bank_account_name,created_at FROM stores WHERE owner_id=?";
+        return jdbc.query(sql, (rs, row) -> new StoreView.Profile(
+                rs.getLong("id"), rs.getLong("owner_id"), rs.getString("name"),
+                rs.getString("description"), rs.getString("phone"), rs.getString("address"),
+                rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"), rs.getString("image_url"),
+                rs.getTime("open_time").toLocalTime(), rs.getTime("close_time").toLocalTime(),
+                rs.getString("status"), rs.getString("reject_reason"), rs.getBigDecimal("commission_rate"),
+                rs.getString("bank_name"), maskAccount(rs.getString("bank_account_no")),
+                rs.getString("bank_account_name"), rs.getTimestamp("created_at").toLocalDateTime()), ownerId)
+                .stream().findFirst();
+    }
+
+    private String maskAccount(String account) {
+        if (account == null || account.isEmpty()) return null;
+        if (account.length() <= 4) return "*".repeat(account.length());
+        return "*".repeat(account.length() - 4) + account.substring(account.length() - 4);
+    }
+
     private static final String RATINGS = " LEFT JOIN (SELECT store_id,ROUND(AVG(rating),2) rating," +
             "COUNT(*) review_count FROM reviews GROUP BY store_id) r ON r.store_id=s.id ";
 

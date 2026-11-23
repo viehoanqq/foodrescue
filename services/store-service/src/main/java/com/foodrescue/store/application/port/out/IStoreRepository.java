@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface IStoreRepository {
     Optional<OwnedStore> findByOwnerId(Long ownerId);
     Optional<StoreView.Registration> findRegistration(Long ownerId);
+    Optional<StoreView.Profile> findProfileByOwnerId(Long ownerId);
     Optional<StoreView.Detail> findApprovedById(Long storeId);
     StoreView.Page findApproved(BigDecimal latitude, BigDecimal longitude, BigDecimal radiusKm, int page, int size);
     Registered save(Long ownerId, StoreRegistration data, String licenseUrl, String imageUrl);

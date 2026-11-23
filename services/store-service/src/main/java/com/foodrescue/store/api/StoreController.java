@@ -53,6 +53,12 @@ public class StoreController {
         return readStore.registration(user.id());
     }
 
+    @GetMapping("/api/store/profile")
+    @SecurityRequirement(name = "bearerAuth")
+    public StoreView.Profile profile(@AuthenticationPrincipal AuthenticatedUser owner) {
+        return readStore.profile(owner.id());
+    }
+
     @GetMapping("/api/stores")
     public StoreView.Page list(@RequestParam(required = false) BigDecimal lat,
                                @RequestParam(required = false) BigDecimal lon,

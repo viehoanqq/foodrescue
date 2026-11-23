@@ -14,6 +14,11 @@ public class ReadStoreUseCase {
                 .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Bạn chưa đăng ký cửa hàng"));
     }
 
+    public StoreView.Profile profile(Long ownerId) {
+        return stores.findProfileByOwnerId(ownerId)
+                .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Bạn chưa có cửa hàng"));
+    }
+
     public StoreView.Detail detail(Long storeId) {
         return stores.findApprovedById(storeId)
                 .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
