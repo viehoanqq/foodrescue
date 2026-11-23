@@ -12,6 +12,7 @@ export const storeApi = {
   stores: (params) => api.get('/stores', { params }),
   store: (id) => api.get(`/stores/${id}`),
   profile: () => api.get('/store/profile'),
+  updateProfile: (values) => api.put('/store/profile', values),
   staff: (params) => api.get('/store/staff', { params }),
   createStaff: (values) => api.post('/store/staff', values),
   setStaffLocked: (id, locked) => api.post(`/store/staff/${id}/${locked ? 'lock' : 'unlock'}`),

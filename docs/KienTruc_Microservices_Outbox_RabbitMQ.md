@@ -157,7 +157,7 @@ Migration hiện có: identity `V1__baseline.sql` và `V2__user_token_version.sq
 
 ### 5.2 Store API
 
-Đã có các API đăng ký, xem cửa hàng, hồ sơ chủ, nhân viên và Admin xem/duyệt/từ chối/khóa/mở khóa/sửa hoa hồng cửa hàng. Các dòng còn lại là dự kiến.
+Đã có các API đăng ký, xem cửa hàng, xem/sửa hồ sơ chủ, nhân viên, đánh giá và Admin xem/duyệt/từ chối/khóa/mở khóa/sửa hoa hồng cửa hàng. Các dòng còn lại là dự kiến.
 
 Trong `store-service`, API được chia theo nhóm: `StoreController` (đăng ký, hồ sơ, cửa hàng công khai, đánh giá), `StoreStaffController` (nhân viên), `AdminStoreController` (quản trị). Phần Admin dùng `ReadAdminStoreUseCase`/`AdminStoreUseCase` và `IAdminStoreRepository`/`JdbcAdminStoreRepository`; phần cửa hàng dùng `ReadStoreUseCase` và `IStoreRepository`/`JdbcStoreRepository`. Các endpoint `/internal/stores/**` sẽ có controller riêng khi triển khai, không đặt vào ba controller công khai trên.
 
@@ -168,7 +168,7 @@ Trong `store-service`, API được chia theo nhóm: `StoreController` (đăng k
 | `GET /api/stores?lat&lon&radiusKm&page&size` | Công khai | Tọa độ/bán kính/query | `{content:[storeSummary],page,size,totalElements,totalPages}`; chỉ APPROVED | Không |
 | `GET /api/stores/{id}` | Công khai | Path `id` | `{id,name,address,latitude,longitude,rating,openTime,closeTime}` | Không |
 | `GET /api/store/profile` | STORE_OWNER | Không có body | `{id,ownerId,name,description,phone,address,latitude,longitude,imageUrl,openTime,closeTime,status,rejectReason,commissionRate,bankName,bankAccountNoMasked,bankAccountName,createdAt}`; không trả ảnh giấy phép hoặc số tài khoản đầy đủ | Không |
-| `PUT /api/store/profile` | STORE_OWNER | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bank...}` | Hồ sơ mới; V1 chỉ dự kiến phát audit, không có `store.profile-changed.v1` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| `PUT /api/store/profile` | STORE_OWNER | `{name,description,phone,address,latitude,longitude,openTime,closeTime,bankName,bankAccountName,bankAccountNo?}`; bỏ trống `bankAccountNo` để giữ số cũ | Hồ sơ mới; số tài khoản vẫn che bớt, không có `store.profile-changed.v1` | Outbox `audit.action.v1` → `identity.audit-events` |
 | `GET /api/store/staff?page&size` | STORE_OWNER | Query phân trang | `{content:[{id,email,fullName,phone,status}],page,size,totalElements,totalPages}` | Không |
 | `POST /api/store/staff` | STORE_OWNER | `{email,fullName,phone}` | `{userId,email,fullName,phone,role,storeId,status,mustChangePassword,temporaryPassword}`; Identity tạo tài khoản và ghi audit | Store không phát event; Identity ghi audit `STORE_STAFF_CREATED` trực tiếp |
 | `POST /api/store/staff/{id}/lock` hoặc `/unlock` | STORE_OWNER | Path `id` | `{userId,storeId,status,tokenVersion}`; Identity thực thi sau khi Store xác minh quyền chủ | Store không phát event; Identity ghi audit khóa/mở staff trực tiếp |

@@ -12,11 +12,16 @@ import com.foodrescue.store.application.usecase.ReadStoreUseCase;
 import com.foodrescue.store.application.usecase.ReadAdminStoreUseCase;
 import com.foodrescue.store.application.usecase.AdminStoreUseCase;
 import com.foodrescue.store.application.usecase.StoreReviewUseCase;
+import com.foodrescue.store.application.usecase.UpdateStoreProfileUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class StoreBeans {
+    @Bean
+    UpdateStoreProfileUseCase updateStoreProfileUseCase(IStoreRepository stores) {
+        return new UpdateStoreProfileUseCase(stores);
+    }
     @Bean
     StoreReviewUseCase storeReviewUseCase(IStoreRepository stores, IReviewRepository reviews,
                                          IOrderEligibilityPort orders) {

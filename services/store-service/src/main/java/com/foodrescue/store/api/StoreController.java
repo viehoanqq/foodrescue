@@ -5,9 +5,11 @@ import com.foodrescue.buildingblocks.security.AuthenticatedUser;
 import com.foodrescue.store.application.usecase.RegisterStoreUseCase;
 import com.foodrescue.store.application.usecase.ReadStoreUseCase;
 import com.foodrescue.store.application.usecase.StoreReviewUseCase;
+import com.foodrescue.store.application.usecase.UpdateStoreProfileUseCase;
 import com.foodrescue.store.application.port.out.IImageStorage.Upload;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreRegistration;
+import com.foodrescue.store.domain.model.StoreProfileUpdate;
 import com.foodrescue.store.domain.model.StoreView;
 import com.foodrescue.store.domain.model.ReviewView;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,13 +28,16 @@ public class StoreController {
     private final RegisterStoreUseCase registerStore;
     private final ReadStoreUseCase readStore;
     private final StoreReviewUseCase storeReviews;
+    private final UpdateStoreProfileUseCase updateProfile;
     private final ObjectMapper mapper;
 
     public StoreController(RegisterStoreUseCase registerStore, ReadStoreUseCase readStore,
-                           StoreReviewUseCase storeReviews, ObjectMapper mapper) {
+                           StoreReviewUseCase storeReviews, UpdateStoreProfileUseCase updateProfile,
+                           ObjectMapper mapper) {
         this.registerStore = registerStore;
         this.readStore = readStore;
         this.storeReviews = storeReviews;
+        this.updateProfile = updateProfile;
         this.mapper = mapper;
     }
 
@@ -64,6 +69,13 @@ public class StoreController {
     @SecurityRequirement(name = "bearerAuth")
     public StoreView.Profile profile(@AuthenticationPrincipal AuthenticatedUser owner) {
         return readStore.profile(owner.id());
+    }
+
+    @PutMapping("/api/store/profile")
+    @SecurityRequirement(name = "bearerAuth")
+    public StoreView.Profile updateProfile(@AuthenticationPrincipal AuthenticatedUser owner,
+                                           @RequestBody StoreProfileUpdate request) {
+        return updateProfile.execute(owner.id(), request);
     }
 
     @GetMapping("/api/stores")

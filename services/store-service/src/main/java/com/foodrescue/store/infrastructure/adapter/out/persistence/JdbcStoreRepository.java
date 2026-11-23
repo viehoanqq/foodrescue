@@ -1,8 +1,12 @@
 package com.foodrescue.store.infrastructure.adapter.out.persistence;
 
 import com.foodrescue.store.application.port.out.IStoreRepository;
+import com.foodrescue.store.application.port.out.IOutboxPort;
+import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreRegistration;
+import com.foodrescue.store.domain.model.StoreProfileUpdate;
 import com.foodrescue.store.domain.model.StoreView;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -12,14 +16,19 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import com.foodrescue.store.domain.model.OwnedStore;
 import java.util.Optional;
+import java.util.Map;
+import java.util.UUID;
 
 @Repository
 public class JdbcStoreRepository implements IStoreRepository {
     private final JdbcTemplate jdbc;
-    public JdbcStoreRepository(JdbcTemplate jdbc) {
+    private final IOutboxPort outbox;
+    public JdbcStoreRepository(JdbcTemplate jdbc, IOutboxPort outbox) {
         this.jdbc = jdbc;
+        this.outbox = outbox;
     }
 
     @Override
@@ -58,6 +67,28 @@ public class JdbcStoreRepository implements IStoreRepository {
                 rs.getString("bank_name"), maskAccount(rs.getString("bank_account_no")),
                 rs.getString("bank_account_name"), rs.getTimestamp("created_at").toLocalDateTime()), ownerId)
                 .stream().findFirst();
+    }
+
+    @Override
+    @Transactional
+    public StoreView.Profile updateProfile(Long ownerId, StoreProfileUpdate input) {
+        int changed = jdbc.update("UPDATE stores SET name=?,description=?,phone=?,address=?,latitude=?," +
+                        "longitude=?,open_time=?,close_time=?,bank_name=?," +
+                        "bank_account_no=COALESCE(?,bank_account_no),bank_account_name=?," +
+                        "aggregate_version=aggregate_version+1 WHERE owner_id=? AND status IN ('APPROVED','LOCKED')",
+                input.name(), input.description(), input.phone(), input.address(), input.latitude(),
+                input.longitude(), input.openTime(), input.closeTime(), input.bankName(),
+                input.bankAccountNo(), input.bankAccountName(), ownerId);
+        if (changed != 1)
+            throw new StoreException(409, "STORE_NOT_EDITABLE", "Cửa hàng chưa thể chỉnh sửa hồ sơ");
+        var row = jdbc.queryForMap("SELECT id,aggregate_version FROM stores WHERE owner_id=?", ownerId);
+        Long storeId = ((Number) row.get("id")).longValue();
+        long version = ((Number) row.get("aggregate_version")).longValue();
+        outbox.append(EventEnvelope.create(MessagingNames.AUDIT_ACTION_EVENT, "Store", storeId.toString(),
+                version, UUID.randomUUID(), null, ownerId,
+                Map.of("action", "STORE_PROFILE_UPDATED", "entityType", "STORE",
+                        "entityId", storeId, "detail", "Store profile updated")));
+        return findProfileByOwnerId(ownerId).orElseThrow();
     }
 
     private String maskAccount(String account) {
