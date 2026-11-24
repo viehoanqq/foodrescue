@@ -2,10 +2,13 @@
 .checkout-page h1,.customer-orders-page h1 { margin: 0 0 20px; color: #173e30; font-size: 30px; }
 .checkout-page h2,.customer-orders-page h2 { margin: 0 0 12px; color: #173e30; font-size: 20px; }
 .checkout-steps { max-width: 860px; margin: 0 auto 30px; }
-.checkout-layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 20px; align-items: start; }
+.checkout-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 20px; align-items: start; }
 .checkout-side-card,.checkout-main-card { background: #fff; border: 1px solid #e5eae4; border-radius: 14px; padding: 24px; }
-.checkout-side-card { grid-column: 1; grid-row: 1; }
-.checkout-main-card { grid-column: 2; grid-row: 1; min-width: 0; }
+.checkout-side-card { grid-column: 2; grid-row: 1; }
+.checkout-main-card { grid-column: 1; grid-row: 1; min-width: 0; }
+.checkout-cart-layout { grid-template-columns: minmax(0, 1fr) 290px; }
+.checkout-cart-layout .checkout-main-card { grid-column: 1; }
+.checkout-cart-layout .checkout-side-card { grid-column: 2; }
 .checkout-side-card p,.checkout-main-card>p { color: #66756c; line-height: 1.5; }
 .checkout-side-card .ant-alert { margin: 14px 0; }
 .checkout-total { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #e5eae4; padding: 16px 0; margin-top: 16px; }
@@ -53,5 +56,5 @@
 .customer-order-contact h3 { margin: 0 0 8px; }
 .customer-order-contact p { margin: 5px 0; }
 .customer-order-item { display: flex; justify-content: space-between; gap: 14px; border-top: 1px solid #edf0eb; padding: 12px 0; margin: 0; }
-@media(max-width:760px){.checkout-layout { grid-template-columns: 1fr; }.checkout-side-card,.checkout-main-card { grid-column: 1; grid-row: auto; }.checkout-main-card { grid-row: 1; }.checkout-transfer-body { grid-template-columns: 1fr; }.customer-orders-page { padding: 18px; }}
+@media(max-width:760px){.checkout-layout,.checkout-cart-layout { grid-template-columns: 1fr; }.checkout-side-card,.checkout-main-card,.checkout-cart-layout .checkout-side-card,.checkout-cart-layout .checkout-main-card { grid-column: 1; grid-row: auto; }.checkout-main-card,.checkout-cart-layout .checkout-main-card { grid-row: 1; }.checkout-transfer-body { grid-template-columns: 1fr; }.customer-orders-page { padding: 18px; }}
 @media(max-width:500px){.checkout-page { width: calc(100% - 28px); }.checkout-product { grid-template-columns: 75px minmax(0, 1fr); }.checkout-product img { width: 75px; height: 75px; }.checkout-finish-actions { flex-direction: column; }}

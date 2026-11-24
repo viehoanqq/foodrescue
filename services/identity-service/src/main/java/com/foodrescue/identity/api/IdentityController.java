@@ -9,6 +9,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,7 +48,8 @@ public class IdentityController {
     @SecurityRequirement(name = "bearerAuth")
     public UserView update(@AuthenticationPrincipal IdentityPrincipal principal,
                            @Valid @RequestBody ProfileRequest request) {
-        return UserView.from(service.updateProfile(principal.id(), request.fullName(), request.phone()));
+        return UserView.from(service.updateProfile(principal.id(), request.fullName(), request.phone(),
+                request.address(), request.latitude(), request.longitude()));
     }
 
     @PutMapping("/api/me/password")
@@ -61,16 +65,20 @@ public class IdentityController {
                                   @NotBlank @Size(max = 20) String phone) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
     public record ProfileRequest(@NotBlank @Size(max = 100) String fullName,
-                                 @NotBlank @Size(max = 20) String phone) {}
+                                 @NotBlank @Size(max = 20) String phone,
+                                 @Size(max = 255) String address,
+                                 @DecimalMin("-90") @DecimalMax("90") BigDecimal latitude,
+                                 @DecimalMin("-180") @DecimalMax("180") BigDecimal longitude) {}
     public record PasswordRequest(@NotBlank String oldPassword,
                                   @NotBlank @Size(min = 8, max = 72) String newPassword) {}
     public record AuthResponse(String token, UserView user) {}
     public record UserView(Long id, String email, String fullName, String phone, String role,
                            Long storeId, String status, boolean mustChangePassword,
-                           LocalDateTime createdAt) {
+                           LocalDateTime createdAt, String address, BigDecimal latitude, BigDecimal longitude) {
         public static UserView from(UserAccount user) {
             return new UserView(user.id(), user.email(), user.fullName(), user.phone(), user.role(),
-                    user.storeId(), user.status(), user.mustChangePassword(), user.createdAt());
+                    user.storeId(), user.status(), user.mustChangePassword(), user.createdAt(),
+                    user.address(), user.latitude(), user.longitude());
         }
     }
 }

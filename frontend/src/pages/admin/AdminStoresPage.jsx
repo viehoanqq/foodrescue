@@ -130,11 +130,12 @@ export default function AdminStoresPage() {
       ]} />{selected.imageUrl && <Image src={selected.imageUrl} alt={selected.name} width={180} style={{ marginTop: 18 }} />}
         <h3>Giấy phép kinh doanh</h3>{licenseUrl ? <Image src={licenseUrl} alt="Giấy phép kinh doanh" width={240} /> : <Alert type="warning" showIcon message="Chưa tải được ảnh giấy phép" />}
         {selected.rejectReason && <Alert style={{ marginTop: 16 }} type="error" showIcon message="Lý do từ chối" description={selected.rejectReason} />}
-        {['PENDING', 'APPROVED', 'LOCKED'].includes(selected.status) && <p style={{ marginTop: 16 }}>Hoa hồng: <InputNumber min={0} max={50} value={Number(selected.commissionRate ?? 15)} onChange={(value) => setSelected((old) => ({ ...old, commissionRate: value }))} addonAfter="%" />{selected.status !== 'PENDING' && <Button style={{ marginLeft: 8 }} loading={busy} onClick={saveCommission}>Lưu hoa hồng</Button>}</p>}
+        {['PENDING', 'APPROVED', 'LOCKED'].includes(selected.status) && <p style={{ marginTop: 16 }}>Hoa hồng: <InputNumber min={0} max={50} value={Number(selected.commissionRate ?? 15)} onChange={(value) => setSelected((old) => ({ ...old, commissionRate: value }))} addonAfter="%" />{selected.status !== 'PENDING' && <Button style={{ marginLeft: 8 }} loading={busy} onClick={() => Modal.confirm({ title: 'Cập nhật hoa hồng?', content: `Cửa hàng ${selected.name} sẽ áp dụng mức ${selected.commissionRate}%.`, okText: 'Cập nhật', cancelText: 'Hủy', onOk: saveCommission })}>Lưu hoa hồng</Button>}</p>}
       </>}
     </Modal>
     <Modal title="Chỉnh sửa cửa hàng" width={760} open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="Lưu thay đổi" confirmLoading={busy} destroyOnClose>
-      <Form form={editForm} layout="vertical" onFinish={saveStore}>
+      <Form form={editForm} layout="vertical" onFinish={(values) => Modal.confirm({ title: 'Lưu thay đổi cửa hàng?',
+        content: 'Thông tin mới sẽ cập nhật hồ sơ cửa hàng.', okText: 'Lưu thay đổi', cancelText: 'Kiểm tra lại', onOk: () => saveStore(values) })}>
         <Row gutter={16}><Col xs={24} sm={12}><Form.Item name="name" label="Tên cửa hàng" rules={[{ required: true, whitespace: true }, { max: 150 }]}><Input maxLength={150} /></Form.Item></Col>
           <Col xs={24} sm={12}><Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, whitespace: true }, { max: 20 }]}><Input maxLength={20} /></Form.Item></Col></Row>
         <Form.Item name="description" label="Giới thiệu" rules={[{ max: 1000 }]}><Input.TextArea rows={3} maxLength={1000} showCount /></Form.Item>

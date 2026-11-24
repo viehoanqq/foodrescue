@@ -31,6 +31,15 @@ public class UserEntity {
     @Column(name = "phone", nullable = false, length = 20)
     private String phone;
 
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "latitude", precision = 10, scale = 8)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 11, scale = 8)
+    private BigDecimal longitude;
+
     @Column(name = "store_id")
     private Long storeId;
 
@@ -63,6 +72,13 @@ public class UserEntity {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+    public BigDecimal getLatitude() { return latitude; }
+    public void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
+    public BigDecimal getLongitude() { return longitude; }
+    public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
 
     public Long getStoreId() { return storeId; }
     public void setStoreId(Long storeId) { this.storeId = storeId; }

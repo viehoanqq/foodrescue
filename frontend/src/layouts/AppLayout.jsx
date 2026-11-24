@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button, Drawer, Dropdown, Layout, Menu, Typography } from 'antd';
+import { Badge, Button, Drawer, Dropdown, Layout, Menu, Modal, Typography } from 'antd';
 import {
   AppstoreOutlined, AuditOutlined, BankOutlined, DashboardOutlined, DollarOutlined,
   GiftOutlined, InboxOutlined, LogoutOutlined, MenuOutlined, DownOutlined, ProfileOutlined, ReloadOutlined,
@@ -61,9 +61,12 @@ export default function AppLayout() {
   }
 
   function signOut() {
-    const loginPath = loginForRole(user?.role);
-    logout();
-    navigate(loginPath, { replace: true });
+    Modal.confirm({ title: 'Đăng xuất khỏi tài khoản?', content: 'Bạn sẽ cần đăng nhập lại để tiếp tục.',
+      okText: 'Đăng xuất', cancelText: 'Ở lại', onOk: () => {
+        const loginPath = loginForRole(user?.role);
+        logout();
+        navigate(loginPath, { replace: true });
+      } });
   }
 
   const accountItems = [
@@ -91,7 +94,7 @@ export default function AppLayout() {
   return <Layout className={`app-shell ${sideLayout ? 'app-shell-side' : 'app-shell-top'}`}>
     {sideLayout && <Layout.Sider width={244} theme="light" className="app-desktop-sidebar">
       <div className="app-sidebar-inner">
-        <Link to={homeForRole(user?.role)} className="app-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link>
+        <Link to={homeForRole(user?.role)} className="app-brand" aria-label="FoodRescue"><img src="/logo.svg" alt="FoodRescue" /></Link>
         <Typography.Text type="secondary" className="app-sidebar-subtitle">{areaName}</Typography.Text>
         {navigation}
       </div>
@@ -102,8 +105,8 @@ export default function AppLayout() {
           <Button className="app-mobile-menu" type="text" icon={<MenuOutlined />} aria-label="Mở menu" onClick={() => setDrawerOpen(true)} />
           {sideLayout ? <Typography.Text strong className="app-page-name">{selected?.label || (location.pathname.startsWith('/me') ? 'Tài khoản' : areaName)}</Typography.Text>
             : <>
-              <Link to={homeForRole(user?.role)} className="app-top-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link>
-              <Menu className="app-top-menu" theme="dark" mode="horizontal" selectedKeys={selected ? [selected.key] : []}
+              <Link to={homeForRole(user?.role)} className="app-top-brand" aria-label="FoodRescue"><img src="/logo.svg" alt="FoodRescue" /></Link>
+              <Menu className="app-top-menu" theme="light" mode="horizontal" selectedKeys={selected ? [selected.key] : []}
                 items={menu} onClick={selectMenu} />
             </>}
           {!sideLayout && user?.role === 'CUSTOMER' && <Badge count={cartCount} size="small" offset={[-2, 2]}>

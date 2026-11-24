@@ -9,6 +9,7 @@ import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.application.port.out.ITokenPort;
 import com.foodrescue.identity.application.port.out.IUnitOfWork;
 import java.security.SecureRandom;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -126,14 +127,25 @@ public class IdentityService {
         return saved;
     }
 
-    public UserAccount updateProfile(Long id, String fullName, String phone) {
-        return unitOfWork.execute(() -> updateProfileTransaction(id, fullName, phone));
+    public UserAccount updateProfile(Long id, String fullName, String phone,
+                                     String address, BigDecimal latitude, BigDecimal longitude) {
+        return unitOfWork.execute(() -> updateProfileTransaction(id, fullName, phone, address, latitude, longitude));
     }
 
-    private UserAccount updateProfileTransaction(Long id, String fullName, String phone) {
+    private UserAccount updateProfileTransaction(Long id, String fullName, String phone,
+                                                  String address, BigDecimal latitude, BigDecimal longitude) {
         UserAccount old = find(id);
-        UserAccount saved = users.save(copy(old, old.passwordHash(), fullName.trim(), phone.trim(),
-                old.status(), old.mustChangePassword(), old.tokenVersion()));
+        if ((latitude == null) != (longitude == null)) {
+            throw new IdentityException(400, "INVALID_LOCATION", "Cần nhập cả vĩ độ và kinh độ");
+        }
+        if (latitude != null && (latitude.compareTo(BigDecimal.valueOf(-90)) < 0 || latitude.compareTo(BigDecimal.valueOf(90)) > 0)
+                || longitude != null && (longitude.compareTo(BigDecimal.valueOf(-180)) < 0 || longitude.compareTo(BigDecimal.valueOf(180)) > 0)) {
+            throw new IdentityException(400, "INVALID_LOCATION", "Tọa độ không hợp lệ");
+        }
+        UserAccount saved = users.save(new UserAccount(old.id(), old.email(), old.passwordHash(),
+                fullName.trim(), phone.trim(), old.role(), old.storeId(), old.status(),
+                old.mustChangePassword(), old.createdAt(), old.tokenVersion(),
+                address == null || address.isBlank() ? null : address.trim(), latitude, longitude));
         audit.record(id, "USER_PROFILE_UPDATED", "USER", id, null);
         return saved;
     }
@@ -231,7 +243,8 @@ public class IdentityService {
     private UserAccount copy(UserAccount old, String passwordHash, String fullName, String phone,
                              String status, boolean mustChangePassword, long version) {
         return new UserAccount(old.id(), old.email(), passwordHash, fullName, phone, old.role(), old.storeId(),
-                status, mustChangePassword, old.createdAt(), version);
+                status, mustChangePassword, old.createdAt(), version,
+                old.address(), old.latitude(), old.longitude());
     }
 
     private String normalize(String email) { return email.trim().toLowerCase(Locale.ROOT); }

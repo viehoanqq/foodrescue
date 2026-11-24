@@ -10,6 +10,7 @@ import MyStorePage from '../pages/MyStorePage';
 import PasswordPage from '../pages/PasswordPage';
 import CustomerLanding from '../pages/customer/CustomerLanding';
 import StoresPage, { StoreDetailPage } from '../pages/customer/StoresPage';
+import BatchCatalogPage, { BatchDetailPage } from '../pages/customer/BatchCatalogPage';
 import { CustomerCartPage, CheckoutInfoPage, CheckoutPaymentPage, CustomerPaymentPage, CustomerPaymentCompletePage, CustomerOrdersPage, CustomerOrderDetailPage } from '../pages/customer/CustomerOrderFlow';
 import StoreRegistrationPage from '../pages/store/StoreRegistrationPage';
 import StoreProfilePage from '../pages/store/StoreProfilePage';
@@ -17,11 +18,17 @@ import StoreStaffPage from '../pages/store/StoreStaffPage';
 import OwnerReviewsPage from '../pages/store/OwnerReviewsPage';
 import { AnonymousRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from './RouteGuards';
 import { STORE_ROLES } from './paths';
-import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoStoreCategories } from '../demo/DemoPages';
+import { DemoBatches, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoStoreCategories } from '../demo/DemoPages';
+import DemoAdminPage from '../demo/DemoAdminPage';
 
 function OldCustomerOrderRedirect() {
   const { orderId } = useParams();
   return <Navigate to={`/me/orders/${orderId}`} replace />;
+}
+
+function OldBatchRedirect() {
+  const { batchId } = useParams();
+  return <Navigate to={`/batches/${batchId}`} replace />;
 }
 
 export default function AppRoutes() {
@@ -31,8 +38,8 @@ export default function AppRoutes() {
       <Route path="/" element={<CustomerLanding />} />
       <Route path="/stores" element={<StoresPage />} />
       <Route path="/stores/:id" element={<StoreDetailPage />} />
-      <Route path="/batches" element={<DemoHome />} />
-      <Route path="/batches/:batchId" element={<DemoBatchDetail />} />
+      <Route path="/batches" element={<BatchCatalogPage />} />
+      <Route path="/batches/:batchId" element={<BatchDetailPage />} />
     </Route>
     <Route path="/payment/result" element={<Navigate to="/me/orders" replace />} />
     <Route element={<AnonymousRoute />}>
@@ -58,9 +65,9 @@ export default function AppRoutes() {
           </Route>
         </Route>
         <Route element={<RoleRoute roles={['CUSTOMER']} />}>
-          <Route path="/customer/batches" element={<DemoHome />} />
+          <Route path="/customer/batches" element={<Navigate to="/batches" replace />} />
           <Route path="/store/register" element={<StoreRegistrationPage />} />
-          <Route path="/customer/batches/:batchId" element={<DemoBatchDetail />} />
+          <Route path="/customer/batches/:batchId" element={<OldBatchRedirect />} />
           <Route path="/customer/cart" element={<CustomerCartPage />} />
           <Route path="/customer/checkout" element={<CheckoutInfoPage />} />
           <Route path="/customer/checkout/payment" element={<CheckoutPaymentPage />} />
@@ -87,7 +94,7 @@ export default function AppRoutes() {
           <Route path="/admin/audit" element={<AdminAuditLogsPage />} />
           <Route path="/admin/stores" element={<AdminStoresPage />} />
           <Route path="/admin/categories" element={<Navigate to="/admin/stores" replace />} />
-          {['dashboard', 'orders', 'refunds', 'payouts', 'finance'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdmin section={section} />} />)}
+          {['dashboard', 'orders', 'refunds', 'payouts', 'finance'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdminPage section={section} />} />)}
         </Route>
       </Route>
     </Route>

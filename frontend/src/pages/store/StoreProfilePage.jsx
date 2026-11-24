@@ -71,7 +71,8 @@ export default function StoreProfilePage() {
       ]} /></Card>
       <Modal title="Chỉnh sửa hồ sơ cửa hàng" open={editOpen} width={760} onCancel={() => setEditOpen(false)}
         onOk={() => form.submit()} okText="Lưu thay đổi" confirmLoading={saving} destroyOnClose>
-        <Form form={form} layout="vertical" onFinish={save}>
+        <Form form={form} layout="vertical" onFinish={(values) => Modal.confirm({ title: 'Lưu thay đổi hồ sơ cửa hàng?',
+          content: 'Thông tin mới sẽ hiển thị trên trang cửa hàng.', okText: 'Lưu thay đổi', cancelText: 'Kiểm tra lại', onOk: () => save(values) })}>
           <Row gutter={16}><Col xs={24} sm={12}><Form.Item name="name" label="Tên cửa hàng" rules={[{ required: true, whitespace: true }, { max: 150 }]}><Input maxLength={150} /></Form.Item></Col>
             <Col xs={24} sm={12}><Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, whitespace: true }, { max: 20 }]}><Input maxLength={20} /></Form.Item></Col></Row>
           <Form.Item name="description" label="Giới thiệu" rules={[{ max: 1000 }]}><Input.TextArea rows={3} maxLength={1000} showCount /></Form.Item>

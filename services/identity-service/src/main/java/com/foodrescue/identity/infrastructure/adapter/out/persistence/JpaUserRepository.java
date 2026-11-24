@@ -36,6 +36,9 @@ public class JpaUserRepository implements IUserRepository {
         entity.setPasswordHash(user.passwordHash());
         entity.setFullName(user.fullName());
         entity.setPhone(user.phone());
+        entity.setAddress(user.address());
+        entity.setLatitude(user.latitude());
+        entity.setLongitude(user.longitude());
         entity.setStoreId(user.storeId());
         entity.setStatus(user.status());
         entity.setMustChangePassword(user.mustChangePassword());
@@ -69,6 +72,7 @@ public class JpaUserRepository implements IUserRepository {
     private UserAccount toDomain(UserEntity e) {
         return new UserAccount(e.getId(), e.getEmail(), e.getPasswordHash(), e.getFullName(), e.getPhone(),
                 e.getRole(), e.getStoreId(), e.getStatus(), Boolean.TRUE.equals(e.getMustChangePassword()),
-                e.getCreatedAt(), e.getTokenVersion() == null ? 0 : e.getTokenVersion());
+                e.getCreatedAt(), e.getTokenVersion() == null ? 0 : e.getTokenVersion(),
+                e.getAddress(), e.getLatitude(), e.getLongitude());
     }
 }

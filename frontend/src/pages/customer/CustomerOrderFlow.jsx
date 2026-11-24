@@ -42,7 +42,9 @@ function CartProduct({ row, data, editable = false }) {
             const current = next.cart.find(item => item.batchId === row.batchId);
             if (current) current.quantity = value || 1;
           })} /><Button danger type="text" icon={<DeleteOutlined />} aria-label={`Xóa ${row.batch.title}`}
-          onClick={() => updateDemo(next => { next.cart = next.cart.filter(item => item.batchId !== row.batchId); })} /></>
+          onClick={() => Modal.confirm({ title: 'Bỏ túi khỏi giỏ hàng?', content: row.batch.title,
+            okText: 'Bỏ túi', cancelText: 'Giữ lại', okButtonProps: { danger: true },
+            onOk: () => updateDemo(next => { next.cart = next.cart.filter(item => item.batchId !== row.batchId); }) })} /></>
           : <span>× {row.quantity}</span>}</div>
     </div>
   </article>;
@@ -64,7 +66,7 @@ export function CustomerCartPage() {
   const canContinue = rows.length > 0 && storeIds.length === 1 && !invalid;
 
   return <main className="checkout-page"><h1>Giỏ hàng</h1><FlowHeader current={0} />
-    <div className="checkout-layout"><aside className="checkout-side-card"><h2>Thông tin đơn hàng</h2>
+    <div className="checkout-layout checkout-cart-layout"><aside className="checkout-side-card"><h2>Thông tin đơn hàng</h2>
       <p>{rows.length} loại túi từ {storeIds.length} cửa hàng</p>
       <div className="checkout-total"><span>Tạm tính</span><strong>{money(total)}</strong></div>
       <p className="checkout-help">Mỗi đơn chỉ nhận túi từ một cửa hàng. Bạn sẽ nhập thông tin liên hệ và chọn thanh toán ở bước tiếp theo.</p>
@@ -97,7 +99,7 @@ export function CheckoutInfoPage() {
     <div className="checkout-layout"><section className="checkout-main-card"><h2>Người đến nhận</h2>
       <p>Đơn sẽ được chuẩn bị tại cửa hàng; địa chỉ và số điện thoại giúp cửa hàng liên hệ với bạn.</p>
       <Form layout="vertical" initialValues={{ fullName: data.checkoutDraft?.fullName || user?.fullName,
-        phone: data.checkoutDraft?.phone || user?.phone, address: data.checkoutDraft?.address || '', note: data.checkoutDraft?.note || '' }} onFinish={submit}>
+        phone: data.checkoutDraft?.phone || user?.phone, address: data.checkoutDraft?.address || user?.address || '', note: data.checkoutDraft?.note || '' }} onFinish={submit}>
         <Form.Item name="fullName" label="Họ tên người nhận" rules={[{ required: true, whitespace: true, message: 'Nhập họ tên' }, { max: 100 }]}><Input maxLength={100} /></Form.Item>
         <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, pattern: /^0\d{9,10}$/, message: 'Nhập số điện thoại hợp lệ' }]}><Input maxLength={11} /></Form.Item>
         <Form.Item name="address" label="Địa chỉ liên hệ" rules={[{ required: true, whitespace: true, message: 'Nhập địa chỉ' }, { max: 255 }]}><Input maxLength={255} placeholder="Số nhà, đường, phường, quận, thành phố" /></Form.Item>
@@ -148,7 +150,10 @@ export function CheckoutPaymentPage() {
         <Radio value="VNPAY_DEMO"><ShoppingCartOutlined /> VNPay (mô phỏng)</Radio>
       </Radio.Group>
       <Alert type="info" showIcon message="Đây là dữ liệu mẫu, không chuyển tiền thật." style={{ margin: '20px 0' }} />
-      <Space><Button onClick={() => navigate('/customer/checkout')}>Sửa thông tin</Button><Button type="primary" onClick={createOrder}>Tạo đơn và tiếp tục</Button></Space>
+      <Space><Button onClick={() => navigate('/customer/checkout')}>Sửa thông tin</Button><Button type="primary" onClick={() => Modal.confirm({
+        title: 'Xác nhận tạo đơn?', content: `Bạn sẽ đặt ${rows.reduce((sum, row) => sum + row.quantity, 0)} túi, tổng ${money(total)}. Số lượng sẽ được giữ cho đơn này.`,
+        okText: 'Tạo đơn', cancelText: 'Kiểm tra lại', onOk: createOrder,
+      })}>Tạo đơn và tiếp tục</Button></Space>
     </section><aside className="checkout-side-card"><h2>Xác nhận đơn</h2>
       <p>Người nhận: {draft.fullName}</p><p>Điện thoại: {draft.phone}</p><p>Địa chỉ liên hệ: {draft.address}</p>
       {rows.map(row => <p key={row.batchId}>{row.batch.title} × {row.quantity}</p>)}
@@ -183,7 +188,10 @@ export function CustomerPaymentPage() {
           ? <><p>Ngân hàng: <strong>Ngân hàng mẫu</strong></p><p>Số tài khoản: <strong>0000000000</strong></p><p>Nội dung: <strong>FR {order.id}</strong></p></>
           : <p>Quét mã VNPay mô phỏng để xem thông tin thanh toán.</p>}
           <p>Số tiền: <strong>{money(order.total)}</strong></p>
-          <Button type="primary" size="large" onClick={confirmPayment}>Xác nhận thanh toán mô phỏng</Button>
+          <Button type="primary" size="large" onClick={() => Modal.confirm({
+            title: 'Xác nhận thanh toán mô phỏng?', content: `Đơn #${order.id} · ${money(order.total)}. Thao tác sẽ chuyển đơn sang đã thanh toán và cấp mã nhận hàng.`,
+            okText: 'Xác nhận', cancelText: 'Quay lại', onOk: confirmPayment,
+          })}>Xác nhận thanh toán mô phỏng</Button>
           <p><Link to={`/me/orders/${order.id}`}>Xem đơn trước khi thanh toán</Link></p></div></div>
     </Card>
   </main>;

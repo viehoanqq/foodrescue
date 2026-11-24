@@ -1,0 +1,5 @@
+.profile-location-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:520px}
+.profile-location-fields .ant-input-number{width:100%}
+.profile-locate-button{margin:0 0 20px}
+.profile-form-actions{display:flex;justify-content:flex-start;padding-top:4px}
+@media(max-width:560px){.profile-location-fields{grid-template-columns:1fr;gap:0}}

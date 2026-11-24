@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Form, Input, InputNumber, Pagination, Rate, Spin, message } from 'antd';
+import { Alert, Button, Card, Empty, Form, Input, InputNumber, Modal, Pagination, Rate, Spin, message } from 'antd';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { storeApi } from '../../services/storeApi';
@@ -45,7 +45,9 @@ export default function StoreReviews({ storeId, allowCreate = false, compact = f
     </div>
     {allowCreate && user?.role === 'CUSTOMER' && formOpen && <Card className="store-card" title="Đánh giá đơn đã hoàn thành">
       <p>Nhập mã đơn đã hoàn thành tại cửa hàng này. Mỗi đơn chỉ được đánh giá một lần.</p>
-      <Form form={form} layout="vertical" onFinish={submit}>
+      <Form form={form} layout="vertical" onFinish={(values) => Modal.confirm({ title: 'Gửi đánh giá cửa hàng?',
+        content: `Đánh giá ${values.rating} sao cho đơn #${values.orderId}. Mỗi đơn chỉ được đánh giá một lần.`,
+        okText: 'Gửi đánh giá', cancelText: 'Kiểm tra lại', onOk: () => submit(values) })}>
         <Form.Item name="orderId" label="Mã đơn hàng" rules={[{ required: true, message: 'Nhập mã đơn hàng' }]}><InputNumber min={1} precision={0} style={{ width: '100%' }} /></Form.Item>
         <Form.Item name="rating" label="Số sao" rules={[{ required: true, message: 'Chọn số sao' }]}><Rate /></Form.Item>
         <Form.Item name="comment" label="Nhận xét" rules={[{ max: 1000, message: 'Tối đa 1000 ký tự' }]}><Input.TextArea rows={3} maxLength={1000} showCount /></Form.Item>
