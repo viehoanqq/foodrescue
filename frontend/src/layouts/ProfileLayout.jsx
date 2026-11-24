@@ -1,5 +1,5 @@
 import { Menu, Typography } from 'antd';
-import { LockOutlined, ShopOutlined, UserOutlined } from '@ant-design/icons';
+import { InboxOutlined, LockOutlined, ShopOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthProvider';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import './layout.css';
@@ -13,9 +13,9 @@ export default function ProfileLayout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const location = useLocation();
-  const selected = location.pathname === '/me/password' ? '/me/password' : location.pathname === '/me/store' ? '/me/store' : '/me';
+  const selected = location.pathname.startsWith('/me/orders') ? '/me/orders' : location.pathname === '/me/password' ? '/me/password' : location.pathname === '/me/store' ? '/me/store' : '/me';
   const visibleItems = user.role === 'CUSTOMER' || user.role === 'STORE_OWNER'
-    ? [...items, { key: '/me/store', icon: <ShopOutlined />, label: 'Cửa hàng của tôi' }] : items;
+    ? [...items, ...(user.role === 'CUSTOMER' ? [{ key: '/me/orders', icon: <InboxOutlined />, label: 'Đơn của tôi' }] : []), { key: '/me/store', icon: <ShopOutlined />, label: 'Cửa hàng của tôi' }] : items;
 
   return <div className="account-layout">
     <aside className="account-aside">

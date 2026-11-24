@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import ProfileLayout from '../layouts/ProfileLayout';
 import AuthScreen from '../pages/AuthScreen';
@@ -10,13 +10,19 @@ import MyStorePage from '../pages/MyStorePage';
 import PasswordPage from '../pages/PasswordPage';
 import CustomerLanding from '../pages/customer/CustomerLanding';
 import StoresPage, { StoreDetailPage } from '../pages/customer/StoresPage';
+import { CustomerCartPage, CheckoutInfoPage, CheckoutPaymentPage, CustomerPaymentPage, CustomerPaymentCompletePage, CustomerOrdersPage, CustomerOrderDetailPage } from '../pages/customer/CustomerOrderFlow';
 import StoreRegistrationPage from '../pages/store/StoreRegistrationPage';
 import StoreProfilePage from '../pages/store/StoreProfilePage';
 import StoreStaffPage from '../pages/store/StoreStaffPage';
 import OwnerReviewsPage from '../pages/store/OwnerReviewsPage';
 import { AnonymousRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from './RouteGuards';
 import { STORE_ROLES } from './paths';
-import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoCart, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoStoreCategories } from '../demo/DemoPages';
+import { DemoAdmin, DemoBatchDetail, DemoBatches, DemoHome, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoStoreCategories } from '../demo/DemoPages';
+
+function OldCustomerOrderRedirect() {
+  const { orderId } = useParams();
+  return <Navigate to={`/me/orders/${orderId}`} replace />;
+}
 
 export default function AppRoutes() {
   return <Routes>
@@ -28,7 +34,7 @@ export default function AppRoutes() {
       <Route path="/batches" element={<DemoHome />} />
       <Route path="/batches/:batchId" element={<DemoBatchDetail />} />
     </Route>
-    <Route path="/payment/result" element={<Navigate to="/customer/orders" replace />} />
+    <Route path="/payment/result" element={<Navigate to="/me/orders" replace />} />
     <Route element={<AnonymousRoute />}>
       <Route path="/login" element={<AuthScreen mode="login" />} />
       <Route path="/admin/login" element={<AuthScreen mode="login" portal="admin" />} />
@@ -43,6 +49,10 @@ export default function AppRoutes() {
         <Route element={<ProfileLayout />}>
           <Route path="/me" element={<ProfilePage />} />
           <Route path="/me/password" element={<PasswordPage />} />
+          <Route element={<RoleRoute roles={['CUSTOMER']} />}>
+            <Route path="/me/orders" element={<CustomerOrdersPage />} />
+            <Route path="/me/orders/:orderId" element={<CustomerOrderDetailPage />} />
+          </Route>
           <Route element={<RoleRoute roles={['CUSTOMER', 'STORE_OWNER']} />}>
             <Route path="/me/store" element={<MyStorePage />} />
           </Route>
@@ -51,9 +61,13 @@ export default function AppRoutes() {
           <Route path="/customer/batches" element={<DemoHome />} />
           <Route path="/store/register" element={<StoreRegistrationPage />} />
           <Route path="/customer/batches/:batchId" element={<DemoBatchDetail />} />
-          <Route path="/customer/cart" element={<DemoCart />} />
-          <Route path="/customer/orders" element={<DemoOrders />} />
-          <Route path="/customer/orders/:orderId" element={<DemoOrderDetail />} />
+          <Route path="/customer/cart" element={<CustomerCartPage />} />
+          <Route path="/customer/checkout" element={<CheckoutInfoPage />} />
+          <Route path="/customer/checkout/payment" element={<CheckoutPaymentPage />} />
+          <Route path="/customer/payment/:orderId" element={<CustomerPaymentPage />} />
+          <Route path="/customer/payment/:orderId/complete" element={<CustomerPaymentCompletePage />} />
+          <Route path="/customer/orders" element={<Navigate to="/me/orders" replace />} />
+          <Route path="/customer/orders/:orderId" element={<OldCustomerOrderRedirect />} />
         </Route>
         <Route element={<RoleRoute roles={STORE_ROLES} />}>
           <Route path="/store/orders" element={<DemoOrders store />} />

@@ -15,7 +15,6 @@ const customerMenu = [
   { key: '/', icon: <ShopOutlined />, label: 'Trang chủ' },
   { key: '/stores', icon: <ShopOutlined />, label: 'Cửa hàng' },
   { key: '/batches', icon: <GiftOutlined />, label: 'Túi giải cứu' },
-  { key: '/customer/orders', icon: <InboxOutlined />, label: 'Đơn của tôi' },
 ];
 const staffMenu = [
   { key: '/store/orders', icon: <ProfileOutlined />, label: 'Đơn cửa hàng' },
@@ -49,7 +48,7 @@ export default function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const sideLayout = user?.role === 'ADMIN' || user?.role === 'STORE_OWNER';
   const menu = user?.role === 'ADMIN' ? adminMenu : user?.role === 'STORE_OWNER' ? ownerMenu
-    : user?.role === 'STORE_STAFF' ? staffMenu : user?.role === 'CUSTOMER' ? customerMenu : customerMenu.filter((item) => item.key !== '/customer/orders');
+    : user?.role === 'STORE_STAFF' ? staffMenu : customerMenu;
   const areaName = user?.role === 'ADMIN' ? 'Quản trị' : user?.role === 'STORE_OWNER' ? 'Chủ cửa hàng'
     : user?.role === 'STORE_STAFF' ? 'Nhân viên cửa hàng' : 'Khách hàng';
   const cartCount = demo.cart.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
@@ -69,6 +68,9 @@ export default function AppLayout() {
 
   const accountItems = [
     { key: 'profile', icon: <UserOutlined />, label: 'Hồ sơ cá nhân', onClick: () => navigate('/me') },
+    ...(user?.role === 'CUSTOMER'
+      ? [{ key: 'orders', icon: <InboxOutlined />, label: 'Đơn của tôi', onClick: () => navigate('/me/orders') }]
+      : []),
     ...(user?.role === 'CUSTOMER' || user?.role === 'STORE_OWNER'
       ? [{ key: 'store', icon: <ShopOutlined />, label: 'Cửa hàng của tôi', onClick: () => navigate('/me/store') }]
       : []),
