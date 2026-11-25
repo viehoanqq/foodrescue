@@ -9,6 +9,7 @@ spring:
     password: ${DB_PASSWORD:123}
   flyway:
     enabled: true
+    validate-on-migrate: false
   jpa:
     hibernate:
       ddl-auto: update
