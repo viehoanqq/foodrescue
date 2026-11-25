@@ -76,6 +76,12 @@ public class OrderEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "reservation_id")
+    private UUID reservationId;
+
+    @Column(name = "aggregate_version", nullable = false)
+    private Long aggregateVersion = 1L;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -138,4 +144,10 @@ public class OrderEntity {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public UUID getReservationId() { return reservationId; }
+    public void setReservationId(UUID reservationId) { this.reservationId = reservationId; }
+
+    public Long getAggregateVersion() { return aggregateVersion; }
+    public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
 }

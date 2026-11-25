@@ -11,6 +11,16 @@ public class CartItemEntityId implements Serializable {
 
     public CartItemEntityId() {}
 
+    public CartItemEntityId(Long customerId, Long batchId) {
+        this.customerId = customerId;
+        this.batchId = batchId;
+    }
+
+    public Long getCustomerId() { return customerId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
+    public Long getBatchId() { return batchId; }
+    public void setBatchId(Long batchId) { this.batchId = batchId; }
+
     @Override public boolean equals(Object other) {
         if (this == other) return true;
         if (!(other instanceof CartItemEntityId that)) return false;
