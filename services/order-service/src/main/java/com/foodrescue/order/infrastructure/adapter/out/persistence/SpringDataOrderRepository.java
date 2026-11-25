@@ -20,6 +20,8 @@ public interface SpringDataOrderRepository extends JpaRepository<OrderEntity, Lo
     List<OrderEntity> findByStoreIdOrderByCreatedAtDesc(Long storeId);
     List<OrderEntity> findByStoreIdAndStatusOrderByCreatedAtDesc(Long storeId, String status);
 
+    List<OrderEntity> findByStatusOrderByCreatedAtDesc(String status);
+
     @Query("SELECT o FROM OrderEntity o WHERE o.status = :status AND o.paymentExpiresAt < :now")
     List<OrderEntity> findExpiredPendingOrders(@Param("status") String status, @Param("now") LocalDateTime now);
 
