@@ -8,6 +8,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in .env}
       STORE_DB_PASSWORD: ${STORE_DB_PASSWORD:?Set STORE_DB_PASSWORD in .env}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in .env}
       TZ: Asia/Ho_Chi_Minh
     ports:
       - "127.0.0.1:3307:3306"
@@ -25,7 +26,6 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:?Set CATALOG_DB_PASSWORD in .env}
-      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in .env}
       FINANCE_DB_PASSWORD: ${FINANCE_DB_PASSWORD:?Set FINANCE_DB_PASSWORD in .env}
       POSTGRES_USER: postgres
       TZ: Asia/Ho_Chi_Minh
@@ -164,7 +164,7 @@ services:
     ports:
       - "127.0.0.1:8085:8085"
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/order_db
+      DB_URL: jdbc:mysql://mysql:3306/order_db?serverTimezone=Asia/Ho_Chi_Minh
       DB_USERNAME: order_app
       DB_PASSWORD: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
@@ -174,7 +174,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
       CATALOG_SERVICE_URL: http://catalog-inventory-service:8084
     depends_on:
-      postgres: { condition: service_healthy }
+      mysql: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
 
   payment-finance-service:

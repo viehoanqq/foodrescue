@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -76,7 +78,8 @@ public class OrderEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "reservation_id")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "reservation_id", length = 36)
     private UUID reservationId;
 
     @Column(name = "aggregate_version", nullable = false)

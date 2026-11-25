@@ -26,7 +26,7 @@ public class JdbcOutboxAdapter implements IOutboxPort {
         try {
             jdbc.update("INSERT INTO outbox_events " +
                     "(event_id, aggregate_type, aggregate_id, aggregate_version, event_type, schema_version, payload, occurred_at) " +
-                    "VALUES (CAST(? AS UUID), ?, ?, ?, ?, ?, CAST(? AS JSONB), ?)",
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     event.eventId().toString(),
                     event.aggregateType(),
                     event.aggregateId(),
