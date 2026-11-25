@@ -25,8 +25,8 @@ management:
       exposure:
         include: health,info
 app:
-  internal-api-key: ${INTERNAL_API_KEY:}
+  internal-api-key: ${INTERNAL_API_KEY:z9AphlDPXMbCx5GrqRZBZ1-9nDJ7yX1VjzNLUOD7Z2euwvVWSbM0kroVJtruzSDV}
   catalog-service-url: ${CATALOG_SERVICE_URL:http://localhost:8084}
   jwt:
-    secret: ${JWT_SECRET:foodrescue-insecure-test-secret-min-256-bits-length!!}
+    secret: ${JWT_SECRET:3qCTqWepEe1ycaz_ge8zYdxG9okY9nQNVhMBU-jPJCcBgrffhw7dJlrfmE6s5wPW}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8082}
