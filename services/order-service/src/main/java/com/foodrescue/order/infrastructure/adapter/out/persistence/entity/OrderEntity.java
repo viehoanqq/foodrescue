@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -76,6 +78,13 @@ public class OrderEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "reservation_id", length = 36)
+    private UUID reservationId;
+
+    @Column(name = "aggregate_version", nullable = false)
+    private Long aggregateVersion = 1L;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -138,4 +147,10 @@ public class OrderEntity {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public UUID getReservationId() { return reservationId; }
+    public void setReservationId(UUID reservationId) { this.reservationId = reservationId; }
+
+    public Long getAggregateVersion() { return aggregateVersion; }
+    public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
 }

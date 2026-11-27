@@ -77,7 +77,7 @@
 
 ## Người C — `order-service`
 
-**DB sở hữu:** PostgreSQL `order_db`: `cart_items`, `orders`, `order_items`, Outbox/Inbox. Mỗi `orders.store_id` là **một cửa hàng**; giỏ nhiều store phải tách đơn hoặc chặn rõ. Order chụp giá, commission, khung giờ; không sửa kho hay payment/refund DB.
+**DB sở hữu:** MySQL `order_db`: `cart_items`, `orders`, `order_items`, Outbox/Inbox. Mỗi `orders.store_id` là **một cửa hàng**; giỏ nhiều store phải tách đơn hoặc chặn rõ. Order chụp giá, commission, khung giờ; không sửa kho hay payment/refund DB.
 
 **Đã có:** `InventoryPort` và adapter HTTP gọi Catalog reservation; `/internal/order/reservations/**` hiện là đường thử, chưa tạo đơn.
 

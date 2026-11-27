@@ -18,8 +18,8 @@ Hệ thống có **5 service nghiệp vụ**, mỗi service sở hữu một dat
 |---|---|---|
 | `identity-service` | MySQL `identity_db` | Tài khoản, đăng nhập, phân quyền, nhật ký thao tác |
 | `store-service` | MySQL `store_db` | Cửa hàng, nhân viên, đánh giá |
-| `catalog-inventory-service` | PostgreSQL `catalog_db` | Danh mục theo cửa hàng, túi giải cứu, tồn kho |
-| `order-service` | PostgreSQL `order_db` | Giỏ hàng, đơn hàng, mã nhận hàng |
+| `catalog-inventory-service` | PostgreSQL `catalog_db` | Danh mục, túi giải cứu, tồn kho |
+| `order-service` | MySQL `order_db` | Giỏ hàng, đơn hàng, mã nhận hàng |
 | `payment-finance-service` | PostgreSQL `finance_db` | Thanh toán, hoàn tiền, chi trả, thống kê |
 
 `api-gateway` là điểm vào API; `building-blocks` chứa các cơ chế Java dùng chung giữa service. Frontend hiện có dữ liệu mẫu trong trình duyệt để xem và thao tác các trang nghiệp vụ; đăng nhập và quản lý tài khoản dùng `identity-service`.
