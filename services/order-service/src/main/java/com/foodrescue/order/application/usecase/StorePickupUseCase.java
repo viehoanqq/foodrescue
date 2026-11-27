@@ -92,7 +92,7 @@ public class StorePickupUseCase {
         }
 
         String cleanCode = pickupCode.trim().toUpperCase();
-        OrderEntity order = orderRepository.findByPickupCode(cleanCode)
+        OrderEntity order = orderRepository.findLockedByPickupCode(cleanCode)
                 .orElseThrow(() -> OrderException.notFound("Mã nhận hàng không hợp lệ"));
 
         if (!order.getStoreId().equals(storeId)) {

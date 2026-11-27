@@ -70,7 +70,7 @@ public class RefundStatusConsumer {
             return;
         }
 
-        OrderEntity order = orderRepository.findById(orderId).orElse(null);
+        OrderEntity order = orderRepository.findLockedById(orderId).orElse(null);
         if (order == null) {
             log.warn("Order not found for refund status: {}", orderId);
             return;
@@ -80,13 +80,16 @@ public class RefundStatusConsumer {
                 ? UUID.fromString(event.path("correlationId").asText())
                 : UUID.randomUUID();
 
-        if (MessagingNames.REFUND_REQUESTED_EVENT.equals(eventType)) {
+        if (MessagingNames.REFUND_REQUESTED_EVENT.equals(eventType)
+                && !"REFUND_PENDING".equals(order.getPaymentStatus())
+                && !"REFUNDED".equals(order.getPaymentStatus())) {
             order.setPaymentStatus("REFUND_PENDING");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);
             emitOrderStateChanged(order, correlationId);
             log.info("Order {} updated paymentStatus to REFUND_PENDING", order.getOrderCode());
-        } else if (MessagingNames.REFUND_COMPLETED_EVENT.equals(eventType)) {
+        } else if (MessagingNames.REFUND_COMPLETED_EVENT.equals(eventType)
+                && !"REFUNDED".equals(order.getPaymentStatus())) {
             order.setPaymentStatus("REFUNDED");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);

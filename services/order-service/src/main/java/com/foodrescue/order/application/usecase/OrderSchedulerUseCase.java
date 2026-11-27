@@ -40,8 +40,11 @@ public class OrderSchedulerUseCase {
     @Transactional
     public void expireUnpaidOrders() {
         LocalDateTime now = LocalDateTime.now();
-        List<OrderEntity> expiredOrders = orderRepository.findExpiredPendingOrders("PENDING_PAYMENT", now);
-        for (OrderEntity order : expiredOrders) {
+        List<Long> expiredOrderIds = orderRepository.findExpiredPendingOrderIds("PENDING_PAYMENT", now);
+        for (Long id : expiredOrderIds) {
+            OrderEntity order = orderRepository.findLockedById(id).orElse(null);
+            if (order == null || !"PENDING_PAYMENT".equals(order.getStatus())
+                    || !order.getPaymentExpiresAt().isBefore(LocalDateTime.now())) continue;
             order.setStatus("EXPIRED");
             order.setCancelReason("Hết hạn thanh toán (quá 15 phút)");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
@@ -64,8 +67,11 @@ public class OrderSchedulerUseCase {
     @Transactional
     public void markNoShowOrders() {
         LocalDateTime deadline = LocalDateTime.now().minusMinutes(30);
-        List<OrderEntity> noShowOrders = orderRepository.findNoShowOrders("CONFIRMED", deadline);
-        for (OrderEntity order : noShowOrders) {
+        List<Long> noShowOrderIds = orderRepository.findNoShowOrderIds("CONFIRMED", deadline);
+        for (Long id : noShowOrderIds) {
+            OrderEntity order = orderRepository.findLockedById(id).orElse(null);
+            if (order == null || !"CONFIRMED".equals(order.getStatus())
+                    || !order.getPickupEnd().isBefore(deadline)) continue;
             order.setStatus("NO_SHOW");
             order.setCompletedAt(LocalDateTime.now());
             order.setCancelReason("Khách hàng không đến nhận trong khung giờ");

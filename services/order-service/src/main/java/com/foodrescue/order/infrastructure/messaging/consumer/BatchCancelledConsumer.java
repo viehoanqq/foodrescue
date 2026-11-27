@@ -78,19 +78,15 @@ public class BatchCancelledConsumer {
         }
 
         List<OrderItemEntity> affectedItems = orderItemRepository.findByBatchId(batchId);
-        Set<Long> processedOrderIds = new HashSet<>();
+        Set<Long> processedOrderIds = new TreeSet<>();
+        for (OrderItemEntity item : affectedItems) processedOrderIds.add(item.getOrderId());
 
         UUID correlationId = event.path("correlationId").isTextual()
                 ? UUID.fromString(event.path("correlationId").asText())
                 : UUID.randomUUID();
 
-        for (OrderItemEntity item : affectedItems) {
-            Long orderId = item.getOrderId();
-            if (!processedOrderIds.add(orderId)) {
-                continue;
-            }
-
-            OrderEntity order = orderRepository.findById(orderId).orElse(null);
+        for (Long orderId : processedOrderIds) {
+            OrderEntity order = orderRepository.findLockedById(orderId).orElse(null);
             if (order == null) {
                 continue;
             }

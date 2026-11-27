@@ -63,7 +63,7 @@ public class CustomerOrderUseCase {
 
     @Transactional
     public OrderResponse cancelOrder(Long customerId, Long orderId, String reason) {
-        OrderEntity order = orderRepository.findById(orderId)
+        OrderEntity order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> OrderException.notFound("Không tìm thấy đơn hàng #" + orderId));
 
         if (!order.getCustomerId().equals(customerId)) {
@@ -186,7 +186,7 @@ public class CustomerOrderUseCase {
 
     @Transactional
     public OrderResponse adminCancelOrder(Long adminId, Long orderId, String reason) {
-        OrderEntity order = orderRepository.findById(orderId)
+        OrderEntity order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> OrderException.notFound("Không tìm thấy đơn hàng #" + orderId));
 
         String currentStatus = order.getStatus();

@@ -76,7 +76,7 @@ public class PaymentResultsConsumer {
             return;
         }
 
-        OrderEntity order = orderRepository.findById(orderId).orElse(null);
+        OrderEntity order = orderRepository.findLockedById(orderId).orElse(null);
         if (order == null) {
             log.warn("Order not found for payment result: {}", orderId);
             return;
@@ -108,7 +108,9 @@ public class PaymentResultsConsumer {
                         order.getAggregateVersion(), correlationId, null, order.getCustomerId(), auditPayload));
 
                 log.info("Order {} confirmed by payment success", order.getOrderCode());
-            } else if ("CANCELLED".equalsIgnoreCase(status) || "EXPIRED".equalsIgnoreCase(status)) {
+            } else if (("CANCELLED".equalsIgnoreCase(status) || "EXPIRED".equalsIgnoreCase(status))
+                    && !"REFUND_PENDING".equals(order.getPaymentStatus())
+                    && !"REFUNDED".equals(order.getPaymentStatus())) {
                 // Payment received after cancel/expired -> trigger refund required
                 order.setPaymentStatus("REFUND_PENDING");
                 order.setAggregateVersion(order.getAggregateVersion() + 1);

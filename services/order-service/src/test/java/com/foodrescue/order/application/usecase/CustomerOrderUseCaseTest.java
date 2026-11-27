@@ -60,7 +60,7 @@ class CustomerOrderUseCaseTest {
         order.setReservationId(reservationId);
         order.setAggregateVersion(1L);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(OrderEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
 
@@ -92,7 +92,7 @@ class CustomerOrderUseCaseTest {
         order.setReservationId(reservationId);
         order.setAggregateVersion(2L);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findLockedById(orderId)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(OrderEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
 
@@ -112,7 +112,7 @@ class CustomerOrderUseCaseTest {
         order.setId(100L);
         order.setCustomerId(99L);
 
-        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(orderRepository.findLockedById(100L)).thenReturn(Optional.of(order));
 
         assertThrows(OrderException.class, () -> useCase.cancelOrder(8L, 100L, "test"));
     }
