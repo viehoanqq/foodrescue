@@ -1,48 +1,83 @@
 package com.foodrescue.finance.infrastructure.messaging.outbox;
 
-import com.foodrescue.buildingblocks.events.MessagingNames;
-import java.sql.ResultSet;
-import java.util.List;
-import java.util.Map;
+import com.foodrescue.finance.infrastructure.adapter.out.persistence.JpaFinanceQueries;
+
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-/** At least once publisher. Consumers must deduplicate eventId in inbox_events. */
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 @Component
 public class OutboxPublisher {
-    private final JdbcTemplate jdbc;
+    private final JpaFinanceQueries db;
     private final RabbitTemplate rabbit;
+    private static final org.slf4j.Logger LOG =
+            org.slf4j.LoggerFactory.getLogger(OutboxPublisher.class);
 
-    public OutboxPublisher(JdbcTemplate jdbc, RabbitTemplate rabbit) {
-        this.jdbc = jdbc;
+    public OutboxPublisher(JpaFinanceQueries db, RabbitTemplate rabbit) {
+        this.db = db;
         this.rabbit = rabbit;
+        rabbit.setMandatory(true);
     }
 
     @Scheduled(fixedDelayString = "${outbox.poll-ms:1000}")
-    @Transactional
     public void publish() {
-        List<Map<String, Object>> rows = jdbc.query(
-            "SELECT event_id, event_type, payload FROM outbox_events " +
-            "WHERE published_at IS NULL AND (next_attempt_at IS NULL OR next_attempt_at <= CURRENT_TIMESTAMP) " +
-            "ORDER BY occurred_at LIMIT 50 FOR UPDATE SKIP LOCKED",
-            (ResultSet rs, int row) -> Map.of(
-                "id", rs.getString("event_id"),
-                "type", rs.getString("event_type"),
-                "payload", rs.getString("payload")));
-        for (Map<String, Object> row : rows) {
-            String id = (String) row.get("id");
-            String routingKey = (String) row.get("type");
-            String payload = (String) row.get("payload");
-            rabbit.invoke(ops -> {
-                ops.convertAndSend(MessagingNames.EVENTS_EXCHANGE, routingKey, payload,
-                    message -> { message.getMessageProperties().setMessageId(id); return message; });
-                ops.waitForConfirmsOrDie(5000);
-                return null;
-            });
-            jdbc.update("UPDATE outbox_events SET published_at = CURRENT_TIMESTAMP, attempts = attempts + 1 WHERE event_id = CAST(? AS UUID)", id);
+        // Atomic claim commits before waiting on RabbitMQ. One row keeps the lease longer than the
+        // confirm timeout.
+        for (int i = 0; i < 50; i++) {
+            UUID token = UUID.randomUUID();
+            var rows =
+                    db.queryForList(
+                            """
+UPDATE outbox_events SET claim_token=?,claimed_until=now()+interval '30 seconds'
+WHERE event_id IN (SELECT event_id FROM outbox_events WHERE published_at IS NULL
+AND (next_attempt_at IS NULL OR next_attempt_at<=now()) AND (claimed_until IS NULL OR claimed_until<now())
+ORDER BY occurred_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING event_id,event_type,payload
+""",
+                            token);
+            if (rows.isEmpty()) return;
+            var row = rows.get(0);
+            UUID id = (UUID) row.get("event_id");
+            try {
+                var properties = new MessageProperties();
+                properties.setContentType("application/json");
+                properties.setMessageId(id.toString());
+                properties.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+                var correlation = new CorrelationData(id.toString());
+                rabbit.send(
+                        "foodrescue.events",
+                        (String) row.get("event_type"),
+                        new Message(
+                                row.get("payload").toString().getBytes(StandardCharsets.UTF_8),
+                                properties),
+                        correlation);
+                var confirm = correlation.getFuture().get(5, TimeUnit.SECONDS);
+                if (!confirm.isAck() || correlation.getReturned() != null)
+                    throw new IllegalStateException("Publish not routed/confirmed");
+                db.update(
+                        "UPDATE outbox_events SET"
+                            + " published_at=now(),attempts=attempts+1,claim_token=NULL,claimed_until=NULL,last_error=NULL"
+                            + " WHERE event_id=? AND claim_token=?",
+                        id,
+                        token);
+            } catch (Exception ex) {
+                if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
+                db.update(
+                        """
+UPDATE outbox_events SET attempts=attempts+1,next_attempt_at=now()+make_interval(secs=>LEAST(300,POWER(2,LEAST(attempts,8)))::double precision),
+last_error=?,claim_token=NULL,claimed_until=NULL WHERE event_id=? AND claim_token=?
+""",
+                        ex.getClass().getSimpleName(),
+                        id,
+                        token);
+                LOG.warn("Finance outbox publish deferred: {}", id);
+                return;
+            }
         }
     }
 }

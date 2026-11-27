@@ -7,6 +7,8 @@ spring:
     url: ${DB_URL:jdbc:postgresql://postgres:5432/finance_db}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:}
+    hikari:
+      connection-init-sql: SET TIME ZONE 'Asia/Ho_Chi_Minh'
   flyway:
     enabled: true
   jpa:
@@ -18,6 +20,16 @@ spring:
     username: ${RABBITMQ_USER:foodrescue}
     password: ${RABBITMQ_PASSWORD:}
     publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 4
+          initial-interval: 1000ms
+          multiplier: 2
+          max-interval: 10000ms
 management:
   endpoints:
     web:
@@ -30,3 +42,10 @@ app:
   finance-store-api-key: ${FINANCE_STORE_API_KEY:}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://identity-service:8082}
 
+  order-service-url: ${ORDER_SERVICE_URL:http://order-service:8085}
+  store-service-url: ${STORE_SERVICE_URL:http://store-service:8083}
+  vnpay:
+    merchant: ${VNPAY_TMN_CODE:}
+    secret: ${VNPAY_HASH_SECRET:}
+    url: ${VNPAY_PAYMENT_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+    return-url: ${VNPAY_RETURN_URL:http://localhost:5173/payment/result}

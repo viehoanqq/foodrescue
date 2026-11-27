@@ -1,9 +1,9 @@
 package com.foodrescue.finance.infrastructure.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.*;
-import java.util.UUID;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -32,21 +32,51 @@ public class PayoutItemEntity {
     @Column(name = "active", nullable = false)
     private Boolean active;
 
-    public Long getPayoutId() { return payoutId; }
-    public void setPayoutId(Long payoutId) { this.payoutId = payoutId; }
+    public Long getPayoutId() {
+        return payoutId;
+    }
 
-    public Long getOrderId() { return orderId; }
-    public void setOrderId(Long orderId) { this.orderId = orderId; }
+    public void setPayoutId(Long payoutId) {
+        this.payoutId = payoutId;
+    }
 
-    public BigDecimal getGrossAmount() { return grossAmount; }
-    public void setGrossAmount(BigDecimal grossAmount) { this.grossAmount = grossAmount; }
+    public Long getOrderId() {
+        return orderId;
+    }
 
-    public BigDecimal getCommissionAmount() { return commissionAmount; }
-    public void setCommissionAmount(BigDecimal commissionAmount) { this.commissionAmount = commissionAmount; }
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
 
-    public BigDecimal getNetAmount() { return netAmount; }
-    public void setNetAmount(BigDecimal netAmount) { this.netAmount = netAmount; }
+    public BigDecimal getGrossAmount() {
+        return grossAmount;
+    }
 
-    public Boolean getActive() { return active; }
-    public void setActive(Boolean active) { this.active = active; }
+    public void setGrossAmount(BigDecimal grossAmount) {
+        this.grossAmount = grossAmount;
+    }
+
+    public BigDecimal getCommissionAmount() {
+        return commissionAmount;
+    }
+
+    public void setCommissionAmount(BigDecimal commissionAmount) {
+        this.commissionAmount = commissionAmount;
+    }
+
+    public BigDecimal getNetAmount() {
+        return netAmount;
+    }
+
+    public void setNetAmount(BigDecimal netAmount) {
+        this.netAmount = netAmount;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
 }

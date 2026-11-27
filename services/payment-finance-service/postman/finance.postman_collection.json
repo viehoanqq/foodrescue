@@ -1,0 +1,291 @@
+{
+  "info": {
+    "name": "FoodRescue — Payment & Finance (D)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "customerToken",
+      "value": ""
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": "1"
+    },
+    {
+      "key": "storeId",
+      "value": "1"
+    },
+    {
+      "key": "refundId",
+      "value": "1"
+    },
+    {
+      "key": "payoutId",
+      "value": "1"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "change-per-new-operation"
+    },
+    {
+      "key": "refundReference",
+      "value": ""
+    },
+    {
+      "key": "transferReference",
+      "value": ""
+    },
+    {
+      "key": "from",
+      "value": "2026-11-01"
+    },
+    {
+      "key": "to",
+      "value": "2026-11-27"
+    }
+  ],
+  "item": [
+    {
+      "name": "Tạo URL VNPay",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{customerToken}}"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/payments/vnpay-url",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"orderId\": {{orderId}}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Danh sách hoàn tiền",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/refunds?status=PENDING&page=0&size=20"
+      }
+    },
+    {
+      "name": "Chi tiết hoàn và VNPay gốc",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/refunds/{{refundId}}"
+      }
+    },
+    {
+      "name": "Xác nhận đã hoàn thủ công",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/refunds/{{refundId}}/complete",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gatewayRef\": \"{{refundReference}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Tạo kỳ chi trả",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/payouts",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"storeId\": {{storeId}}, \"from\": \"{{from}}\", \"to\": \"{{to}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Danh sách chi trả",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/payouts?page=0&size=20"
+      }
+    },
+    {
+      "name": "Chi tiết chi trả",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/payouts/{{payoutId}}"
+      }
+    },
+    {
+      "name": "Xác nhận đã chuyển khoản",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/payouts/{{payoutId}}/paid",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"transferRef\": \"{{transferReference}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Hủy kỳ chưa chi",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/payouts/{{payoutId}}/cancel"
+      }
+    },
+    {
+      "name": "Doanh thu cửa hàng",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ownerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/store/revenue?from={{from}}&to={{to}}"
+      }
+    },
+    {
+      "name": "Sao kê cửa hàng",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{ownerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/store/statement?from={{from}}&to={{to}}&page=0&size=20"
+      }
+    },
+    {
+      "name": "Đối soát lũy kế",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/finance/reconciliation"
+      }
+    },
+    {
+      "name": "Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/dashboard?from={{from}}&to={{to}}"
+      }
+    }
+  ]
+}

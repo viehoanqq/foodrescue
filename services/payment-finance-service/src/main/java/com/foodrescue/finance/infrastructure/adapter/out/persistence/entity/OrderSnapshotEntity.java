@@ -1,6 +1,7 @@
 package com.foodrescue.finance.infrastructure.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.UUID;
@@ -45,36 +46,91 @@ public class OrderSnapshotEntity {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Long getOrderId() { return orderId; }
-    public void setOrderId(Long orderId) { this.orderId = orderId; }
+    public Long getOrderId() {
+        return orderId;
+    }
 
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public Long getStoreId() {
+        return storeId;
+    }
 
-    public String getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public void setStoreId(Long storeId) {
+        this.storeId = storeId;
+    }
 
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+    public String getStatus() {
+        return status;
+    }
 
-    public BigDecimal getCommissionAmount() { return commissionAmount; }
-    public void setCommissionAmount(BigDecimal commissionAmount) { this.commissionAmount = commissionAmount; }
+    public void setStatus(String status) {
+        this.status = status;
+    }
 
-    public BigDecimal getStoreEarning() { return storeEarning; }
-    public void setStoreEarning(BigDecimal storeEarning) { this.storeEarning = storeEarning; }
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
 
-    public LocalDateTime getCompletedAt() { return completedAt; }
-    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
 
-    public Long getAggregateVersion() { return aggregateVersion; }
-    public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
 
-    public UUID getLastEventId() { return lastEventId; }
-    public void setLastEventId(UUID lastEventId) { this.lastEventId = lastEventId; }
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
 
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public BigDecimal getCommissionAmount() {
+        return commissionAmount;
+    }
+
+    public void setCommissionAmount(BigDecimal commissionAmount) {
+        this.commissionAmount = commissionAmount;
+    }
+
+    public BigDecimal getStoreEarning() {
+        return storeEarning;
+    }
+
+    public void setStoreEarning(BigDecimal storeEarning) {
+        this.storeEarning = storeEarning;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    public Long getAggregateVersion() {
+        return aggregateVersion;
+    }
+
+    public void setAggregateVersion(Long aggregateVersion) {
+        this.aggregateVersion = aggregateVersion;
+    }
+
+    public UUID getLastEventId() {
+        return lastEventId;
+    }
+
+    public void setLastEventId(UUID lastEventId) {
+        this.lastEventId = lastEventId;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

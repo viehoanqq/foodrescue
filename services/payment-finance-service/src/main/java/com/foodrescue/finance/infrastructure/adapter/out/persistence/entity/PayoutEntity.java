@@ -1,9 +1,9 @@
 package com.foodrescue.finance.infrastructure.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.*;
-import java.util.UUID;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -70,60 +70,166 @@ public class PayoutEntity {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getPayoutCode() { return payoutCode; }
-    public void setPayoutCode(String payoutCode) { this.payoutCode = payoutCode; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Long getStoreId() { return storeId; }
-    public void setStoreId(Long storeId) { this.storeId = storeId; }
+    public String getPayoutCode() {
+        return payoutCode;
+    }
 
-    public LocalDate getPeriodFrom() { return periodFrom; }
-    public void setPeriodFrom(LocalDate periodFrom) { this.periodFrom = periodFrom; }
+    public void setPayoutCode(String payoutCode) {
+        this.payoutCode = payoutCode;
+    }
 
-    public LocalDate getPeriodTo() { return periodTo; }
-    public void setPeriodTo(LocalDate periodTo) { this.periodTo = periodTo; }
+    public Long getStoreId() {
+        return storeId;
+    }
 
-    public Integer getOrderCount() { return orderCount; }
-    public void setOrderCount(Integer orderCount) { this.orderCount = orderCount; }
+    public void setStoreId(Long storeId) {
+        this.storeId = storeId;
+    }
 
-    public BigDecimal getGrossAmount() { return grossAmount; }
-    public void setGrossAmount(BigDecimal grossAmount) { this.grossAmount = grossAmount; }
+    public LocalDate getPeriodFrom() {
+        return periodFrom;
+    }
 
-    public BigDecimal getCommissionAmount() { return commissionAmount; }
-    public void setCommissionAmount(BigDecimal commissionAmount) { this.commissionAmount = commissionAmount; }
+    public void setPeriodFrom(LocalDate periodFrom) {
+        this.periodFrom = periodFrom;
+    }
 
-    public BigDecimal getNetAmount() { return netAmount; }
-    public void setNetAmount(BigDecimal netAmount) { this.netAmount = netAmount; }
+    public LocalDate getPeriodTo() {
+        return periodTo;
+    }
 
-    public String getBankName() { return bankName; }
-    public void setBankName(String bankName) { this.bankName = bankName; }
+    public void setPeriodTo(LocalDate periodTo) {
+        this.periodTo = periodTo;
+    }
 
-    public String getBankAccountNo() { return bankAccountNo; }
-    public void setBankAccountNo(String bankAccountNo) { this.bankAccountNo = bankAccountNo; }
+    public Integer getOrderCount() {
+        return orderCount;
+    }
 
-    public String getBankAccountName() { return bankAccountName; }
-    public void setBankAccountName(String bankAccountName) { this.bankAccountName = bankAccountName; }
+    public void setOrderCount(Integer orderCount) {
+        this.orderCount = orderCount;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public BigDecimal getGrossAmount() {
+        return grossAmount;
+    }
 
-    public String getTransferRef() { return transferRef; }
-    public void setTransferRef(String transferRef) { this.transferRef = transferRef; }
+    public void setGrossAmount(BigDecimal grossAmount) {
+        this.grossAmount = grossAmount;
+    }
 
-    public String getNote() { return note; }
-    public void setNote(String note) { this.note = note; }
+    public BigDecimal getCommissionAmount() {
+        return commissionAmount;
+    }
 
-    public Long getCreatedBy() { return createdBy; }
-    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
+    public void setCommissionAmount(BigDecimal commissionAmount) {
+        this.commissionAmount = commissionAmount;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public BigDecimal getNetAmount() {
+        return netAmount;
+    }
 
-    public Long getPaidBy() { return paidBy; }
-    public void setPaidBy(Long paidBy) { this.paidBy = paidBy; }
+    public void setNetAmount(BigDecimal netAmount) {
+        this.netAmount = netAmount;
+    }
 
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public String getBankName() {
+        return bankName;
+    }
+
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public String getBankAccountNo() {
+        return bankAccountNo;
+    }
+
+    public void setBankAccountNo(String bankAccountNo) {
+        this.bankAccountNo = bankAccountNo;
+    }
+
+    public String getBankAccountName() {
+        return bankAccountName;
+    }
+
+    public void setBankAccountName(String bankAccountName) {
+        this.bankAccountName = bankAccountName;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getTransferRef() {
+        return transferRef;
+    }
+
+    public void setTransferRef(String transferRef) {
+        this.transferRef = transferRef;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Long getPaidBy() {
+        return paidBy;
+    }
+
+    public void setPaidBy(Long paidBy) {
+        this.paidBy = paidBy;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    @Column(name = "idempotency_key")
+    private String idempotencyKey;
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String value) {
+        idempotencyKey = value;
+    }
 }

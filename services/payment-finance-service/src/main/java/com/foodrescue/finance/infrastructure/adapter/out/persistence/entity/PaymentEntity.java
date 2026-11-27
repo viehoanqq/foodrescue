@@ -1,9 +1,9 @@
 package com.foodrescue.finance.infrastructure.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.*;
-import java.util.UUID;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -43,33 +43,138 @@ public class PaymentEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public Long getOrderId() { return orderId; }
-    public void setOrderId(Long orderId) { this.orderId = orderId; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public Long getOrderId() {
+        return orderId;
+    }
 
-    public String getTxnRef() { return txnRef; }
-    public void setTxnRef(String txnRef) { this.txnRef = txnRef; }
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
 
-    public String getGatewayTxnNo() { return gatewayTxnNo; }
-    public void setGatewayTxnNo(String gatewayTxnNo) { this.gatewayTxnNo = gatewayTxnNo; }
+    public BigDecimal getAmount() {
+        return amount;
+    }
 
-    public String getBankCode() { return bankCode; }
-    public void setBankCode(String bankCode) { this.bankCode = bankCode; }
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
 
-    public String getResponseCode() { return responseCode; }
-    public void setResponseCode(String responseCode) { this.responseCode = responseCode; }
+    public String getTxnRef() {
+        return txnRef;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setTxnRef(String txnRef) {
+        this.txnRef = txnRef;
+    }
 
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public String getGatewayTxnNo() {
+        return gatewayTxnNo;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setGatewayTxnNo(String gatewayTxnNo) {
+        this.gatewayTxnNo = gatewayTxnNo;
+    }
+
+    public String getBankCode() {
+        return bankCode;
+    }
+
+    public void setBankCode(String bankCode) {
+        this.bankCode = bankCode;
+    }
+
+    public String getResponseCode() {
+        return responseCode;
+    }
+
+    public void setResponseCode(String responseCode) {
+        this.responseCode = responseCode;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    @Column(name = "customer_id")
+    private Long customerId;
+
+    public Long getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(Long value) {
+        customerId = value;
+    }
+
+    @Column(name = "idempotency_key")
+    private String idempotencyKey;
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String value) {
+        idempotencyKey = value;
+    }
+
+    @Column(name = "payment_url")
+    private String paymentUrl;
+
+    public String getPaymentUrl() {
+        return paymentUrl;
+    }
+
+    public void setPaymentUrl(String value) {
+        paymentUrl = value;
+    }
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    public LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(LocalDateTime value) {
+        expiresAt = value;
+    }
+
+    @Column(name = "aggregate_version")
+    private Long aggregateVersion;
+
+    public Long getAggregateVersion() {
+        return aggregateVersion;
+    }
+
+    public void setAggregateVersion(Long value) {
+        aggregateVersion = value;
+    }
 }

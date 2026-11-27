@@ -1,26 +1,33 @@
 package com.foodrescue.finance.infrastructure.messaging;
 
-import com.foodrescue.buildingblocks.events.MessagingNames;
-import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.*;
 
 @Configuration
 public class RabbitConfiguration {
     @Bean
-    public TopicExchange foodrescueEvents() {
-        return new TopicExchange(MessagingNames.EVENTS_EXCHANGE, true, false);
-    }
-
-    // Temporary durable catch-all until business consumers are migrated.
-    @Bean
-    public Queue migrationEvents() { return new Queue(MessagingNames.MIGRATION_QUEUE, true); }
-
-    @Bean
-    public Binding migrationBinding(Queue migrationEvents, TopicExchange foodrescueEvents) {
-        return BindingBuilder.bind(migrationEvents).to(foodrescueEvents).with(MessagingNames.ALL_EVENTS_ROUTING_KEY);
+    public Declarables financeTopology() {
+        TopicExchange events = new TopicExchange("foodrescue.events", true, false);
+        DirectExchange dlx = new DirectExchange("foodrescue.dlx", true, false);
+        java.util.List<Declarable> declarations = new java.util.ArrayList<>();
+        declarations.add(events);
+        declarations.add(dlx);
+        String[][] routes = {
+            {"finance.order-snapshots", "order.state-changed.v1"},
+            {"finance.refund-required", "order.refund-required.v1"}
+        };
+        for (String[] route : routes) {
+            Queue queue =
+                    QueueBuilder.durable(route[0])
+                            .deadLetterExchange("foodrescue.dlx")
+                            .deadLetterRoutingKey(route[0])
+                            .build();
+            Queue dead = QueueBuilder.durable(route[0] + ".dead").build();
+            declarations.add(queue);
+            declarations.add(dead);
+            declarations.add(BindingBuilder.bind(queue).to(events).with(route[1]));
+            declarations.add(BindingBuilder.bind(dead).to(dlx).with(route[0]));
+        }
+        return new Declarables(declarations);
     }
 }
