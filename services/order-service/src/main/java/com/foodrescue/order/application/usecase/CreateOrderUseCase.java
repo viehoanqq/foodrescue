@@ -8,6 +8,7 @@ import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.ICheckoutIdempotencyPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.application.port.out.IStorePolicyPort;
+import com.foodrescue.order.application.port.out.IReservationRecoveryPort;
 import com.foodrescue.order.domain.exception.OrderException;
 import com.foodrescue.order.domain.model.StockReservation;
 import com.foodrescue.order.domain.model.StockReservationCommand;
@@ -27,7 +28,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class CreateOrderUseCase {
@@ -42,6 +43,9 @@ public class CreateOrderUseCase {
     private final IStorePolicyPort storePolicyPort;
     private final IOutboxPort outboxPort;
     private final ICheckoutIdempotencyPort idempotencyPort;
+    private final IReservationRecoveryPort recoveryPort;
+    private final ReservationRecoveryWorker recoveryWorker;
+    private final TransactionTemplate transactions;
 
     public CreateOrderUseCase(
             SpringDataOrderRepository orderRepository,
@@ -50,7 +54,10 @@ public class CreateOrderUseCase {
             IInventoryPort inventoryPort,
             IStorePolicyPort storePolicyPort,
             IOutboxPort outboxPort,
-            ICheckoutIdempotencyPort idempotencyPort) {
+            ICheckoutIdempotencyPort idempotencyPort,
+            IReservationRecoveryPort recoveryPort,
+            ReservationRecoveryWorker recoveryWorker,
+            TransactionTemplate transactions) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartRepository = cartRepository;
@@ -58,14 +65,34 @@ public class CreateOrderUseCase {
         this.storePolicyPort = storePolicyPort;
         this.outboxPort = outboxPort;
         this.idempotencyPort = idempotencyPort;
+        this.recoveryPort = recoveryPort;
+        this.recoveryWorker = recoveryWorker;
+        this.transactions = transactions;
     }
 
-    @Transactional
     public OrderResponse createOrder(Long customerId, String idempotencyKey, UUID correlationId) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 128) {
             throw OrderException.validation("Idempotency-Key must contain 1 to 128 characters");
         }
-        idempotencyKey = idempotencyKey.trim();
+        String key = idempotencyKey.trim();
+        UUID reservationId = UUID.nameUUIDFromBytes((customerId + ":" + key).getBytes(StandardCharsets.UTF_8));
+        UUID traceId = correlationId == null ? UUID.randomUUID() : correlationId;
+        try {
+            return transactions.execute(status -> createOrderInTransaction(customerId, key, traceId, reservationId));
+        } catch (RuntimeException ex) {
+            try {
+                recoveryPort.requestRelease(reservationId);
+                recoveryWorker.recoverOne(reservationId);
+            } catch (RuntimeException recoveryError) {
+                ex.addSuppressed(recoveryError);
+                log.error("Recovery scheduling failed for reservation {}: {}", reservationId, recoveryError.getMessage());
+            }
+            throw ex;
+        }
+    }
+
+    private OrderResponse createOrderInTransaction(Long customerId, String idempotencyKey,
+                                                   UUID correlationId, UUID reservationId) {
         Long existingId = idempotencyPort.claim(customerId, idempotencyKey);
         if (existingId != null) {
             OrderEntity existing = orderRepository.findById(existingId)
@@ -77,8 +104,6 @@ public class CreateOrderUseCase {
                     .map(i -> new OrderItemResponse(i.getId(), i.getBatchId(), i.getQuantity(), i.getUnitPrice(), i.getSubtotal()))
                     .toList());
         }
-        if (correlationId == null) correlationId = UUID.randomUUID();
-
         List<CartItemEntity> cartItems = cartRepository.findByCustomerId(customerId);
         if (cartItems.isEmpty()) throw OrderException.cartEmpty();
         List<StockReservationCommand.Item> requestItems = cartItems.stream()
@@ -103,7 +128,8 @@ public class CreateOrderUseCase {
         BigDecimal commissionRate = policy.commissionRate();
 
         // Chuẩn bị Reservation sang Catalog
-        UUID reservationId = UUID.nameUUIDFromBytes((customerId + ":" + idempotencyKey).getBytes(StandardCharsets.UTF_8));
+        recoveryPort.ensurePending(reservationId);
+        recoveryPort.lockPending(reservationId);
         List<StockReservationCommand.Item> commandItems = requestItems;
 
         StockReservation reservation;
@@ -111,13 +137,32 @@ public class CreateOrderUseCase {
             reservation = inventoryPort.reserve(
                     new StockReservationCommand(reservationId, 1L, storeId, customerId, commandItems),
                     correlationId);
-        } catch (Exception ex) {
-            log.error("Stock reservation failed for customerId={}: {}", customerId, ex.getMessage());
-            throw OrderException.conflict("STOCK_NOT_ENOUGH", "Không thể giữ kho cho túi cứu trợ: " + ex.getMessage());
+        } catch (RuntimeException ex) {
+            if (ex instanceof com.foodrescue.buildingblocks.http.InternalServiceException serviceError
+                    && serviceError.status() < 500) {
+                throw OrderException.conflict("STOCK_NOT_ENOUGH", "Catalog rejected the stock reservation");
+            }
+            try {
+                reservation = inventoryPort.find(reservationId, correlationId);
+            } catch (RuntimeException lookupError) {
+                ex.addSuppressed(lookupError);
+                throw new OrderException("RESERVATION_UNCERTAIN",
+                        "Catalog did not confirm the reservation; recovery will check and release it", 503);
+            }
         }
 
-        if (reservation == null || !"HELD".equals(reservation.status())) {
+        if (reservation == null || !reservationId.equals(reservation.reservationId())
+                || !"HELD".equals(reservation.status())) {
             throw OrderException.conflict("RESERVATION_NOT_HELD", "Inventory reservation is not active");
+        }
+        Map<Long, Integer> requested = new HashMap<>();
+        for (StockReservationCommand.Item item : commandItems) requested.put(item.batchId(), item.quantity());
+        Map<Long, Integer> reserved = new HashMap<>();
+        if (reservation.items() != null) {
+            for (StockReservation.Item item : reservation.items()) reserved.put(item.batchId(), item.quantity());
+        }
+        if (!requested.equals(reserved)) {
+            throw OrderException.conflict("RESERVATION_MISMATCH", "Catalog reservation does not match the cart");
         }
 
         try {
@@ -212,15 +257,11 @@ public class CreateOrderUseCase {
                     payload);
             outboxPort.append(envelope);
             idempotencyPort.complete(customerId, idempotencyKey, savedOrder.getId());
+            recoveryPort.markOrdered(reservationId, savedOrder.getId());
 
             return toResponse(savedOrder, itemResponses);
-        } catch (Exception ex) {
-            log.error("Failed to commit order after reservation, compensating release: {}", ex.getMessage());
-            try {
-                inventoryPort.release(reservationId, correlationId);
-            } catch (Exception releaseEx) {
-                log.error("Failed to release reservation {}: {}", reservationId, releaseEx.getMessage());
-            }
+        } catch (RuntimeException ex) {
+            log.error("Order persistence failed after stock reservation {}: {}", reservationId, ex.getMessage());
             throw ex;
         }
     }

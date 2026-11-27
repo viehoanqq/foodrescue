@@ -3,6 +3,7 @@ package com.foodrescue.order.application.usecase;
 import com.foodrescue.order.api.dto.AddToCartRequest;
 import com.foodrescue.order.api.dto.CartResponse;
 import com.foodrescue.order.api.dto.UpdateCartItemRequest;
+import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.domain.exception.OrderException;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataCartItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.CartItemEntity;
@@ -24,7 +25,7 @@ class CartUseCaseTest {
     @BeforeEach
     void setUp() {
         cartRepository = mock(SpringDataCartItemRepository.class);
-        cartUseCase = new CartUseCase(cartRepository);
+        cartUseCase = new CartUseCase(cartRepository, mock(IInventoryPort.class));
     }
 
     @Test
