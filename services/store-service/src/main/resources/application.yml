@@ -22,6 +22,7 @@ spring:
     username: ${RABBITMQ_USER:foodrescue}
     password: ${RABBITMQ_PASSWORD:}
     publisher-confirm-type: correlated
+    publisher-returns: true
 management:
   endpoints:
     web:
@@ -34,5 +35,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:}
   internal-api-key: ${INTERNAL_API_KEY:}
+  finance-store-api-key: ${FINANCE_STORE_API_KEY:}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://identity-service:8082}
+  order-service-url: ${ORDER_SERVICE_URL:http://order-service:8085}
 

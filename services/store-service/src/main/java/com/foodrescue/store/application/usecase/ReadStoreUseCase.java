@@ -41,4 +41,5 @@ public class ReadStoreUseCase {
             throw new StoreException(400, "INVALID_RADIUS", "Bán kính phải lớn hơn 0 và không quá 100 km");
         return stores.findApproved(latitude, longitude, radiusKm, page, size);
     }
+
 }

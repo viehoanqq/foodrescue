@@ -43,6 +43,7 @@ switch ($Service) {
         Set-LocalEnv 'DB_URL' 'jdbc:mysql://localhost:3307/store_db?serverTimezone=Asia/Ho_Chi_Minh'
         Set-LocalEnv 'DB_USERNAME' 'store_app'
         Set-LocalEnv 'DB_PASSWORD' $settings['STORE_DB_PASSWORD']
+        Set-LocalEnv 'FINANCE_STORE_API_KEY' $settings['FINANCE_STORE_API_KEY']
     }
     'catalog-inventory-service' {
         Set-LocalEnv 'DB_URL' 'jdbc:postgresql://localhost:5433/catalog_db'
@@ -59,6 +60,7 @@ switch ($Service) {
         Set-LocalEnv 'DB_URL' 'jdbc:postgresql://localhost:5433/finance_db'
         Set-LocalEnv 'DB_USERNAME' 'finance_app'
         Set-LocalEnv 'DB_PASSWORD' $settings['FINANCE_DB_PASSWORD']
+        Set-LocalEnv 'FINANCE_STORE_API_KEY' $settings['FINANCE_STORE_API_KEY']
     }
     'api-gateway' {
         Set-LocalEnv 'IDENTITY_SERVICE_URL' 'http://localhost:8082'

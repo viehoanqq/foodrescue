@@ -9,5 +9,5 @@ export function loginForRole(role) {
 export function homeForRole(role) {
   if (role === 'ADMIN') return '/admin/users';
   if (STORE_ROLES.includes(role)) return '/store/orders';
-  return '/customer';
+  return '/';
 }

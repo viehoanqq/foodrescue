@@ -44,7 +44,7 @@ export default function AuthScreen({ mode = 'login', portal }) {
 
   return <main className="auth-page">
     <div className="auth-card">
-      <Link to="/" className="auth-brand" aria-label="FoodRescue"><img src="/foodrescue-logo.png" alt="FoodRescue" /></Link>
+      <Link to="/" className="auth-brand" aria-label="FoodRescue"><img src="/logo.svg" alt="FoodRescue" /></Link>
       {isPasswordChange ? <>
         <div className="auth-password-icon"><LockOutlined /></div>
         <h1>Đổi mật khẩu tạm</h1>

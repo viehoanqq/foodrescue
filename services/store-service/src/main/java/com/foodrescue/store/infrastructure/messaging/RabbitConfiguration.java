@@ -5,11 +5,17 @@ import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.boot.autoconfigure.amqp.RabbitTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitConfiguration {
+    @Bean
+    public RabbitTemplateCustomizer storePublisherReturns() {
+        return template -> template.setMandatory(true);
+    }
+
     @Bean
     public TopicExchange foodrescueEvents() {
         return new TopicExchange(MessagingNames.EVENTS_EXCHANGE, true, false);

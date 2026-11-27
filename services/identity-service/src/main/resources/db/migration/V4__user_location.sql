@@ -1,0 +1,4 @@
+ALTER TABLE users
+    ADD COLUMN address VARCHAR(255) NULL,
+    ADD COLUMN latitude DECIMAL(10,8) NULL,
+    ADD COLUMN longitude DECIMAL(11,8) NULL;

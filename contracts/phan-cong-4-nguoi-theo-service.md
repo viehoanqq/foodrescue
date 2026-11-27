@@ -33,6 +33,8 @@
 
 **DB sở hữu:** MySQL `store_db`: `stores`, `reviews`, Outbox/Inbox. `stores.owner_id UNIQUE`, `reviews.order_id UNIQUE`. Store không ghi `users` hoặc `orders`.
 
+**Cấu trúc code:** `StoreController` xử lý đăng ký/hồ sơ/cửa hàng công khai/đánh giá; `StoreStaffController` xử lý nhân viên; `AdminStoreController` xử lý duyệt và quản trị. Admin có use case, port và JDBC repository riêng (`ReadAdminStoreUseCase`, `AdminStoreUseCase`, `IAdminStoreRepository`, `JdbcAdminStoreRepository`). Khi triển khai `/internal/stores/**`, đặt vào `InternalStoreController` riêng.
+
 **API phải làm:**
 
 | Nhóm | Endpoint/luồng |

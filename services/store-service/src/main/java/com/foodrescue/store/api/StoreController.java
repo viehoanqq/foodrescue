@@ -4,11 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.security.AuthenticatedUser;
 import com.foodrescue.store.application.usecase.RegisterStoreUseCase;
 import com.foodrescue.store.application.usecase.ReadStoreUseCase;
+import com.foodrescue.store.application.usecase.StoreReviewUseCase;
+import com.foodrescue.store.application.usecase.UpdateStoreProfileUseCase;
 import com.foodrescue.store.application.port.out.IImageStorage.Upload;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreRegistration;
+import com.foodrescue.store.domain.model.StoreProfileUpdate;
 import com.foodrescue.store.domain.model.StoreView;
+import com.foodrescue.store.domain.model.ReviewView;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.math.BigDecimal;
 import org.springframework.http.HttpStatus;
@@ -18,14 +23,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
+@Tag(name = "Cửa hàng", description = "Đăng ký, hồ sơ cửa hàng, danh sách công khai và đánh giá")
 public class StoreController {
     private final RegisterStoreUseCase registerStore;
     private final ReadStoreUseCase readStore;
+    private final StoreReviewUseCase storeReviews;
+    private final UpdateStoreProfileUseCase updateProfile;
     private final ObjectMapper mapper;
 
-    public StoreController(RegisterStoreUseCase registerStore, ReadStoreUseCase readStore, ObjectMapper mapper) {
+    public StoreController(RegisterStoreUseCase registerStore, ReadStoreUseCase readStore,
+                           StoreReviewUseCase storeReviews, UpdateStoreProfileUseCase updateProfile,
+                           ObjectMapper mapper) {
         this.registerStore = registerStore;
         this.readStore = readStore;
+        this.storeReviews = storeReviews;
+        this.updateProfile = updateProfile;
         this.mapper = mapper;
     }
 
@@ -59,6 +71,13 @@ public class StoreController {
         return readStore.profile(owner.id());
     }
 
+    @PutMapping("/api/store/profile")
+    @SecurityRequirement(name = "bearerAuth")
+    public StoreView.Profile updateProfile(@AuthenticationPrincipal AuthenticatedUser owner,
+                                           @RequestBody StoreProfileUpdate request) {
+        return updateProfile.execute(owner.id(), request);
+    }
+
     @GetMapping("/api/stores")
     public StoreView.Page list(@RequestParam(required = false) BigDecimal lat,
                                @RequestParam(required = false) BigDecimal lon,
@@ -70,6 +89,21 @@ public class StoreController {
 
     @GetMapping("/api/stores/{id}")
     public StoreView.Detail detail(@PathVariable Long id) { return readStore.detail(id); }
+
+    @PostMapping("/api/stores/{id}/reviews")
+    @SecurityRequirement(name = "bearerAuth")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReviewView.Item createReview(@AuthenticationPrincipal AuthenticatedUser customer,
+                                         @PathVariable Long id, @RequestBody ReviewView.Create request) {
+        return storeReviews.create(id, customer.id(), request);
+    }
+
+    @GetMapping("/api/stores/{id}/reviews")
+    public ReviewView.Page reviews(@PathVariable Long id,
+                                    @RequestParam(defaultValue = "0") int page,
+                                    @RequestParam(defaultValue = "20") int size) {
+        return storeReviews.list(id, page, size);
+    }
 
 }
 

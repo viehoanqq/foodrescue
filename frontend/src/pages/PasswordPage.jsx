@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Form, Input, Typography, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Typography, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { loginForRole } from '../routes/paths';
@@ -29,7 +29,9 @@ export default function PasswordPage() {
   return <Card style={{ maxWidth: 680, margin: '24px auto' }}>
     <Typography.Title level={4}>Đổi mật khẩu</Typography.Title>
     <Typography.Paragraph type="secondary">Sau khi đổi, bạn sẽ đăng nhập lại bằng mật khẩu mới.</Typography.Paragraph>
-    <Form form={form} layout="vertical" onFinish={submit}>
+    <Form form={form} layout="vertical" onFinish={(values) => Modal.confirm({ title: 'Đổi mật khẩu?',
+      content: 'Sau khi đổi mật khẩu, bạn sẽ phải đăng nhập lại.', okText: 'Đổi mật khẩu',
+      cancelText: 'Quay lại', onOk: () => submit(values) })}>
       <Form.Item name="oldPassword" label="Mật khẩu hiện tại" rules={[{ required: true, message: 'Nhập mật khẩu hiện tại' }]}>
         <Input.Password autoComplete="current-password" />
       </Form.Item>
