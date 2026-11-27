@@ -70,6 +70,12 @@ public class StoreEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "aggregate_version", nullable = false)
+    private Long aggregateVersion;
+
+    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime updatedAt;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -126,4 +132,7 @@ public class StoreEntity {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getAggregateVersion() { return aggregateVersion; }
+    public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }
