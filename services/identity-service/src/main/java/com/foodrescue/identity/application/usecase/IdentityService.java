@@ -2,6 +2,9 @@ package com.foodrescue.identity.application.usecase;
 
 import com.foodrescue.identity.domain.model.UserAccount;
 import com.foodrescue.identity.domain.model.PageResult;
+import com.foodrescue.identity.domain.model.enums.OtpType;
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.domain.exception.IdentityException;
 import com.foodrescue.identity.application.port.out.IAuditRepository;
@@ -9,7 +12,6 @@ import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.application.port.out.ITokenPort;
 import com.foodrescue.identity.application.port.out.IUnitOfWork;
 import com.foodrescue.identity.application.port.out.IEmailOtpPort;
-import com.foodrescue.identity.application.port.out.IEmailOtpPort.OtpType;
 import com.foodrescue.identity.application.port.out.IGoogleIdentityPort;
 import java.security.SecureRandom;
 import java.math.BigDecimal;
@@ -77,7 +79,7 @@ public class IdentityService {
         UserAccount user = users.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new IdentityException(404, "EMAIL_NOT_FOUND",
                         "Không tìm thấy tài khoản với email này"));
-        if (!"ACTIVE".equals(user.status())) {
+        if (!user.status().isActive()) {
             throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
         }
         return user;
@@ -96,7 +98,7 @@ public class IdentityService {
         }
         emailOtp.consume(OtpType.REGISTRATION, normalized, otp);
         UserAccount saved = users.save(new UserAccount(null, normalized, passwords.hash(password),
-                fullName.trim(), phone.trim(), "CUSTOMER", null, "ACTIVE", false,
+                fullName.trim(), phone.trim(), UserRole.CUSTOMER, null, UserStatus.ACTIVE, false,
                 LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));
         audit.record(saved.id(), "USER_REGISTERED", "USER", saved.id(), null);
         return new AuthResult(saved, tokens.issue(saved.id(), saved.tokenVersion()));
@@ -108,7 +110,7 @@ public class IdentityService {
         if (user.passwordHash() == null || !passwords.matches(password, user.passwordHash())) {
             throw new IdentityException(401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng");
         }
-        if (!"ACTIVE".equals(user.status())) {
+        if (!user.status().isActive()) {
             throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
         }
         return new AuthResult(user, tokens.issue(user.id(), user.tokenVersion()));
@@ -129,16 +131,16 @@ public class IdentityService {
             String name = profile.fullName() == null || profile.fullName().isBlank()
                     ? email : profile.fullName().trim();
             UserAccount created = users.save(new UserAccount(null, email, null, name, null,
-                    "CUSTOMER", null, "ACTIVE", false,
+                    UserRole.CUSTOMER, null, UserStatus.ACTIVE, false,
                     LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0,
                     null, null, null, profile.sub()));
             audit.record(created.id(), "USER_REGISTERED", "USER", created.id(), "GOOGLE");
             return created;
         });
-        if (!"CUSTOMER".equals(user.role()) && !"STORE_OWNER".equals(user.role())) {
+        if (!user.role().canUseGoogle()) {
             throw new IdentityException(403, "GOOGLE_ROLE_FORBIDDEN", "Tài khoản này không thể đăng nhập bằng Google");
         }
-        if (!"ACTIVE".equals(user.status())) {
+        if (!user.status().isActive()) {
             throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
         }
         return new AuthResult(user, tokens.issue(user.id(), user.tokenVersion()));
@@ -151,10 +153,10 @@ public class IdentityService {
 
     private UserAccount linkGoogleTransaction(Long userId, String password, IGoogleIdentityPort.GoogleProfile profile) {
         UserAccount user = find(userId);
-        if (!"ACTIVE".equals(user.status())) {
+        if (!user.status().isActive()) {
             throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
         }
-        if (!"CUSTOMER".equals(user.role()) && !"STORE_OWNER".equals(user.role())) {
+        if (!user.role().canUseGoogle()) {
             throw new IdentityException(403, "GOOGLE_ROLE_FORBIDDEN", "Tài khoản này không thể liên kết Google");
         }
         if (user.passwordHash() == null || !passwords.matches(password, user.passwordHash())) {
@@ -189,7 +191,7 @@ public class IdentityService {
     public com.foodrescue.identity.domain.model.PageResult<UserAccount> listStaff(
             Long actorId, Long storeId, int page, int size) {
         UserAccount actor = find(actorId);
-        if (!"STORE_OWNER".equals(actor.role()) || !"ACTIVE".equals(actor.status())) {
+        if (actor.role() != UserRole.STORE_OWNER || !actor.status().isActive()) {
             throw new IdentityException(403, "FORBIDDEN", "Chỉ chủ cửa hàng được xem nhân viên");
         }
         if (page < 0 || size < 1 || size > 100) {
@@ -205,7 +207,7 @@ public class IdentityService {
     private StaffResult createStaffTransaction(Long actorId, Long storeId, String email,
                                                String fullName, String phone) {
         UserAccount actor = find(actorId);
-        if (!"STORE_OWNER".equals(actor.role()) || !"ACTIVE".equals(actor.status())) {
+        if (actor.role() != UserRole.STORE_OWNER || !actor.status().isActive()) {
             throw new IdentityException(403, "FORBIDDEN", "Chỉ chủ cửa hàng đang hoạt động được tạo nhân viên");
         }
         String normalized = normalize(email);
@@ -214,7 +216,7 @@ public class IdentityService {
         }
         String temporaryPassword = randomPassword();
         UserAccount saved = users.save(new UserAccount(null, normalized, passwords.hash(temporaryPassword),
-                fullName.trim(), phone.trim(), "STORE_STAFF", storeId, "ACTIVE", true,
+                fullName.trim(), phone.trim(), UserRole.STORE_STAFF, storeId, UserStatus.ACTIVE, true,
                 LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));
         audit.record(actorId, "STORE_STAFF_CREATED", "USER", saved.id(), "storeId=" + storeId);
         return new StaffResult(saved, temporaryPassword);
@@ -226,15 +228,15 @@ public class IdentityService {
 
     private UserAccount setStaffLockedTransaction(Long actorId, Long storeId, Long staffId, boolean locked) {
         UserAccount actor = find(actorId);
-        if (!"STORE_OWNER".equals(actor.role()) || !"ACTIVE".equals(actor.status())) {
+        if (actor.role() != UserRole.STORE_OWNER || !actor.status().isActive()) {
             throw new IdentityException(403, "FORBIDDEN", "Chỉ chủ cửa hàng đang hoạt động được quản lý nhân viên");
         }
         UserAccount staff = find(staffId);
-        if (!"STORE_STAFF".equals(staff.role()) || !storeId.equals(staff.storeId())) {
+        if (staff.role() != UserRole.STORE_STAFF || !storeId.equals(staff.storeId())) {
             throw new IdentityException(404, "STAFF_NOT_FOUND", "Không tìm thấy nhân viên của cửa hàng");
         }
-        String nextStatus = locked ? "LOCKED" : "ACTIVE";
-        if (nextStatus.equals(staff.status())) return staff;
+        UserStatus nextStatus = UserStatus.fromLocked(locked);
+        if (nextStatus == staff.status()) return staff;
         UserAccount saved = users.save(copy(staff, staff.passwordHash(), staff.fullName(), staff.phone(),
                 nextStatus, staff.mustChangePassword(), staff.tokenVersion() + 1));
         audit.record(actorId, locked ? "STORE_STAFF_LOCKED" : "STORE_STAFF_UNLOCKED", "USER", staffId,
@@ -286,7 +288,21 @@ public class IdentityService {
         if (page < 0 || size < 1 || size > 100) {
             throw new IdentityException(400, "VALIDATION_ERROR", "page hoặc size không hợp lệ");
         }
-        return users.search(role, status, keyword, page, size);
+        UserRole parsedRole = parseEnumFilter(() -> UserRole.fromNullable(role),
+                "Vai trò người dùng không hợp lệ: " + role);
+        UserStatus parsedStatus = parseEnumFilter(() -> UserStatus.fromNullable(status),
+                "Trạng thái tài khoản không hợp lệ: " + status);
+        return users.search(parsedRole, parsedStatus, keyword, page, size);
+    }
+
+    private static <E extends Enum<E>> E parseEnumFilter(
+            java.util.function.Supplier<java.util.Optional<E>> parser,
+            String errorMessage) {
+        try {
+            return parser.get().orElse(null);
+        } catch (IllegalArgumentException ex) {
+            throw new IdentityException(400, "VALIDATION_ERROR", errorMessage);
+        }
     }
 
     public UserAccount setLocked(Long actorId, Long targetId, boolean locked) {
@@ -295,11 +311,11 @@ public class IdentityService {
 
     private UserAccount setLockedTransaction(Long actorId, Long targetId, boolean locked) {
         UserAccount old = find(targetId);
-        if (locked && (targetId.equals(actorId) || "ADMIN".equals(old.role()))) {
+        if (locked && (targetId.equals(actorId) || old.role() == UserRole.ADMIN)) {
             throw new IdentityException(403, "FORBIDDEN", "Không thể khóa tài khoản quản trị");
         }
-        String nextStatus = locked ? "LOCKED" : "ACTIVE";
-        if (nextStatus.equals(old.status())) return old;
+        UserStatus nextStatus = UserStatus.fromLocked(locked);
+        if (nextStatus == old.status()) return old;
         UserAccount saved = users.save(copy(old, old.passwordHash(), old.fullName(), old.phone(),
                 nextStatus, old.mustChangePassword(), old.tokenVersion() + 1));
         audit.record(actorId, locked ? "USER_LOCKED" : "USER_UNLOCKED", "USER", targetId, null);
@@ -359,7 +375,7 @@ public class IdentityService {
     }
 
     private UserAccount copy(UserAccount old, String passwordHash, String fullName, String phone,
-                             String status, boolean mustChangePassword, long version) {
+                             UserStatus status, boolean mustChangePassword, long version) {
         return new UserAccount(old.id(), old.email(), passwordHash, fullName, phone, old.role(), old.storeId(),
                 status, mustChangePassword, old.createdAt(), version,
                 old.address(), old.latitude(), old.longitude(), old.googleSub());

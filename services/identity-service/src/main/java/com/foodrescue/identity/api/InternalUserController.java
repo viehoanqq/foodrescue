@@ -33,7 +33,7 @@ public class InternalUserController {
     public UserStatus status(@RequestHeader("X-Internal-Key") String key, @PathVariable Long id) {
         verifier.verify(key);
         var user = service.find(id);
-        return new UserStatus(user.id(), user.status(), user.role(), user.fullName(), user.storeId(),
+        return new UserStatus(user.id(), user.status().name(), user.role().name(), user.fullName(), user.storeId(),
                 user.tokenVersion(), user.mustChangePassword());
     }
 
@@ -51,8 +51,8 @@ public class InternalUserController {
         var result = service.createStaff(request.actorId(), request.storeId(), request.email(),
                 request.fullName(), request.phone());
         var user = result.user();
-        return new StaffResponse(user.id(), user.email(), user.fullName(), user.phone(), user.role(),
-                user.storeId(), user.status(), user.mustChangePassword(), result.temporaryPassword());
+        return new StaffResponse(user.id(), user.email(), user.fullName(), user.phone(), user.role().name(),
+                user.storeId(), user.status().name(), user.mustChangePassword(), result.temporaryPassword());
     }
 
     @GetMapping("/internal/staff")
@@ -64,7 +64,7 @@ public class InternalUserController {
         verifier.verify(key);
         var result = service.listStaff(actorId, storeId, page, size);
         return new StaffPage(result.content().stream().map(user -> new StaffSummary(user.id(), user.email(),
-                        user.fullName(), user.phone(), user.status())).toList(),
+                        user.fullName(), user.phone(), user.status().name())).toList(),
                 result.page(), result.size(), result.totalElements(), result.totalPages());
     }
 
@@ -97,7 +97,7 @@ public class InternalUserController {
     public record StaffStatusRequest(@NotNull @Positive Long actorId, @NotNull @Positive Long storeId) {}
     public record StaffStatusResponse(Long userId, Long storeId, String status, long tokenVersion) {
         public static StaffStatusResponse from(UserAccount user) {
-            return new StaffStatusResponse(user.id(), user.storeId(), user.status(), user.tokenVersion());
+            return new StaffStatusResponse(user.id(), user.storeId(), user.status().name(), user.tokenVersion());
         }
     }
 }

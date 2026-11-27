@@ -1,9 +1,12 @@
 package com.foodrescue.store.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.store.domain.model.enums.StoreStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -49,8 +52,10 @@ public class StoreEntity {
     @Column(name = "close_time", nullable = false)
     private LocalTime closeTime;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private StoreStatus status;
 
     @Column(name = "reject_reason", length = 255)
     private String rejectReason;
@@ -112,8 +117,8 @@ public class StoreEntity {
     public LocalTime getCloseTime() { return closeTime; }
     public void setCloseTime(LocalTime closeTime) { this.closeTime = closeTime; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public StoreStatus getStatus() { return status; }
+    public void setStatus(StoreStatus status) { this.status = status; }
 
     public String getRejectReason() { return rejectReason; }
     public void setRejectReason(String rejectReason) { this.rejectReason = rejectReason; }

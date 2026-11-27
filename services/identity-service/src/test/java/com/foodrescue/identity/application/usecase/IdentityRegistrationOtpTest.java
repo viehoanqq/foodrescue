@@ -1,9 +1,9 @@
 package com.foodrescue.identity.application.usecase;
 
 import com.foodrescue.identity.application.port.out.*;
-import com.foodrescue.identity.application.port.out.IEmailOtpPort.OtpType;
 import com.foodrescue.identity.domain.exception.IdentityException;
 import com.foodrescue.identity.domain.model.UserAccount;
+import com.foodrescue.identity.domain.model.enums.OtpType;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;

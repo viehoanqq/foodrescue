@@ -1,9 +1,11 @@
 package com.foodrescue.identity.application.usecase;
 
 import com.foodrescue.identity.application.port.out.*;
-import com.foodrescue.identity.application.port.out.IEmailOtpPort.OtpType;
 import com.foodrescue.identity.domain.exception.IdentityException;
 import com.foodrescue.identity.domain.model.UserAccount;
+import com.foodrescue.identity.domain.model.enums.OtpType;
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -49,7 +51,7 @@ class IdentityPasswordResetOtpTest {
     @Test
     void sendOtpRejectsLockedAccount() {
         when(users.findByEmail("locked@example.com")).thenReturn(Optional.of(
-                user(7L, "locked@example.com", "LOCKED", true, 3L, null)));
+                user(7L, "locked@example.com", UserStatus.LOCKED, true, 3L, null)));
 
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> service.sendPasswordResetOtp("locked@example.com"));
@@ -62,7 +64,7 @@ class IdentityPasswordResetOtpTest {
     @Test
     void sendOtpNormalizesEmailForActiveAccount() {
         when(users.findByEmail("user@example.com")).thenReturn(Optional.of(
-                user(7L, "user@example.com", "ACTIVE", false, 1L, null)));
+                user(7L, "user@example.com", UserStatus.ACTIVE, false, 1L, null)));
 
         service.sendPasswordResetOtp("  USER@Example.com ");
 
@@ -72,7 +74,7 @@ class IdentityPasswordResetOtpTest {
     @Test
     void invalidOtpDoesNotResetPassword() {
         when(users.findByEmail("user@example.com")).thenReturn(Optional.of(
-                user(7L, "user@example.com", "ACTIVE", false, 1L, null)));
+                user(7L, "user@example.com", UserStatus.ACTIVE, false, 1L, null)));
         doThrow(new IdentityException(400, "INVALID_OTP", "Invalid code"))
                 .when(emailOtp).verify(OtpType.PASSWORD_RESET, "user@example.com", "000000");
 
@@ -86,7 +88,7 @@ class IdentityPasswordResetOtpTest {
     @Test
     void lockedAccountCannotResetPassword() {
         when(users.findByEmail("locked@example.com")).thenReturn(Optional.of(
-                user(7L, "locked@example.com", "LOCKED", false, 1L, null)));
+                user(7L, "locked@example.com", UserStatus.LOCKED, false, 1L, null)));
 
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> service.resetPasswordWithOtp("locked@example.com", "123456", "NewSecret123"));
@@ -98,7 +100,7 @@ class IdentityPasswordResetOtpTest {
     @Test
     void successfulResetConsumesOtpUpdatesPasswordRevokesTokensAndWritesAudit() {
         when(users.findByEmail("user@example.com")).thenReturn(Optional.of(
-                user(7L, "user@example.com", "ACTIVE", true, 4L, "google-sub-1")));
+                user(7L, "user@example.com", UserStatus.ACTIVE, true, 4L, "google-sub-1")));
 
         service.resetPasswordWithOtp("USER@example.com", "654321", "NewSecret123");
 
@@ -114,8 +116,8 @@ class IdentityPasswordResetOtpTest {
         verify(audit).record(7L, "USER_PASSWORD_RESET", "USER", 7L, "EMAIL_OTP");
     }
 
-    private UserAccount user(Long id, String email, String status, boolean mustChange, long version, String googleSub) {
-        return new UserAccount(id, email, "old-hash", "User", "0123456789", "CUSTOMER",
+    private UserAccount user(Long id, String email, UserStatus status, boolean mustChange, long version, String googleSub) {
+        return new UserAccount(id, email, "old-hash", "User", "0123456789", UserRole.CUSTOMER,
                 null, status, mustChange, LocalDateTime.of(2026, 11, 20, 10, 0), version,
                 null, null, null, googleSub);
     }

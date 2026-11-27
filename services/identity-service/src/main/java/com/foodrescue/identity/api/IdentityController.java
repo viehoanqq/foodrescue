@@ -114,8 +114,8 @@ public class IdentityController {
                            LocalDateTime createdAt, String address, BigDecimal latitude, BigDecimal longitude,
                            boolean googleLinked) {
         public static UserView from(UserAccount user) {
-            return new UserView(user.id(), user.email(), user.fullName(), user.phone(), user.role(),
-                    user.storeId(), user.status(), user.mustChangePassword(), user.createdAt(),
+            return new UserView(user.id(), user.email(), user.fullName(), user.phone(), user.role().name(),
+                    user.storeId(), user.status().name(), user.mustChangePassword(), user.createdAt(),
                     user.address(), user.latitude(), user.longitude(), user.googleSub() != null);
         }
     }

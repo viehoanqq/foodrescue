@@ -1,6 +1,6 @@
 package com.foodrescue.identity.infrastructure.adapter.out.mail;
 
-import com.foodrescue.identity.application.port.out.IEmailOtpPort.OtpType;
+import com.foodrescue.identity.domain.model.enums.OtpType;
 
 /** Builds email-client-safe HTML (inline CSS + table layout) and plain-text fallback for OTP emails. */
 public final class OtpEmailTemplate {

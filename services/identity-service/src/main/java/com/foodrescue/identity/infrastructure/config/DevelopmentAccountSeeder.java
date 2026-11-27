@@ -2,6 +2,8 @@ package com.foodrescue.identity.infrastructure.config;
 
 import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.domain.model.UserAccount;
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -34,24 +36,24 @@ public class DevelopmentAccountSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (!enabled) return;
         transaction.executeWithoutResult(status -> {
-            seed(adminEmail, adminPassword, "ADMIN", null, "Quản trị viên mẫu");
-            seed(ownerEmail, ownerPassword, "STORE_OWNER", null, "Chủ cửa hàng mẫu");
+            seed(adminEmail, adminPassword, UserRole.ADMIN, null, "Quản trị viên mẫu");
+            seed(ownerEmail, ownerPassword, UserRole.STORE_OWNER, null, "Chủ cửa hàng mẫu");
         });
     }
 
-    private void seed(String rawEmail, String password, String role, Long storeId, String name) {
+    private void seed(String rawEmail, String password, UserRole role, Long storeId, String name) {
         if (rawEmail == null || rawEmail.isBlank() || password == null || password.length() < 8) {
             throw new IllegalStateException("Seed email/password missing or password shorter than 8 characters");
         }
         String email = rawEmail.trim().toLowerCase(Locale.ROOT);
         var existing = users.findByEmail(email);
         if (existing.isPresent()) {
-            if (!role.equals(existing.get().role())) {
+            if (role != existing.get().role()) {
                 throw new IllegalStateException("Seed email already belongs to a different role: " + email);
             }
             return; // Never reset a password or overwrite a real account on restart.
         }
         users.save(new UserAccount(null, email, passwords.hash(password), name, "", role,
-                storeId, "ACTIVE", false, LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));
+                storeId, UserStatus.ACTIVE, false, LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));
     }
 }

@@ -1,8 +1,8 @@
 package com.foodrescue.identity.infrastructure.adapter.out.persistence;
 
-import com.foodrescue.identity.application.port.out.IEmailOtpPort.OtpType;
 import com.foodrescue.identity.application.port.out.IEmailSenderPort;
 import com.foodrescue.identity.domain.exception.IdentityException;
+import com.foodrescue.identity.domain.model.enums.OtpType;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.EmailOtpEntity;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.EmailOtpId;
 import java.time.LocalDateTime;

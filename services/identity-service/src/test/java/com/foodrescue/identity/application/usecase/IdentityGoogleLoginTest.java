@@ -3,6 +3,8 @@ package com.foodrescue.identity.application.usecase;
 import com.foodrescue.identity.application.port.out.*;
 import com.foodrescue.identity.domain.exception.IdentityException;
 import com.foodrescue.identity.domain.model.UserAccount;
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -45,7 +47,7 @@ class IdentityGoogleLoginTest {
         IdentityService.AuthResult result = service.loginWithGoogle("valid-token");
 
         assertEquals("foodrescue-token", result.token());
-        assertEquals("CUSTOMER", result.user().role());
+        assertEquals(UserRole.CUSTOMER, result.user().role());
         assertEquals("google-123", result.user().googleSub());
         assertNull(result.user().passwordHash());
         assertNull(result.user().phone());
@@ -55,7 +57,7 @@ class IdentityGoogleLoginTest {
     @Test
     void returningGoogleUserKeepsExistingAccount() {
         UserAccount existing = new UserAccount(12L, "person@example.com", null, "Person", null,
-                "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 2,
+                UserRole.CUSTOMER, null, UserStatus.ACTIVE, false, LocalDateTime.now(), 2,
                 null, null, null, "google-123");
         when(users.findByGoogleSub("google-123")).thenReturn(Optional.of(existing));
         when(tokens.issue(12L, 2)).thenReturn("new-token");
@@ -67,18 +69,18 @@ class IdentityGoogleLoginTest {
     @Test
     void promotedStoreOwnerCanStillSignInWithGoogle() {
         UserAccount owner = new UserAccount(12L, "person@example.com", null, "Person", null,
-                "STORE_OWNER", null, "ACTIVE", false, LocalDateTime.now(), 3,
+                UserRole.STORE_OWNER, null, UserStatus.ACTIVE, false, LocalDateTime.now(), 3,
                 null, null, null, "google-123");
         when(users.findByGoogleSub("google-123")).thenReturn(Optional.of(owner));
 
-        assertEquals("STORE_OWNER", service.loginWithGoogle("valid-token").user().role());
+        assertEquals(UserRole.STORE_OWNER, service.loginWithGoogle("valid-token").user().role());
     }
 
     @Test
     void existingPasswordAccountIsNotAutomaticallyLinkedByEmail() {
         when(users.findByEmail("person@example.com")).thenReturn(Optional.of(
                 new UserAccount(5L, "person@example.com", "hash", "Person", "0123456789",
-                        "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0)));
+                        UserRole.CUSTOMER, null, UserStatus.ACTIVE, false, LocalDateTime.now(), 0)));
 
         IdentityException error = assertThrows(IdentityException.class,
                 () -> service.loginWithGoogle("valid-token"));
@@ -90,7 +92,7 @@ class IdentityGoogleLoginTest {
     @Test
     void linkGoogleRequiresCurrentPasswordAndMatchingEmail() {
         UserAccount local = new UserAccount(5L, "person@example.com", "hash", "Person", "0123456789",
-                "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0);
+                UserRole.CUSTOMER, null, UserStatus.ACTIVE, false, LocalDateTime.now(), 0);
         when(users.findById(5L)).thenReturn(Optional.of(local));
         when(passwords.matches("correct-password", "hash")).thenReturn(true);
         when(users.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -113,12 +115,12 @@ class IdentityGoogleLoginTest {
     @Test
     void linkGoogleRejectsGoogleAccountBelongingToSomeoneElse() {
         UserAccount local = new UserAccount(5L, "person@example.com", "hash", "Person", "0123456789",
-                "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0);
+                UserRole.CUSTOMER, null, UserStatus.ACTIVE, false, LocalDateTime.now(), 0);
         when(users.findById(5L)).thenReturn(Optional.of(local));
         when(passwords.matches("correct-password", "hash")).thenReturn(true);
         when(users.findByGoogleSub("google-123")).thenReturn(Optional.of(
                 new UserAccount(6L, "other@example.com", null, "Other", null,
-                        "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0,
+                        UserRole.CUSTOMER, null, UserStatus.ACTIVE, false, LocalDateTime.now(), 0,
                         null, null, null, "google-123")));
 
         IdentityException error = assertThrows(IdentityException.class,

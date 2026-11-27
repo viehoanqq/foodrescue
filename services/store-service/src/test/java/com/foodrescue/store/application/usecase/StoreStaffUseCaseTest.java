@@ -6,6 +6,7 @@ import com.foodrescue.store.application.port.out.IStaffIdentityPort.CreatedStaff
 import com.foodrescue.store.application.port.out.IStaffIdentityPort.NewStaff;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.OwnedStore;
+import com.foodrescue.store.domain.model.enums.StoreStatus;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,7 @@ class StoreStaffUseCaseTest {
 
     @Test
     void usesStoreOwnedByAuthenticatedUser() {
-        when(stores.findByOwnerId(7L)).thenReturn(Optional.of(new OwnedStore(15L, 7L, "APPROVED")));
+        when(stores.findByOwnerId(7L)).thenReturn(Optional.of(new OwnedStore(15L, 7L, StoreStatus.APPROVED)));
         CreatedStaff created = new CreatedStaff(30L, staff.email(), staff.fullName(), staff.phone(),
                 "STORE_STAFF", 15L, "ACTIVE", true, "temporary-password");
         when(identity.create(7L, 15L, staff)).thenReturn(created);
@@ -31,7 +32,7 @@ class StoreStaffUseCaseTest {
 
     @Test
     void pendingStoreCannotCreateStaff() {
-        when(stores.findByOwnerId(7L)).thenReturn(Optional.of(new OwnedStore(15L, 7L, "PENDING")));
+        when(stores.findByOwnerId(7L)).thenReturn(Optional.of(new OwnedStore(15L, 7L, StoreStatus.PENDING)));
 
         StoreException error = assertThrows(StoreException.class, () -> useCase.execute(7L, staff));
 
@@ -41,7 +42,7 @@ class StoreStaffUseCaseTest {
 
     @Test
     void mismatchedOwnerCannotCreateStaff() {
-        when(stores.findByOwnerId(7L)).thenReturn(Optional.of(new OwnedStore(15L, 8L, "APPROVED")));
+        when(stores.findByOwnerId(7L)).thenReturn(Optional.of(new OwnedStore(15L, 8L, StoreStatus.APPROVED)));
 
         StoreException error = assertThrows(StoreException.class, () -> useCase.execute(7L, staff));
 

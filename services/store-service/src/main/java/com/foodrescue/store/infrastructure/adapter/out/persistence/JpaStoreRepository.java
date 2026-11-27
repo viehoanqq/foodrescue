@@ -6,6 +6,7 @@ import com.foodrescue.store.application.port.out.IOutboxPort;
 import com.foodrescue.store.application.port.out.IStoreRepository;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.*;
+import com.foodrescue.store.domain.model.enums.StoreStatus;
 import com.foodrescue.store.infrastructure.adapter.out.persistence.entity.StoreEntity;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -33,7 +34,7 @@ public class JpaStoreRepository implements IStoreRepository {
     }
 
     @Override public Optional<StoreView.Registration> findRegistration(Long ownerId) {
-        return stores.findByOwnerId(ownerId).map(s -> new StoreView.Registration(s.getId(), s.getStatus(),
+        return stores.findByOwnerId(ownerId).map(s -> new StoreView.Registration(s.getId(), s.getStatus().name(),
                 s.getRejectReason(), s.getCreatedAt(), s.getName(), s.getDescription(), s.getPhone(),
                 s.getAddress(), s.getLatitude(), s.getLongitude(), s.getImageUrl(), s.getOpenTime(),
                 s.getCloseTime(), s.getBankName(), mask(s.getBankAccountNo()), s.getBankAccountName()));
@@ -47,7 +48,7 @@ public class JpaStoreRepository implements IStoreRepository {
     public StoreView.Profile updateProfile(Long ownerId, StoreProfileUpdate input) {
         StoreEntity s = stores.findLockedByOwnerId(ownerId).orElseThrow(() ->
                 new StoreException(409, "STORE_NOT_EDITABLE", "Cửa hàng chưa thể chỉnh sửa hồ sơ"));
-        if (!List.of("APPROVED", "LOCKED").contains(s.getStatus()))
+        if (s.getStatus() == null || !s.getStatus().isProfileEditable())
             throw new StoreException(409, "STORE_NOT_EDITABLE", "Cửa hàng chưa thể chỉnh sửa hồ sơ");
         apply(s, input);
         s.setAggregateVersion(s.getAggregateVersion() + 1);
@@ -60,7 +61,7 @@ public class JpaStoreRepository implements IStoreRepository {
     }
 
     @Override public Optional<StoreView.Detail> findApprovedById(Long storeId) {
-        return stores.findByIdAndStatus(storeId, "APPROVED").map(s -> {
+        return stores.findByIdAndStatus(storeId, StoreStatus.APPROVED).map(s -> {
             Object[] r = rating(storeId);
             return new StoreView.Detail(s.getId(), s.getName(), s.getDescription(), s.getPhone(),
                     s.getAddress(), s.getImageUrl(), s.getLatitude(), s.getLongitude(),
@@ -100,7 +101,7 @@ public class JpaStoreRepository implements IStoreRepository {
         s.setPhone(d.storePhone().trim()); s.setAddress(d.address().trim());
         s.setLatitude(d.latitude()); s.setLongitude(d.longitude()); s.setImageUrl(imageUrl);
         s.setLicenseImageUrl(licenseUrl); s.setOpenTime(d.openTime()); s.setCloseTime(d.closeTime());
-        s.setStatus("PENDING"); s.setCommissionRate(new BigDecimal("15.00"));
+        s.setStatus(StoreStatus.PENDING); s.setCommissionRate(new BigDecimal("15.00"));
         s.setBankName(d.bankName().trim()); s.setBankAccountNo(d.bankAccountNo().trim());
         s.setBankAccountName(d.bankAccountName().trim()); s.setCreatedAt(LocalDateTime.now());
         s.setAggregateVersion(1L);
@@ -128,7 +129,7 @@ public class JpaStoreRepository implements IStoreRepository {
     private StoreView.Profile profile(StoreEntity s) {
         return new StoreView.Profile(s.getId(), s.getOwnerId(), s.getName(), s.getDescription(),
                 s.getPhone(), s.getAddress(), s.getLatitude(), s.getLongitude(), s.getImageUrl(),
-                s.getOpenTime(), s.getCloseTime(), s.getStatus(), s.getRejectReason(),
+                s.getOpenTime(), s.getCloseTime(), s.getStatus().name(), s.getRejectReason(),
                 s.getCommissionRate(), s.getBankName(), mask(s.getBankAccountNo()),
                 s.getBankAccountName(), s.getCreatedAt());
     }

@@ -2,6 +2,8 @@ package com.foodrescue.identity.infrastructure.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.identity.domain.model.UserAccount;
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataInboxRepository;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataStoreStatusRepository;
@@ -34,13 +36,13 @@ class StoreStatusListenerTest {
 
     @Test
     void approvalPromotesExistingCustomerWithoutSettingStaffStoreId() throws Exception {
-        when(users.findById(5L)).thenReturn(Optional.of(account("CUSTOMER", 3)));
+        when(users.findById(5L)).thenReturn(Optional.of(account(UserRole.CUSTOMER, 3)));
 
         listener.receive(event("APPROVED", 1));
 
         ArgumentCaptor<UserAccount> saved = ArgumentCaptor.forClass(UserAccount.class);
         verify(users).save(saved.capture());
-        assertEquals("STORE_OWNER", saved.getValue().role());
+        assertEquals(UserRole.STORE_OWNER, saved.getValue().role());
         assertNull(saved.getValue().storeId());
         assertEquals(4, saved.getValue().tokenVersion());
     }
@@ -55,7 +57,7 @@ class StoreStatusListenerTest {
 
     @Test
     void lockingInvalidatesOwnerAndStaffTokens() throws Exception {
-        when(users.findById(5L)).thenReturn(Optional.of(account("STORE_OWNER", 3)));
+        when(users.findById(5L)).thenReturn(Optional.of(account(UserRole.STORE_OWNER, 3)));
 
         listener.receive(event("LOCKED", 2));
 
@@ -65,9 +67,9 @@ class StoreStatusListenerTest {
         verify(userEntities).incrementStaffTokenVersions(7L);
     }
 
-    private UserAccount account(String role, long version) {
+    private UserAccount account(UserRole role, long version) {
         return new UserAccount(5L, "owner@example.com", "hash", "Owner", "0123456789",
-                role, null, "ACTIVE", false, LocalDateTime.now(), version);
+                role, null, UserStatus.ACTIVE, false, LocalDateTime.now(), version);
     }
 
     private String event(String status, long version) {
