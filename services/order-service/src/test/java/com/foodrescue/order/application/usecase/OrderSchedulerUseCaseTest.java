@@ -2,6 +2,7 @@ package com.foodrescue.order.application.usecase;
 
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -24,9 +25,9 @@ class OrderSchedulerUseCaseTest {
     void paymentConfirmedAfterScanPreventsExpiry() {
         OrderEntity current = new OrderEntity();
         current.setId(10L);
-        current.setStatus("CONFIRMED");
+        current.setStatus(OrderStatus.CONFIRMED);
         current.setPaymentExpiresAt(LocalDateTime.now().minusMinutes(1));
-        when(orders.findExpiredPendingOrderIds(eq("PENDING_PAYMENT"), any())).thenReturn(List.of(10L));
+        when(orders.findExpiredPendingOrderIds(eq(OrderStatus.PENDING_PAYMENT), any())).thenReturn(List.of(10L));
         when(orders.findLockedById(10L)).thenReturn(Optional.of(current));
 
         scheduler.expireUnpaidOrders();
@@ -39,9 +40,9 @@ class OrderSchedulerUseCaseTest {
     void handoverAfterScanPreventsNoShow() {
         OrderEntity current = new OrderEntity();
         current.setId(11L);
-        current.setStatus("COMPLETED");
+        current.setStatus(OrderStatus.COMPLETED);
         current.setPickupEnd(LocalDateTime.now().minusHours(1));
-        when(orders.findNoShowOrderIds(eq("CONFIRMED"), any())).thenReturn(List.of(11L));
+        when(orders.findNoShowOrderIds(eq(OrderStatus.CONFIRMED), any())).thenReturn(List.of(11L));
         when(orders.findLockedById(11L)).thenReturn(Optional.of(current));
 
         scheduler.markNoShowOrders();

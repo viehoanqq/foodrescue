@@ -7,6 +7,8 @@ import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IInboxPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
+import com.foodrescue.order.domain.model.enums.PaymentStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -82,10 +84,10 @@ public class PaymentResultsConsumer {
                 : UUID.randomUUID();
 
         if (MessagingNames.PAYMENT_SUCCEEDED_EVENT.equals(eventType)) {
-            String status = order.getStatus();
-            if ("PENDING_PAYMENT".equalsIgnoreCase(status)) {
-                order.setStatus("CONFIRMED");
-                order.setPaymentStatus("PAID");
+            OrderStatus status = order.getStatus();
+            if (status == OrderStatus.PENDING_PAYMENT) {
+                order.setStatus(OrderStatus.CONFIRMED);
+                order.setPaymentStatus(PaymentStatus.PAID);
                 order.setAggregateVersion(order.getAggregateVersion() + 1);
                 orderRepository.save(order);
 
@@ -103,11 +105,10 @@ public class PaymentResultsConsumer {
                         order.getAggregateVersion(), correlationId, null, order.getCustomerId(), auditPayload));
 
                 log.info("Order {} confirmed by payment success", order.getOrderCode());
-            } else if (("CANCELLED".equalsIgnoreCase(status) || "EXPIRED".equalsIgnoreCase(status))
-                    && !"REFUND_PENDING".equals(order.getPaymentStatus())
-                    && !"REFUNDED".equals(order.getPaymentStatus())) {
+            } else if (status != null && status.isLatePaymentRefundable()
+                    && (order.getPaymentStatus() == null || !order.getPaymentStatus().isRefundInitiated())) {
                 // Payment received after cancel/expired -> trigger refund required
-                order.setPaymentStatus("REFUND_PENDING");
+                order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
                 order.setAggregateVersion(order.getAggregateVersion() + 1);
                 orderRepository.save(order);
 
@@ -125,7 +126,7 @@ public class PaymentResultsConsumer {
                 log.info("Late payment for order {}, emitted refund-required", order.getOrderCode());
             }
         } else if (MessagingNames.PAYMENT_FAILED_EVENT.equals(eventType)) {
-            if ("PENDING_PAYMENT".equalsIgnoreCase(order.getStatus())) {
+            if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
                 log.info("Payment failed for order: {}", order.getOrderCode());
             }
         }
@@ -137,8 +138,8 @@ public class PaymentResultsConsumer {
         statePayload.put("orderId", order.getId());
         statePayload.put("storeId", order.getStoreId());
         statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
+        statePayload.put("status", order.getStatus().name());
+        statePayload.put("paymentStatus", order.getPaymentStatus().name());
         statePayload.put("totalAmount", order.getTotalAmount().longValue());
         statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
         statePayload.put("storeEarning", order.getStoreEarning().longValue());

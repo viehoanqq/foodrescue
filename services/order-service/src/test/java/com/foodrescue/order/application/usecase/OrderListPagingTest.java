@@ -4,6 +4,7 @@ import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.domain.exception.OrderException;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -27,7 +28,7 @@ class OrderListPagingTest {
     @Test
     void customerListUsesCustomerScopeAndReturnsPageMetadata() {
         CustomerOrderUseCase useCase = new CustomerOrderUseCase(orders, items, inventory, outbox);
-        when(orders.findCustomerOrders(eq(7L), eq("CONFIRMED"), any(Pageable.class)))
+        when(orders.findCustomerOrders(eq(7L), eq(OrderStatus.CONFIRMED), any(Pageable.class)))
                 .thenReturn(new PageImpl<OrderEntity>(List.of(), PageRequest.of(1, 5), 8));
 
         OrderPageResponse result = useCase.getMyOrders(7L, " confirmed ", 1, 5);
@@ -42,17 +43,17 @@ class OrderListPagingTest {
     void storeDateFiltersCreatedAtWithinRequestedDay() {
         StorePickupUseCase useCase = new StorePickupUseCase(orders, items, outbox);
         LocalDateTime from = LocalDate.of(2026, 11, 27).atStartOfDay();
-        when(orders.findStoreOrders(eq(9L), eq("COMPLETED"), eq(from), eq(from.plusDays(1)), any(Pageable.class)))
+        when(orders.findStoreOrders(eq(9L), eq(OrderStatus.COMPLETED), eq(from), eq(from.plusDays(1)), any(Pageable.class)))
                 .thenReturn(new PageImpl<OrderEntity>(List.of(), PageRequest.of(0, 20), 0));
 
         OrderPageResponse result = useCase.getStoreOrders(9L, LocalDate.of(2026, 11, 27), "completed", 0, 20);
 
         assertEquals(0, result.totalElements());
-        verify(orders).findStoreOrders(eq(9L), eq("COMPLETED"), eq(from), eq(from.plusDays(1)), any(Pageable.class));
+        verify(orders).findStoreOrders(eq(9L), eq(OrderStatus.COMPLETED), eq(from), eq(from.plusDays(1)), any(Pageable.class));
     }
 
     @Test
-    void adminCanFilterByCodeAndInvalidPageSizeIsRejected() {
+    void adminCanFilterByCodeAndInvalidPageSizeOrStatusIsRejected() {
         CustomerOrderUseCase useCase = new CustomerOrderUseCase(orders, items, inventory, outbox);
         when(orders.findAdminOrders(eq(null), eq("FR-123"), any(Pageable.class)))
                 .thenReturn(new PageImpl<OrderEntity>(List.of(), PageRequest.of(0, 20), 0));
@@ -60,5 +61,8 @@ class OrderListPagingTest {
         useCase.getAllOrdersForAdmin(" fr-123 ", null, 0, 20);
         verify(orders).findAdminOrders(eq(null), eq("FR-123"), any(Pageable.class));
         assertThrows(OrderException.class, () -> useCase.getMyOrders(7L, null, 0, 101));
+        OrderException badStatus = assertThrows(OrderException.class,
+                () -> useCase.getMyOrders(7L, "UNKNOWN_STATUS", 0, 20));
+        assertEquals(400, badStatus.status());
     }
 }

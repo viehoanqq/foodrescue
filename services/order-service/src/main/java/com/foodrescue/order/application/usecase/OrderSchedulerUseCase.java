@@ -4,6 +4,7 @@ import com.foodrescue.buildingblocks.events.EventEnvelope;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -40,12 +41,12 @@ public class OrderSchedulerUseCase {
     @Transactional
     public void expireUnpaidOrders() {
         LocalDateTime now = LocalDateTime.now();
-        List<Long> expiredOrderIds = orderRepository.findExpiredPendingOrderIds("PENDING_PAYMENT", now);
+        List<Long> expiredOrderIds = orderRepository.findExpiredPendingOrderIds(OrderStatus.PENDING_PAYMENT, now);
         for (Long id : expiredOrderIds) {
             OrderEntity order = orderRepository.findLockedById(id).orElse(null);
-            if (order == null || !"PENDING_PAYMENT".equals(order.getStatus())
+            if (order == null || order.getStatus() != OrderStatus.PENDING_PAYMENT
                     || !order.getPaymentExpiresAt().isBefore(LocalDateTime.now())) continue;
-            order.setStatus("EXPIRED");
+            order.setStatus(OrderStatus.EXPIRED);
             order.setCancelReason("Hết hạn thanh toán (quá 15 phút)");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);
@@ -67,12 +68,12 @@ public class OrderSchedulerUseCase {
     @Transactional
     public void markNoShowOrders() {
         LocalDateTime deadline = LocalDateTime.now().minusMinutes(30);
-        List<Long> noShowOrderIds = orderRepository.findNoShowOrderIds("CONFIRMED", deadline);
+        List<Long> noShowOrderIds = orderRepository.findNoShowOrderIds(OrderStatus.CONFIRMED, deadline);
         for (Long id : noShowOrderIds) {
             OrderEntity order = orderRepository.findLockedById(id).orElse(null);
-            if (order == null || !"CONFIRMED".equals(order.getStatus())
+            if (order == null || order.getStatus() != OrderStatus.CONFIRMED
                     || !order.getPickupEnd().isBefore(deadline)) continue;
-            order.setStatus("NO_SHOW");
+            order.setStatus(OrderStatus.NO_SHOW);
             order.setCompletedAt(LocalDateTime.now());
             order.setCancelReason("Khách hàng không đến nhận trong khung giờ");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
@@ -89,8 +90,8 @@ public class OrderSchedulerUseCase {
         statePayload.put("orderId", order.getId());
         statePayload.put("storeId", order.getStoreId());
         statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
+        statePayload.put("status", order.getStatus().name());
+        statePayload.put("paymentStatus", order.getPaymentStatus().name());
         statePayload.put("totalAmount", order.getTotalAmount().longValue());
         statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
         statePayload.put("storeEarning", order.getStoreEarning().longValue());

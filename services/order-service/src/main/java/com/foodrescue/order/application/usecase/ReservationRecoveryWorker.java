@@ -3,6 +3,7 @@ package com.foodrescue.order.application.usecase;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IReservationRecoveryPort;
 import com.foodrescue.order.domain.model.StockReservation;
+import com.foodrescue.order.domain.model.enums.ReservationStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -39,13 +40,14 @@ public class ReservationRecoveryWorker {
             }
             StockReservation current = inventory.find(id, UUID.randomUUID());
             if (current == null) throw new IllegalStateException("Catalog returned an empty reservation");
-            if ("HELD".equals(current.status())) {
+            ReservationStatus currentStatus = ReservationStatus.tryParse(current.status()).orElse(null);
+            if (currentStatus == ReservationStatus.HELD) {
                 StockReservation released = inventory.release(id, UUID.randomUUID());
-                if (released == null || !"RELEASED".equals(released.status())) {
+                if (released == null || ReservationStatus.tryParse(released.status()).orElse(null) != ReservationStatus.RELEASED) {
                     throw new IllegalStateException("Catalog did not confirm reservation release");
                 }
                 recovery.markReleased(id);
-            } else if ("RELEASED".equals(current.status()) || "EXPIRED".equals(current.status())) {
+            } else if (currentStatus == ReservationStatus.RELEASED || currentStatus == ReservationStatus.EXPIRED) {
                 recovery.markReleased(id);
             } else {
                 throw new IllegalStateException("Reservation has unexpected state " + current.status());

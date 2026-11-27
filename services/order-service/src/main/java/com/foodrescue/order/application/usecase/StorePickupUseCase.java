@@ -8,6 +8,7 @@ import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.api.dto.PickupLookupResponse;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.domain.exception.OrderException;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -41,7 +42,7 @@ public class StorePickupUseCase {
     public OrderPageResponse getStoreOrders(Long storeId, LocalDate date, String status, int page, int size) {
         LocalDateTime from = date == null ? null : date.atStartOfDay();
         LocalDateTime until = date == null ? null : date.plusDays(1).atStartOfDay();
-        String normalizedStatus = status == null || status.isBlank() ? null : status.trim().toUpperCase(Locale.ROOT);
+        OrderStatus normalizedStatus = CustomerOrderUseCase.parseStatusFilter(status);
         return OrderPageResponse.from(orderRepository.findStoreOrders(storeId, normalizedStatus, from, until,
                 CustomerOrderUseCase.paging(page, size)).map(this::toOrderResponse));
     }
@@ -60,7 +61,7 @@ public class StorePickupUseCase {
             throw OrderException.forbidden("Đơn hàng không thuộc cửa hàng này");
         }
 
-        if (!"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
+        if (order.getStatus() != OrderStatus.CONFIRMED) {
             throw OrderException.conflict("ORDER_STATUS_CONFLICT", "Đơn hàng chưa thanh toán hoặc đã hoàn tất/huỷ");
         }
 
@@ -101,7 +102,7 @@ public class StorePickupUseCase {
             throw OrderException.forbidden("Đơn hàng không thuộc cửa hàng này");
         }
 
-        if (!"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
+        if (order.getStatus() != OrderStatus.CONFIRMED) {
             throw OrderException.conflict("ORDER_STATUS_CONFLICT", "Đơn hàng chưa sẵn sàng giao: " + order.getStatus());
         }
 
@@ -113,7 +114,7 @@ public class StorePickupUseCase {
             throw OrderException.conflict("PICKUP_TOO_LATE", "Đơn hàng đã quá thời gian ân hạn nhận hàng");
         }
 
-        order.setStatus("COMPLETED");
+        order.setStatus(OrderStatus.COMPLETED);
         order.setHandledBy(actorId);
         order.setCompletedAt(now);
         order.setAggregateVersion(order.getAggregateVersion() + 1);
@@ -128,8 +129,8 @@ public class StorePickupUseCase {
         statePayload.put("orderId", savedOrder.getId());
         statePayload.put("storeId", savedOrder.getStoreId());
         statePayload.put("customerId", savedOrder.getCustomerId());
-        statePayload.put("status", savedOrder.getStatus());
-        statePayload.put("paymentStatus", savedOrder.getPaymentStatus());
+        statePayload.put("status", savedOrder.getStatus().name());
+        statePayload.put("paymentStatus", savedOrder.getPaymentStatus().name());
         statePayload.put("totalAmount", savedOrder.getTotalAmount().longValue());
         statePayload.put("commissionAmount", savedOrder.getCommissionAmount().longValue());
         statePayload.put("storeEarning", savedOrder.getStoreEarning().longValue());
@@ -188,9 +189,9 @@ public class StorePickupUseCase {
                 o.getStoreEarning(),
                 o.getPickupStart(),
                 o.getPickupEnd(),
-                "PAID".equals(o.getPaymentStatus()) ? o.getPickupCode() : null,
-                o.getStatus(),
-                o.getPaymentStatus(),
+                o.getPaymentStatus() != null && o.getPaymentStatus().isPaid() ? o.getPickupCode() : null,
+                o.getStatus() != null ? o.getStatus().name() : null,
+                o.getPaymentStatus() != null ? o.getPaymentStatus().name() : null,
                 o.getCancelReason(),
                 o.getPaymentExpiresAt(),
                 o.getCompletedAt(),
