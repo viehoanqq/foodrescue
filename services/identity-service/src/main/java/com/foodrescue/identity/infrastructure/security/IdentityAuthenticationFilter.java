@@ -29,6 +29,8 @@ public class IdentityAuthenticationFilter extends OncePerRequestFilter {
         return "POST".equals(req.getMethod()) && ("/api/auth/login".equals(req.getRequestURI())
                 || "/api/auth/register".equals(req.getRequestURI())
                 || "/api/auth/register/otp".equals(req.getRequestURI())
+                || "/api/auth/forgot-password/otp".equals(req.getRequestURI())
+                || "/api/auth/forgot-password/reset".equals(req.getRequestURI())
                 || "/api/auth/google".equals(req.getRequestURI()));
     }
 

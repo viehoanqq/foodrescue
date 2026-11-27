@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import ProfileLayout from '../layouts/ProfileLayout';
 import AuthScreen from '../pages/AuthScreen';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
 import AdminStoresPage from '../pages/admin/AdminStoresPage';
@@ -47,6 +48,7 @@ export default function AppRoutes() {
       <Route path="/admin/login" element={<AuthScreen mode="login" portal="admin" />} />
       <Route path="/store/login" element={<AuthScreen mode="login" portal="store" />} />
       <Route path="/register" element={<AuthScreen mode="register" />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     </Route>
     <Route element={<PasswordChangeRoute />}>
       <Route path="/change-password" element={<AuthScreen mode="change-password" />} />

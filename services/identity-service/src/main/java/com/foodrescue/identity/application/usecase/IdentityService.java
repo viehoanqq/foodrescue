@@ -8,8 +8,9 @@ import com.foodrescue.identity.application.port.out.IAuditRepository;
 import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.application.port.out.ITokenPort;
 import com.foodrescue.identity.application.port.out.IUnitOfWork;
+import com.foodrescue.identity.application.port.out.IEmailOtpPort;
+import com.foodrescue.identity.application.port.out.IEmailOtpPort.OtpType;
 import com.foodrescue.identity.application.port.out.IGoogleIdentityPort;
-import com.foodrescue.identity.application.port.out.IRegistrationOtpPort;
 import java.security.SecureRandom;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,29 +29,63 @@ public class IdentityService {
     private final IAuditRepository audit;
     private final IUnitOfWork unitOfWork;
     private final IGoogleIdentityPort google;
-    private final IRegistrationOtpPort registrationOtp;
+    private final IEmailOtpPort emailOtp;
 
     public IdentityService(IUserRepository users, IPasswordPort passwords, ITokenPort tokens, IAuditRepository audit,
-                           IUnitOfWork unitOfWork, IGoogleIdentityPort google, IRegistrationOtpPort registrationOtp) {
+                           IUnitOfWork unitOfWork, IGoogleIdentityPort google, IEmailOtpPort emailOtp) {
         this.users = users;
         this.passwords = passwords;
         this.tokens = tokens;
         this.audit = audit;
         this.unitOfWork = unitOfWork;
         this.google = google;
-        this.registrationOtp = registrationOtp;
+        this.emailOtp = emailOtp;
     }
 
     public void sendRegistrationOtp(String email) {
         String normalized = normalize(email);
         if (users.findByEmail(normalized).isPresent())
             throw new IdentityException(409, "EMAIL_EXISTS", "Email đã được sử dụng");
-        registrationOtp.send(normalized);
+        emailOtp.send(OtpType.REGISTRATION, normalized);
+    }
+
+    public void sendPasswordResetOtp(String email) {
+        String normalized = normalize(email);
+        findActiveUserByEmail(normalized);
+        emailOtp.send(OtpType.PASSWORD_RESET, normalized);
+    }
+
+    public void resetPasswordWithOtp(String email, String otp, String newPassword) {
+        String normalized = normalize(email);
+        findActiveUserByEmail(normalized);
+        emailOtp.verify(OtpType.PASSWORD_RESET, normalized, otp);
+        unitOfWork.execute(() -> {
+            resetPasswordWithOtpTransaction(normalized, otp, newPassword);
+            return null;
+        });
+    }
+
+    private void resetPasswordWithOtpTransaction(String email, String otp, String newPassword) {
+        UserAccount user = findActiveUserByEmail(email);
+        emailOtp.consume(OtpType.PASSWORD_RESET, email, otp);
+        users.save(copy(user, passwords.hash(newPassword), user.fullName(), user.phone(),
+                user.status(), false, user.tokenVersion() + 1));
+        audit.record(user.id(), "USER_PASSWORD_RESET", "USER", user.id(), "EMAIL_OTP");
+    }
+
+    private UserAccount findActiveUserByEmail(String normalizedEmail) {
+        UserAccount user = users.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new IdentityException(404, "EMAIL_NOT_FOUND",
+                        "Không tìm thấy tài khoản với email này"));
+        if (!"ACTIVE".equals(user.status())) {
+            throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
+        }
+        return user;
     }
 
     public AuthResult register(String email, String password, String fullName, String phone, String otp) {
         String normalized = normalize(email);
-        registrationOtp.verify(normalized, otp);
+        emailOtp.verify(OtpType.REGISTRATION, normalized, otp);
         return unitOfWork.execute(() -> registerTransaction(normalized, password, fullName, phone, otp));
     }
 
@@ -59,7 +94,7 @@ public class IdentityService {
         if (users.findByEmail(normalized).isPresent()) {
             throw new IdentityException(409, "EMAIL_EXISTS", "Email đã được sử dụng");
         }
-        registrationOtp.consume(normalized, otp);
+        emailOtp.consume(OtpType.REGISTRATION, normalized, otp);
         UserAccount saved = users.save(new UserAccount(null, normalized, passwords.hash(password),
                 fullName.trim(), phone.trim(), "CUSTOMER", null, "ACTIVE", false,
                 LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));

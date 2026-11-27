@@ -56,6 +56,22 @@
   color: #28694e;
 }
 
+.auth-forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px 0 14px;
+}
+
+.auth-forgot-row a {
+  color: #28694e;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.auth-forgot-row a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 480px) {
   .auth-otp-row { flex-wrap: wrap; }
   .auth-otp-row .ant-btn { width: 100%; }

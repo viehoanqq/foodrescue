@@ -173,6 +173,9 @@ export default function AuthScreen({ mode = 'login', portal }) {
           })]}>
           <Input.Password size="large" autoComplete="new-password" />
         </Form.Item>}
+        {!isRegister && !isPasswordChange && <div className="auth-forgot-row">
+          <Link to="/forgot-password" state={{ portal }}>Quên mật khẩu?</Link>
+        </div>}
         <Button type="primary" htmlType="submit" loading={busy} size="large" block className="auth-submit">
           {isPasswordChange ? 'Đổi mật khẩu' : isRegister ? otpEmail ? 'Xác nhận và tạo tài khoản' : 'Tiếp tục' : 'Đăng nhập'}
         </Button>

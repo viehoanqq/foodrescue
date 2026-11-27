@@ -21,7 +21,9 @@ public class IdentitySecurity {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(b -> b.disable()).formLogin(f -> f.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/register/otp", "/api/auth/login", "/api/auth/google").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/register/otp",
+                                "/api/auth/forgot-password/otp", "/api/auth/forgot-password/reset",
+                                "/api/auth/login", "/api/auth/google").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/internal/health/db", "/actuator/health", "/internal/users/**", "/internal/staff", "/internal/staff/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

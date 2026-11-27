@@ -29,7 +29,7 @@ class IdentityGoogleLoginTest {
         when(google.verify("valid-token"))
                 .thenReturn(new IGoogleIdentityPort.GoogleProfile("google-123", "person@example.com", "Person"));
         service = new IdentityService(users, passwords, tokens, audit, unitOfWork, google,
-                mock(IRegistrationOtpPort.class));
+                mock(IEmailOtpPort.class));
     }
 
     @Test
