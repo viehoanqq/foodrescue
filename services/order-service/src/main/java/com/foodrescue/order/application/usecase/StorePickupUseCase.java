@@ -185,7 +185,7 @@ public class StorePickupUseCase {
                 o.getStoreEarning(),
                 o.getPickupStart(),
                 o.getPickupEnd(),
-                o.getPickupCode(),
+                "PAID".equals(o.getPaymentStatus()) ? o.getPickupCode() : null,
                 o.getStatus(),
                 o.getPaymentStatus(),
                 o.getCancelReason(),

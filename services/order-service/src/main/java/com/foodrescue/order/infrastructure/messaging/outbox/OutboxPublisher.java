@@ -42,7 +42,7 @@ public class OutboxPublisher {
                 ops.waitForConfirmsOrDie(5000);
                 return null;
             });
-            jdbc.update("UPDATE outbox_events SET published_at = CURRENT_TIMESTAMP, attempts = attempts + 1 WHERE event_id = CAST(? AS UUID)", id);
+            jdbc.update("UPDATE outbox_events SET published_at = CURRENT_TIMESTAMP, attempts = attempts + 1 WHERE event_id = ?", id);
         }
     }
 }

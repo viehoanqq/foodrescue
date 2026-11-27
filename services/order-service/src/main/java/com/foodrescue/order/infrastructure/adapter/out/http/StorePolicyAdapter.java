@@ -2,7 +2,6 @@ package com.foodrescue.order.infrastructure.adapter.out.http;
 
 import com.foodrescue.buildingblocks.http.InternalServiceClient;
 import com.foodrescue.order.application.port.out.IStorePolicyPort;
-import java.math.BigDecimal;
 import java.net.URI;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -25,8 +24,8 @@ public class StorePolicyAdapter implements IStorePolicyPort {
         try {
             return client.get("/internal/stores/" + storeId + "/checkout-policy", UUID.randomUUID(), StoreCheckoutPolicy.class);
         } catch (Exception ex) {
-            log.warn("Cannot fetch store policy for storeId={}, using default APPROVED with 15% commission: {}", storeId, ex.getMessage());
-            return new StoreCheckoutPolicy(storeId, "APPROVED", new BigDecimal("15.00"));
+            log.warn("Cannot fetch store policy for storeId={}: {}", storeId, ex.getMessage());
+            throw new IllegalStateException("Cannot verify store checkout policy", ex);
         }
     }
 }

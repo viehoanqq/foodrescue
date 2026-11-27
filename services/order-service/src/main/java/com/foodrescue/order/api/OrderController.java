@@ -1,7 +1,6 @@
 package com.foodrescue.order.api;
 
 import com.foodrescue.buildingblocks.security.AuthenticatedUser;
-import com.foodrescue.order.api.dto.CreateOrderRequest;
 import com.foodrescue.order.api.dto.OrderResponse;
 import com.foodrescue.order.application.usecase.CreateOrderUseCase;
 import com.foodrescue.order.application.usecase.CustomerOrderUseCase;
@@ -30,9 +29,13 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(
             @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestHeader(value = "X-Correlation-Id", required = false) UUID correlationId,
-            @Valid @RequestBody(required = false) CreateOrderRequest request) {
-        return createOrderUseCase.createOrder(user.id(), request, correlationId);
+            @RequestBody(required = false) String body) {
+        if (body != null && !body.isBlank()) {
+            throw com.foodrescue.order.domain.exception.OrderException.validation("Order body must be empty; checkout uses the saved cart");
+        }
+        return createOrderUseCase.createOrder(user.id(), idempotencyKey, correlationId);
     }
 
     @GetMapping

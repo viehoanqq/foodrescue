@@ -1,11 +1,10 @@
 package com.foodrescue.order.application.usecase;
 
 import com.foodrescue.buildingblocks.events.EventEnvelope;
-import com.foodrescue.order.api.dto.CreateOrderItemRequest;
-import com.foodrescue.order.api.dto.CreateOrderRequest;
 import com.foodrescue.order.api.dto.OrderItemResponse;
 import com.foodrescue.order.api.dto.OrderResponse;
 import com.foodrescue.order.application.port.out.IInventoryPort;
+import com.foodrescue.order.application.port.out.ICheckoutIdempotencyPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.application.port.out.IStorePolicyPort;
 import com.foodrescue.order.domain.exception.OrderException;
@@ -20,6 +19,7 @@ import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderI
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -40,6 +40,7 @@ public class CreateOrderUseCase {
     private final IInventoryPort inventoryPort;
     private final IStorePolicyPort storePolicyPort;
     private final IOutboxPort outboxPort;
+    private final ICheckoutIdempotencyPort idempotencyPort;
 
     public CreateOrderUseCase(
             SpringDataOrderRepository orderRepository,
@@ -47,59 +48,62 @@ public class CreateOrderUseCase {
             SpringDataCartItemRepository cartRepository,
             IInventoryPort inventoryPort,
             IStorePolicyPort storePolicyPort,
-            IOutboxPort outboxPort) {
+            IOutboxPort outboxPort,
+            ICheckoutIdempotencyPort idempotencyPort) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartRepository = cartRepository;
         this.inventoryPort = inventoryPort;
         this.storePolicyPort = storePolicyPort;
         this.outboxPort = outboxPort;
+        this.idempotencyPort = idempotencyPort;
     }
 
     @Transactional
-    public OrderResponse createOrder(Long customerId, CreateOrderRequest request, UUID correlationId) {
-        if (correlationId == null) {
-            correlationId = UUID.randomUUID();
+    public OrderResponse createOrder(Long customerId, String idempotencyKey, UUID correlationId) {
+        if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 128) {
+            throw OrderException.validation("Idempotency-Key must contain 1 to 128 characters");
         }
-
-        List<CreateOrderItemRequest> requestItems = new ArrayList<>();
-        if (request != null && request.items() != null && !request.items().isEmpty()) {
-            requestItems.addAll(request.items());
-        } else {
-            List<CartItemEntity> cartItems = cartRepository.findByCustomerId(customerId);
-            if (cartItems.isEmpty()) {
-                throw OrderException.cartEmpty();
+        idempotencyKey = idempotencyKey.trim();
+        Long existingId = idempotencyPort.claim(customerId, idempotencyKey);
+        if (existingId != null) {
+            OrderEntity existing = orderRepository.findById(existingId)
+                    .orElseThrow(() -> new IllegalStateException("Idempotent order no longer exists"));
+            if (!customerId.equals(existing.getCustomerId())) {
+                throw OrderException.forbidden("Idempotency key belongs to another customer");
             }
-            for (CartItemEntity ci : cartItems) {
-                requestItems.add(new CreateOrderItemRequest(ci.getBatchId(), ci.getQuantity()));
-            }
+            return toResponse(existing, orderItemRepository.findByOrderId(existingId).stream()
+                    .map(i -> new OrderItemResponse(i.getId(), i.getBatchId(), i.getQuantity(), i.getUnitPrice(), i.getSubtotal()))
+                    .toList());
+        }
+        if (correlationId == null) correlationId = UUID.randomUUID();
+
+        List<CartItemEntity> cartItems = cartRepository.findByCustomerId(customerId);
+        if (cartItems.isEmpty()) throw OrderException.cartEmpty();
+        List<StockReservationCommand.Item> requestItems = cartItems.stream()
+                .map(ci -> new StockReservationCommand.Item(ci.getBatchId(), ci.getQuantity()))
+                .toList();
+        Long storeId;
+        try {
+            storeId = inventoryPort.requireSingleStore(requestItems.stream()
+                    .map(StockReservationCommand.Item::batchId).toList());
+        } catch (com.foodrescue.buildingblocks.http.InternalServiceException ex) {
+            if (ex.status() == 409) throw OrderException.multiStoreCheckout();
+            throw ex;
         }
 
-        if (requestItems.isEmpty()) {
-            throw OrderException.cartEmpty();
-        }
-
-        for (CreateOrderItemRequest it : requestItems) {
-            if (it.quantity() == null || it.quantity() < 1 || it.quantity() > 5) {
-                throw OrderException.validation("Số lượng mỗi túi phải từ 1 đến 5");
-            }
-        }
-
-        Long storeId = (request != null && request.storeId() != null) ? request.storeId() : 1L;
-
-        // Kiểm tra Store Policy
         IStorePolicyPort.StoreCheckoutPolicy policy = storePolicyPort.getPolicy(storeId);
-        if (policy != null && !"APPROVED".equalsIgnoreCase(policy.status())) {
+        if (policy == null || !"APPROVED".equalsIgnoreCase(policy.status())) {
             throw OrderException.conflict("STORE_NOT_APPROVED", "Cửa hàng chưa được duyệt hoặc đang bị khóa");
         }
-        BigDecimal commissionRate = (policy != null && policy.commissionRate() != null)
-                ? policy.commissionRate() : new BigDecimal("15.00");
+        if (policy.commissionRate() == null) {
+            throw OrderException.conflict("STORE_POLICY_INVALID", "Store commission rate is missing");
+        }
+        BigDecimal commissionRate = policy.commissionRate();
 
         // Chuẩn bị Reservation sang Catalog
-        UUID reservationId = UUID.randomUUID();
-        List<StockReservationCommand.Item> commandItems = requestItems.stream()
-                .map(it -> new StockReservationCommand.Item(it.batchId(), it.quantity()))
-                .toList();
+        UUID reservationId = UUID.nameUUIDFromBytes((customerId + ":" + idempotencyKey).getBytes(StandardCharsets.UTF_8));
+        List<StockReservationCommand.Item> commandItems = requestItems;
 
         StockReservation reservation;
         try {
@@ -111,6 +115,10 @@ public class CreateOrderUseCase {
             throw OrderException.conflict("STOCK_NOT_ENOUGH", "Không thể giữ kho cho túi cứu trợ: " + ex.getMessage());
         }
 
+        if (reservation == null || !"HELD".equals(reservation.status())) {
+            throw OrderException.conflict("RESERVATION_NOT_HELD", "Inventory reservation is not active");
+        }
+
         try {
             LocalDateTime now = LocalDateTime.now();
             BigDecimal totalAmount = BigDecimal.ZERO;
@@ -119,7 +127,10 @@ public class CreateOrderUseCase {
             List<OrderItemEntity> orderItems = new ArrayList<>();
             for (StockReservation.Item resItem : reservation.items()) {
                 totalItems += resItem.quantity();
-                BigDecimal unitPrice = resItem.unitPrice() != null ? resItem.unitPrice() : BigDecimal.valueOf(30000);
+                if (resItem.unitPrice() == null) {
+                    throw OrderException.conflict("PRICE_MISSING", "Catalog did not return a batch price");
+                }
+                BigDecimal unitPrice = resItem.unitPrice();
                 BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(resItem.quantity()));
                 totalAmount = totalAmount.add(subtotal);
 
@@ -169,7 +180,7 @@ public class CreateOrderUseCase {
             }
 
             // Xóa các mặt hàng khỏi giỏ
-            for (CreateOrderItemRequest reqItem : requestItems) {
+            for (StockReservationCommand.Item reqItem : requestItems) {
                 cartRepository.deleteByCustomerIdAndBatchId(customerId, reqItem.batchId());
             }
 
@@ -199,6 +210,7 @@ public class CreateOrderUseCase {
                     customerId,
                     payload);
             outboxPort.append(envelope);
+            idempotencyPort.complete(customerId, idempotencyKey, savedOrder.getId());
 
             return toResponse(savedOrder, itemResponses);
         } catch (Exception ex) {
@@ -233,7 +245,7 @@ public class CreateOrderUseCase {
                 o.getStoreEarning(),
                 o.getPickupStart(),
                 o.getPickupEnd(),
-                o.getPickupCode(),
+                "PAID".equals(o.getPaymentStatus()) ? o.getPickupCode() : null,
                 o.getStatus(),
                 o.getPaymentStatus(),
                 o.getCancelReason(),

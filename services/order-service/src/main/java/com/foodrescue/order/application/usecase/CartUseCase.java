@@ -4,6 +4,7 @@ import com.foodrescue.order.api.dto.AddToCartRequest;
 import com.foodrescue.order.api.dto.CartItemDto;
 import com.foodrescue.order.api.dto.CartResponse;
 import com.foodrescue.order.api.dto.UpdateCartItemRequest;
+import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.domain.exception.OrderException;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataCartItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.CartItemEntity;
@@ -16,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CartUseCase {
     private final SpringDataCartItemRepository cartRepository;
+    private final IInventoryPort inventoryPort;
 
-    public CartUseCase(SpringDataCartItemRepository cartRepository) {
+    public CartUseCase(SpringDataCartItemRepository cartRepository, IInventoryPort inventoryPort) {
         this.cartRepository = cartRepository;
+        this.inventoryPort = inventoryPort;
     }
 
     @Transactional(readOnly = true)
@@ -33,6 +36,20 @@ public class CartUseCase {
 
     @Transactional
     public CartResponse addToCart(Long customerId, AddToCartRequest req) {
+        List<Long> batchIds = cartRepository.findByCustomerId(customerId).stream()
+                .map(CartItemEntity::getBatchId).distinct().toList();
+        if (!batchIds.contains(req.batchId())) {
+            var allBatchIds = new java.util.ArrayList<>(batchIds);
+            allBatchIds.add(req.batchId());
+            try {
+                inventoryPort.requireSingleStore(allBatchIds);
+            } catch (com.foodrescue.buildingblocks.http.InternalServiceException ex) {
+                if (ex.status() == 409) {
+                    throw OrderException.conflict("MULTI_STORE_CART", "Cart can contain batches from one store only");
+                }
+                throw ex;
+            }
+        }
         CartItemEntityId id = new CartItemEntityId(customerId, req.batchId());
         CartItemEntity entity = cartRepository.findById(id).orElse(null);
 

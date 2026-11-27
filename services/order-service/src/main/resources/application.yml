@@ -9,10 +9,10 @@ spring:
     password: ${DB_PASSWORD:123}
   flyway:
     enabled: true
-    validate-on-migrate: false
+    validate-on-migrate: true
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -27,6 +27,7 @@ management:
 app:
   internal-api-key: ${INTERNAL_API_KEY:z9AphlDPXMbCx5GrqRZBZ1-9nDJ7yX1VjzNLUOD7Z2euwvVWSbM0kroVJtruzSDV}
   catalog-service-url: ${CATALOG_SERVICE_URL:http://localhost:8084}
+  store-service-url: ${STORE_SERVICE_URL:http://localhost:8083}
   jwt:
     secret: ${JWT_SECRET:3qCTqWepEe1ycaz_ge8zYdxG9okY9nQNVhMBU-jPJCcBgrffhw7dJlrfmE6s5wPW}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8082}
