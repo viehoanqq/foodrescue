@@ -25,7 +25,7 @@ api.interceptors.response.use(
       details: body.details ?? [],
     };
     const path = error.config?.url ?? '';
-    if (status === 401 && !['/auth/login', '/auth/register', '/me'].includes(path)) {
+    if (status === 401 && !['/auth/login', '/auth/register', '/auth/google', '/me'].includes(path)) {
       window.dispatchEvent(new Event('foodrescue:session-check'));
     }
     if (normalized.code === 'PASSWORD_CHANGE_REQUIRED') {

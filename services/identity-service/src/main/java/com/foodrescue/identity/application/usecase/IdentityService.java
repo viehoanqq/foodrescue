@@ -96,6 +96,40 @@ public class IdentityService {
         return new AuthResult(user, tokens.issue(user.id(), user.tokenVersion()));
     }
 
+    public UserAccount linkGoogle(Long userId, String password, String idToken) {
+        IGoogleIdentityPort.GoogleProfile profile = google.verify(idToken);
+        return unitOfWork.execute(() -> linkGoogleTransaction(userId, password, profile));
+    }
+
+    private UserAccount linkGoogleTransaction(Long userId, String password, IGoogleIdentityPort.GoogleProfile profile) {
+        UserAccount user = find(userId);
+        if (!"ACTIVE".equals(user.status())) {
+            throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
+        }
+        if (!"CUSTOMER".equals(user.role()) && !"STORE_OWNER".equals(user.role())) {
+            throw new IdentityException(403, "GOOGLE_ROLE_FORBIDDEN", "Tài khoản này không thể liên kết Google");
+        }
+        if (user.passwordHash() == null || !passwords.matches(password, user.passwordHash())) {
+            throw new IdentityException(401, "INVALID_CREDENTIALS", "Mật khẩu hiện tại không đúng");
+        }
+        if (!normalize(user.email()).equals(normalize(profile.email()))) {
+            throw new IdentityException(409, "GOOGLE_EMAIL_MISMATCH", "Email Google phải trùng email tài khoản hiện tại");
+        }
+        if (user.googleSub() != null) {
+            if (user.googleSub().equals(profile.sub())) return user;
+            throw new IdentityException(409, "GOOGLE_ALREADY_LINKED", "Tài khoản đã liên kết với Google khác");
+        }
+        if (users.findByGoogleSub(profile.sub()).isPresent()) {
+            throw new IdentityException(409, "GOOGLE_ACCOUNT_IN_USE", "Tài khoản Google đã được liên kết nơi khác");
+        }
+        UserAccount linked = users.save(new UserAccount(user.id(), user.email(), user.passwordHash(),
+                user.fullName(), user.phone(), user.role(), user.storeId(), user.status(),
+                user.mustChangePassword(), user.createdAt(), user.tokenVersion(),
+                user.address(), user.latitude(), user.longitude(), profile.sub()));
+        audit.record(user.id(), "GOOGLE_ACCOUNT_LINKED", "USER", user.id(), null);
+        return linked;
+    }
+
     public UserAccount find(Long id) {
         return users.findById(id).orElseThrow(() -> new IdentityException(404, "NOT_FOUND", "Không tìm thấy người dùng"));
     }

@@ -1,19 +1,24 @@
 server:
   port: ${SERVER_PORT:8082}
 spring:
+  config:
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:../../.env[.properties]
   application:
     name: identity-service
   datasource:
-    url: ${DB_URL:jdbc:mysql://mysql:3306/identity_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:mysql://localhost:3307/identity_db?serverTimezone=Asia/Ho_Chi_Minh}
+    username: ${DB_USERNAME:identity_app}
+    password: ${DB_PASSWORD:${IDENTITY_DB_PASSWORD:}}
   flyway:
     enabled: true
   jpa:
     hibernate:
       ddl-auto: validate
   rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
+    host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:foodrescue}
     password: ${RABBITMQ_PASSWORD:}

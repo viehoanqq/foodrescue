@@ -35,7 +35,7 @@ switch ($Service) {
         Set-LocalEnv 'DB_USERNAME' 'identity_app'
         Set-LocalEnv 'DB_PASSWORD' $settings['IDENTITY_DB_PASSWORD']
         @('SEED_ACCOUNTS_ENABLED', 'SEED_ADMIN_EMAIL', 'SEED_ADMIN_PASSWORD',
-          'SEED_OWNER_EMAIL', 'SEED_OWNER_PASSWORD') | ForEach-Object {
+          'SEED_OWNER_EMAIL', 'SEED_OWNER_PASSWORD', 'GOOGLE_CLIENT_ID') | ForEach-Object {
             Set-LocalEnv $_ $settings[$_]
         }
     }

@@ -3,12 +3,15 @@ import { Button, Card, Form, Input, InputNumber, Modal, Typography, message } fr
 import { EnvironmentOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthProvider';
 import { toFormErrors } from '../services/axios';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import './profilePage.css';
 
 export default function ProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, linkGoogle } = useAuth();
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [linkPassword, setLinkPassword] = useState('');
+  const [linking, setLinking] = useState(false);
   const [form] = Form.useForm();
 
   useEffect(() => { form.setFieldsValue({ fullName: user.fullName, phone: user.phone,
@@ -39,6 +42,31 @@ export default function ProfilePage() {
     }
   }
 
+  function confirmGoogleLink(idToken) {
+    if (!linkPassword) {
+      message.warning('Nhập mật khẩu hiện tại trước khi liên kết Google.');
+      return;
+    }
+    Modal.confirm({
+      title: 'Liên kết tài khoản Google?',
+      content: `Sau khi liên kết, bạn có thể dùng Google để đăng nhập vào tài khoản ${user.email}. Email Google phải trùng email này.`,
+      okText: 'Liên kết', cancelText: 'Hủy',
+      onOk: async () => {
+        setLinking(true);
+        try {
+          await linkGoogle(idToken, linkPassword);
+          setLinkPassword('');
+          message.success('Đã liên kết tài khoản Google.');
+        } catch (error) {
+          message.error(error.message || 'Không thể liên kết Google.');
+          throw error;
+        } finally {
+          setLinking(false);
+        }
+      },
+    });
+  }
+
   return <div><Card className="profile-card">
     <Typography.Title level={4}>Hồ sơ cá nhân</Typography.Title>
     <Typography.Paragraph type="secondary">Thông tin này được dùng để hiển thị tên và liên hệ với bạn.</Typography.Paragraph>
@@ -59,5 +87,17 @@ export default function ProfilePage() {
       <div className="profile-form-actions"><Button type="primary" htmlType="submit" loading={busy}>Lưu thay đổi</Button></div>
     </Form>
   </Card>
+  {['CUSTOMER', 'STORE_OWNER'].includes(user.role) && <Card className="profile-card" style={{ marginTop: 20 }}>
+    <Typography.Title level={5}>Đăng nhập bằng Google</Typography.Title>
+    {user.googleLinked ? <Typography.Paragraph>Google đã được liên kết với tài khoản này.</Typography.Paragraph> : <>
+      <Typography.Paragraph type="secondary">
+        Nhập mật khẩu hiện tại, sau đó chọn tài khoản Google có cùng email {user.email}.
+      </Typography.Paragraph>
+      <Input.Password style={{ maxWidth: 400, marginBottom: 16 }} value={linkPassword}
+        onChange={(event) => setLinkPassword(event.target.value)}
+        placeholder="Mật khẩu hiện tại" autoComplete="current-password" />
+      <GoogleSignInButton onCredential={confirmGoogleLink} text="continue_with" disabled={linking} />
+    </>}
+  </Card>}
   </div>;
 }

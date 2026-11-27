@@ -3,6 +3,8 @@ import { api } from './axios';
 export const identityApi = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (details) => api.post('/auth/register', details),
+  googleLogin: (idToken) => api.post('/auth/google', { idToken }),
+  linkGoogle: (idToken, password) => api.post('/me/google', { idToken, password }),
   me: () => api.get('/me'),
   updateProfile: (details) => api.put('/me', details),
   changePassword: (details) => api.put('/me/password', details),

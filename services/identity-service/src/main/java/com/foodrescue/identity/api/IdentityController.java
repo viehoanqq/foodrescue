@@ -44,6 +44,13 @@ public class IdentityController {
         return new AuthResponse(result.token(), UserView.from(result.user()));
     }
 
+    @PostMapping("/api/me/google")
+    @SecurityRequirement(name = "bearerAuth")
+    public UserView linkGoogle(@AuthenticationPrincipal IdentityPrincipal principal,
+                               @Valid @RequestBody LinkGoogleRequest request) {
+        return UserView.from(service.linkGoogle(principal.id(), request.password(), request.idToken()));
+    }
+
     @GetMapping("/api/me")
     @SecurityRequirement(name = "bearerAuth")
     public UserView me(@AuthenticationPrincipal IdentityPrincipal principal) {
@@ -71,6 +78,7 @@ public class IdentityController {
                                   @NotBlank @Size(max = 20) String phone) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
     public record GoogleLoginRequest(@NotBlank String idToken) {}
+    public record LinkGoogleRequest(@NotBlank String idToken, @NotBlank String password) {}
     public record ProfileRequest(@NotBlank @Size(max = 100) String fullName,
                                  @NotBlank @Size(max = 20) String phone,
                                  @Size(max = 255) String address,
@@ -81,11 +89,12 @@ public class IdentityController {
     public record AuthResponse(String token, UserView user) {}
     public record UserView(Long id, String email, String fullName, String phone, String role,
                            Long storeId, String status, boolean mustChangePassword,
-                           LocalDateTime createdAt, String address, BigDecimal latitude, BigDecimal longitude) {
+                           LocalDateTime createdAt, String address, BigDecimal latitude, BigDecimal longitude,
+                           boolean googleLinked) {
         public static UserView from(UserAccount user) {
             return new UserView(user.id(), user.email(), user.fullName(), user.phone(), user.role(),
                     user.storeId(), user.status(), user.mustChangePassword(), user.createdAt(),
-                    user.address(), user.latitude(), user.longitude());
+                    user.address(), user.latitude(), user.longitude(), user.googleSub() != null);
         }
     }
 }

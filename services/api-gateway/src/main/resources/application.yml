@@ -1,29 +1,34 @@
 server:
   port: ${SERVER_PORT:8080}
 spring:
+  config:
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:../../.env[.properties]
   application:
     name: api-gateway
   cloud:
     gateway:
       routes:
         - id: identity-api
-          uri: ${IDENTITY_SERVICE_URL:http://identity-service:8082}
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/api/auth/register,/api/auth/login,/api/me,/api/me/**,/api/admin/users,/api/admin/users/**,/api/admin/audit-logs,/api/admin/audit-logs/**
+            - Path=/api/auth/register,/api/auth/login,/api/auth/google,/api/me,/api/me/**,/api/admin/users,/api/admin/users/**,/api/admin/audit-logs,/api/admin/audit-logs/**
         - id: store-api
-          uri: ${STORE_SERVICE_URL:http://store-service:8083}
+          uri: ${STORE_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/store/registration,/api/store/profile,/api/store/staff,/api/store/staff/**,/api/stores,/api/stores/**,/api/admin/stores,/api/admin/stores/**,/uploads/images/**
         - id: catalog-api
-          uri: ${CATALOG_SERVICE_URL:http://catalog-inventory-service:8084}
+          uri: ${CATALOG_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/categories,/api/categories/**,/api/batches,/api/batches/**,/api/store/batches,/api/store/batches/**,/api/admin/categories,/api/admin/categories/**
         - id: order-api
-          uri: ${ORDER_SERVICE_URL:http://order-service:8085}
+          uri: ${ORDER_SERVICE_URL:http://localhost:8085}
           predicates:
             - Path=/api/cart,/api/cart/**,/api/orders,/api/orders/**,/api/store/orders,/api/store/orders/**,/api/store/pickup,/api/store/pickup/**,/api/admin/orders,/api/admin/orders/**
         - id: finance-api
-          uri: ${FINANCE_SERVICE_URL:http://payment-finance-service:8086}
+          uri: ${FINANCE_SERVICE_URL:http://localhost:8086}
           predicates:
             - Path=/api/payments,/api/payments/**,/api/store/revenue,/api/store/statement,/api/store/payouts,/api/store/payouts/**,/api/admin/refunds,/api/admin/refunds/**,/api/admin/payouts,/api/admin/payouts/**,/api/admin/finance,/api/admin/finance/**,/api/admin/dashboard
 app:
@@ -31,11 +36,11 @@ app:
     secret: ${JWT_SECRET:}
   internal-api-key: ${INTERNAL_API_KEY:}
   health:
-    identity-url: ${IDENTITY_SERVICE_URL:http://identity-service:8082}
-    store-url: ${STORE_SERVICE_URL:http://store-service:8083}
-    catalog-url: ${CATALOG_SERVICE_URL:http://catalog-inventory-service:8084}
-    order-url: ${ORDER_SERVICE_URL:http://order-service:8085}
-    finance-url: ${FINANCE_SERVICE_URL:http://payment-finance-service:8086}
+    identity-url: ${IDENTITY_SERVICE_URL:http://localhost:8082}
+    store-url: ${STORE_SERVICE_URL:http://localhost:8083}
+    catalog-url: ${CATALOG_SERVICE_URL:http://localhost:8084}
+    order-url: ${ORDER_SERVICE_URL:http://localhost:8085}
+    finance-url: ${FINANCE_SERVICE_URL:http://localhost:8086}
 management:
   endpoints:
     web:

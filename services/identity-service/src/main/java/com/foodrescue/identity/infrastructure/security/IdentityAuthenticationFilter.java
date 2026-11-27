@@ -27,7 +27,8 @@ public class IdentityAuthenticationFilter extends OncePerRequestFilter {
 
     @Override protected boolean shouldNotFilter(HttpServletRequest req) {
         return "POST".equals(req.getMethod()) && ("/api/auth/login".equals(req.getRequestURI())
-                || "/api/auth/register".equals(req.getRequestURI()));
+                || "/api/auth/register".equals(req.getRequestURI())
+                || "/api/auth/google".equals(req.getRequestURI()));
     }
 
     @Override protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)

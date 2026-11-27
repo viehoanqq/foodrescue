@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { Button, Form, Input, message } from 'antd';
+import { Button, Form, Input, Modal, message } from 'antd';
 import { LockOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { homeForRole, loginForRole } from '../routes/paths';
 import { toFormErrors } from '../services/axios';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import './authScreen.css';
 
 export default function AuthScreen({ mode = 'login', portal }) {
   const [busy, setBusy] = useState(false);
   const [storeRole, setStoreRole] = useState('STORE_OWNER');
   const [form] = Form.useForm();
-  const { user: currentUser, authenticate, changePassword } = useAuth();
+  const { user: currentUser, authenticate, authenticateGoogle, changePassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isPasswordChange = mode === 'change-password';
@@ -37,6 +38,28 @@ export default function AuthScreen({ mode = 'login', portal }) {
     } catch (error) {
       if (error.details?.length) form.setFields(toFormErrors(error));
       message.error(error.message || 'Không thể xác thực');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function signInWithGoogle(idToken) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const user = await authenticateGoogle(idToken);
+      if (!user.phone) message.info('Hãy bổ sung số điện thoại trong hồ sơ để cửa hàng liên hệ khi cần.');
+      const destination = !user.phone && user.role === 'CUSTOMER' ? '/me'
+        : location.state?.from?.pathname && !isRegister ? location.state.from.pathname : homeForRole(user.role);
+      navigate(destination, { replace: true });
+    } catch (error) {
+      if (error.code === 'GOOGLE_LINK_REQUIRED') {
+        Modal.info({ title: 'Email đã có tài khoản',
+          content: 'Hãy đăng nhập bằng mật khẩu, mở Hồ sơ cá nhân và chọn Liên kết Google.',
+          okText: 'Đã hiểu' });
+      } else {
+        message.error(error.message || 'Không thể đăng nhập bằng Google');
+      }
     } finally {
       setBusy(false);
     }
@@ -98,6 +121,11 @@ export default function AuthScreen({ mode = 'login', portal }) {
           {isPasswordChange ? 'Đổi mật khẩu' : isRegister ? 'Tạo tài khoản' : 'Đăng nhập'}
         </Button>
       </Form>
+      {!portal && !isPasswordChange && <div className="auth-google-section">
+        <div className="auth-divider"><span>hoặc</span></div>
+        <GoogleSignInButton onCredential={signInWithGoogle}
+          text={isRegister ? 'signup_with' : 'signin_with'} disabled={busy} />
+      </div>}
       <div className="auth-bottom"><Link to="/">Về trang chủ</Link>{portal && <Link to="/login">Đăng nhập khách hàng</Link>}</div>
     </div>
   </main>;

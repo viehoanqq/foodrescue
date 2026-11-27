@@ -22,6 +22,12 @@
 .auth-hint { margin: 0 0 24px; color: #637182; }
 .auth-password-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 14px; border-radius: 12px; color: #28694e; background: #e4f5e9; font-size: 22px; }
 .auth-card h1 { margin: 0 0 8px; font-size: 24px; }
+.auth-google-section { margin-top: 18px; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 8px 0 18px; color: #718077; }
+.auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; background: #dfe5e2; }
+.google-signin-button { display: flex; justify-content: center; min-height: 44px; }
+.google-signin-disabled { opacity: .6; pointer-events: none; }
+.google-signin-error { margin: 8px 0 0; color: #b42318; text-align: center; }
 @media (max-width: 520px) {
   .auth-page { padding: 14px; }
   .auth-card { padding: 26px 18px; border-radius: 20px; }

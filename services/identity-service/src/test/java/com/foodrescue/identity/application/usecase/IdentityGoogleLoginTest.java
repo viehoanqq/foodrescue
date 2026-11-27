@@ -85,4 +85,44 @@ class IdentityGoogleLoginTest {
         assertEquals("GOOGLE_LINK_REQUIRED", error.code());
         verify(users, never()).save(any());
     }
+
+    @Test
+    void linkGoogleRequiresCurrentPasswordAndMatchingEmail() {
+        UserAccount local = new UserAccount(5L, "person@example.com", "hash", "Person", "0123456789",
+                "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0);
+        when(users.findById(5L)).thenReturn(Optional.of(local));
+        when(passwords.matches("correct-password", "hash")).thenReturn(true);
+        when(users.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        IdentityException wrongPassword = assertThrows(IdentityException.class,
+                () -> service.linkGoogle(5L, "wrong-password", "valid-token"));
+        assertEquals("INVALID_CREDENTIALS", wrongPassword.code());
+
+        UserAccount linked = service.linkGoogle(5L, "correct-password", "valid-token");
+        assertEquals("google-123", linked.googleSub());
+        verify(audit).record(5L, "GOOGLE_ACCOUNT_LINKED", "USER", 5L, null);
+
+        when(google.verify("other-email-token"))
+                .thenReturn(new IGoogleIdentityPort.GoogleProfile("google-456", "other@example.com", "Other"));
+        IdentityException wrongEmail = assertThrows(IdentityException.class,
+                () -> service.linkGoogle(5L, "correct-password", "other-email-token"));
+        assertEquals("GOOGLE_EMAIL_MISMATCH", wrongEmail.code());
+    }
+
+    @Test
+    void linkGoogleRejectsGoogleAccountBelongingToSomeoneElse() {
+        UserAccount local = new UserAccount(5L, "person@example.com", "hash", "Person", "0123456789",
+                "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0);
+        when(users.findById(5L)).thenReturn(Optional.of(local));
+        when(passwords.matches("correct-password", "hash")).thenReturn(true);
+        when(users.findByGoogleSub("google-123")).thenReturn(Optional.of(
+                new UserAccount(6L, "other@example.com", null, "Other", null,
+                        "CUSTOMER", null, "ACTIVE", false, LocalDateTime.now(), 0,
+                        null, null, null, "google-123")));
+
+        IdentityException error = assertThrows(IdentityException.class,
+                () -> service.linkGoogle(5L, "correct-password", "valid-token"));
+        assertEquals("GOOGLE_ACCOUNT_IN_USE", error.code());
+        verify(users, never()).save(any());
+    }
 }

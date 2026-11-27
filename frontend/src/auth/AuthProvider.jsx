@@ -73,6 +73,24 @@ export function AuthProvider({ children }) {
     return result.user;
   }, []);
 
+  const authenticateGoogle = useCallback(async (idToken) => {
+    const result = await identityApi.googleLogin(idToken);
+    if (!['CUSTOMER', 'STORE_OWNER'].includes(result.user.role)) {
+      throw new Error('Tài khoản này không được đăng nhập tại trang khách hàng.');
+    }
+    localStorage.setItem(TOKEN_KEY, result.token);
+    localStorage.removeItem('fr_dev_user_id');
+    setUser(result.user);
+    setError(null);
+    return result.user;
+  }, []);
+
+  const linkGoogle = useCallback(async (idToken, password) => {
+    const updated = await identityApi.linkGoogle(idToken, password);
+    setUser(updated);
+    return updated;
+  }, []);
+
   const logout = useCallback(() => { clearSession(); setUser(null); setError(null); }, []);
   const changePassword = useCallback(async (details) => {
     await identityApi.changePassword(details);
@@ -86,8 +104,9 @@ export function AuthProvider({ children }) {
     return updated;
   }, []);
 
-  const value = useMemo(() => ({ user, loading, error, refresh, authenticate, logout, changePassword, updateProfile }),
-    [user, loading, error, refresh, authenticate, logout, changePassword, updateProfile]);
+  const value = useMemo(() => ({ user, loading, error, refresh, authenticate, authenticateGoogle,
+    linkGoogle, logout, changePassword, updateProfile }),
+    [user, loading, error, refresh, authenticate, authenticateGoogle, linkGoogle, logout, changePassword, updateProfile]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

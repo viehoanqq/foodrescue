@@ -1,19 +1,24 @@
 server:
   port: ${SERVER_PORT:8084}
 spring:
+  config:
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:../../.env[.properties]
   application:
     name: catalog-inventory-service
   datasource:
-    url: ${DB_URL:jdbc:postgresql://postgres:5432/catalog_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/catalog_db}
+    username: ${DB_USERNAME:catalog_app}
+    password: ${DB_PASSWORD:${CATALOG_DB_PASSWORD:}}
   flyway:
     enabled: true
   jpa:
     hibernate:
       ddl-auto: validate
   rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
+    host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:foodrescue}
     password: ${RABBITMQ_PASSWORD:}
@@ -27,5 +32,5 @@ app:
   internal-api-key: ${INTERNAL_API_KEY:}
   jwt:
     secret: ${JWT_SECRET:}
-  identity-service-url: ${IDENTITY_SERVICE_URL:http://identity-service:8082}
+  identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8082}
 
