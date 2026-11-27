@@ -1,6 +1,7 @@
 package com.foodrescue.order.application.usecase;
 
 import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.api.dto.OrderItemResponse;
 import com.foodrescue.order.api.dto.OrderResponse;
 import com.foodrescue.order.application.port.out.IInventoryPort;
@@ -117,7 +118,7 @@ public class CustomerOrderUseCase {
                 .toList());
 
         outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
+                MessagingNames.ORDER_STATE_CHANGED_EVENT,
                 "Order",
                 savedOrder.getId().toString(),
                 savedOrder.getAggregateVersion(),
@@ -135,7 +136,7 @@ public class CustomerOrderUseCase {
                     "cancelledAt", now.format(DateTimeFormatter.ISO_DATE_TIME) + "Z"
             );
             outboxPort.append(EventEnvelope.create(
-                    "order.refund-required.v1",
+                    MessagingNames.ORDER_REFUND_REQUIRED_EVENT,
                     "Order",
                     savedOrder.getId().toString(),
                     savedOrder.getAggregateVersion(),
@@ -154,7 +155,7 @@ public class CustomerOrderUseCase {
                 "detail", savedOrder.getCancelReason()
         );
         outboxPort.append(EventEnvelope.create(
-                "audit.action.v1",
+                MessagingNames.AUDIT_ACTION_EVENT,
                 "Order",
                 savedOrder.getId().toString(),
                 savedOrder.getAggregateVersion(),
@@ -236,7 +237,7 @@ public class CustomerOrderUseCase {
                 .toList());
 
         outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
+                MessagingNames.ORDER_STATE_CHANGED_EVENT,
                 "Order",
                 savedOrder.getId().toString(),
                 savedOrder.getAggregateVersion(),
@@ -254,7 +255,7 @@ public class CustomerOrderUseCase {
                     "cancelledAt", now.format(DateTimeFormatter.ISO_DATE_TIME) + "Z"
             );
             outboxPort.append(EventEnvelope.create(
-                    "order.refund-required.v1",
+                    MessagingNames.ORDER_REFUND_REQUIRED_EVENT,
                     "Order",
                     savedOrder.getId().toString(),
                     savedOrder.getAggregateVersion(),
@@ -273,7 +274,7 @@ public class CustomerOrderUseCase {
                 "detail", savedOrder.getCancelReason()
         );
         outboxPort.append(EventEnvelope.create(
-                "audit.action.v1",
+                MessagingNames.AUDIT_ACTION_EVENT,
                 "Order",
                 savedOrder.getId().toString(),
                 savedOrder.getAggregateVersion(),

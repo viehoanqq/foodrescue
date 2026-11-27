@@ -3,12 +3,12 @@ package com.foodrescue.order.infrastructure.messaging.consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
-import com.foodrescue.order.infrastructure.messaging.RabbitConfiguration;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class RefundStatusConsumer {
     private static final Logger log = LoggerFactory.getLogger(RefundStatusConsumer.class);
-    private static final String CONSUMER_NAME = "order.refund-status";
+    private static final String CONSUMER_NAME = MessagingNames.ORDER_REFUND_STATUS_QUEUE;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
@@ -43,7 +43,7 @@ public class RefundStatusConsumer {
         this.outboxPort = outboxPort;
     }
 
-    @RabbitListener(queues = RabbitConfiguration.ORDER_REFUND_STATUS_QUEUE)
+    @RabbitListener(queues = MessagingNames.ORDER_REFUND_STATUS_QUEUE)
     @Transactional
     public void receive(String message) throws Exception {
         JsonNode event = json.readTree(message);
@@ -80,13 +80,13 @@ public class RefundStatusConsumer {
                 ? UUID.fromString(event.path("correlationId").asText())
                 : UUID.randomUUID();
 
-        if ("refund.requested.v1".equals(eventType)) {
+        if (MessagingNames.REFUND_REQUESTED_EVENT.equals(eventType)) {
             order.setPaymentStatus("REFUND_PENDING");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);
             emitOrderStateChanged(order, correlationId);
             log.info("Order {} updated paymentStatus to REFUND_PENDING", order.getOrderCode());
-        } else if ("refund.completed.v1".equals(eventType)) {
+        } else if (MessagingNames.REFUND_COMPLETED_EVENT.equals(eventType)) {
             order.setPaymentStatus("REFUNDED");
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);
@@ -113,7 +113,7 @@ public class RefundStatusConsumer {
                 .toList());
 
         outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
+                MessagingNames.ORDER_STATE_CHANGED_EVENT,
                 "Order",
                 order.getId().toString(),
                 order.getAggregateVersion(),

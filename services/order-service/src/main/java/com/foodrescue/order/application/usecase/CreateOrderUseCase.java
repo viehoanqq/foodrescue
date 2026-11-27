@@ -1,6 +1,7 @@
 package com.foodrescue.order.application.usecase;
 
 import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.api.dto.OrderItemResponse;
 import com.foodrescue.order.api.dto.OrderResponse;
 import com.foodrescue.order.application.port.out.IInventoryPort;
@@ -201,7 +202,7 @@ public class CreateOrderUseCase {
                     .toList());
 
             EventEnvelope<Map<String, Object>> envelope = EventEnvelope.create(
-                    "order.state-changed.v1",
+                    MessagingNames.ORDER_STATE_CHANGED_EVENT,
                     "Order",
                     savedOrder.getId().toString(),
                     1L,

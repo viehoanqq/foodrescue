@@ -3,13 +3,13 @@ package com.foodrescue.order.infrastructure.messaging.consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
-import com.foodrescue.order.infrastructure.messaging.RabbitConfiguration;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class PaymentResultsConsumer {
     private static final Logger log = LoggerFactory.getLogger(PaymentResultsConsumer.class);
-    private static final String CONSUMER_NAME = "order.payment-results";
+    private static final String CONSUMER_NAME = MessagingNames.ORDER_PAYMENT_RESULTS_QUEUE;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
@@ -48,7 +48,7 @@ public class PaymentResultsConsumer {
         this.outboxPort = outboxPort;
     }
 
-    @RabbitListener(queues = RabbitConfiguration.ORDER_PAYMENT_RESULTS_QUEUE)
+    @RabbitListener(queues = MessagingNames.ORDER_PAYMENT_RESULTS_QUEUE)
     @Transactional
     public void receive(String message) throws Exception {
         JsonNode event = json.readTree(message);
@@ -86,7 +86,7 @@ public class PaymentResultsConsumer {
                 ? UUID.fromString(event.path("correlationId").asText())
                 : UUID.randomUUID();
 
-        if ("payment.succeeded.v1".equals(eventType)) {
+        if (MessagingNames.PAYMENT_SUCCEEDED_EVENT.equals(eventType)) {
             String status = order.getStatus();
             if ("PENDING_PAYMENT".equalsIgnoreCase(status)) {
                 order.setStatus("CONFIRMED");
@@ -104,7 +104,7 @@ public class PaymentResultsConsumer {
                         "amount", order.getTotalAmount().longValue(),
                         "detail", "VNPay payment successful"
                 );
-                outboxPort.append(EventEnvelope.create("audit.action.v1", "Order", order.getId().toString(),
+                outboxPort.append(EventEnvelope.create(MessagingNames.AUDIT_ACTION_EVENT, "Order", order.getId().toString(),
                         order.getAggregateVersion(), correlationId, null, order.getCustomerId(), auditPayload));
 
                 log.info("Order {} confirmed by payment success", order.getOrderCode());
@@ -122,12 +122,12 @@ public class PaymentResultsConsumer {
                         "reason", "LATE_PAYMENT",
                         "cancelledAt", LocalDateTime.now().toString()
                 );
-                outboxPort.append(EventEnvelope.create("order.refund-required.v1", "Order", order.getId().toString(),
+                outboxPort.append(EventEnvelope.create(MessagingNames.ORDER_REFUND_REQUIRED_EVENT, "Order", order.getId().toString(),
                         order.getAggregateVersion(), correlationId, null, order.getCustomerId(), refundPayload));
 
                 log.info("Late payment for order {}, emitted refund-required", order.getOrderCode());
             }
-        } else if ("payment.failed.v1".equals(eventType)) {
+        } else if (MessagingNames.PAYMENT_FAILED_EVENT.equals(eventType)) {
             if ("PENDING_PAYMENT".equalsIgnoreCase(order.getStatus())) {
                 log.info("Payment failed for order: {}", order.getOrderCode());
             }
@@ -152,7 +152,7 @@ public class PaymentResultsConsumer {
                 .toList());
 
         outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
+                MessagingNames.ORDER_STATE_CHANGED_EVENT,
                 "Order",
                 order.getId().toString(),
                 order.getAggregateVersion(),

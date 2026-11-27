@@ -3,13 +3,13 @@ package com.foodrescue.order.infrastructure.messaging.consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
-import com.foodrescue.order.infrastructure.messaging.RabbitConfiguration;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class BatchCancelledConsumer {
     private static final Logger log = LoggerFactory.getLogger(BatchCancelledConsumer.class);
-    private static final String CONSUMER_NAME = "order.batch-cancelled";
+    private static final String CONSUMER_NAME = MessagingNames.ORDER_BATCH_CANCELLED_QUEUE;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
@@ -48,7 +48,7 @@ public class BatchCancelledConsumer {
         this.outboxPort = outboxPort;
     }
 
-    @RabbitListener(queues = RabbitConfiguration.ORDER_BATCH_CANCELLED_QUEUE)
+    @RabbitListener(queues = MessagingNames.ORDER_BATCH_CANCELLED_QUEUE)
     @Transactional
     public void receive(String message) throws Exception {
         JsonNode event = json.readTree(message);
@@ -128,7 +128,7 @@ public class BatchCancelledConsumer {
                             "cancelledAt", LocalDateTime.now().toString()
                     );
                     outboxPort.append(EventEnvelope.create(
-                            "order.refund-required.v1",
+                            MessagingNames.ORDER_REFUND_REQUIRED_EVENT,
                             "Order",
                             savedOrder.getId().toString(),
                             savedOrder.getAggregateVersion(),
@@ -161,7 +161,7 @@ public class BatchCancelledConsumer {
                 .toList());
 
         outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
+                MessagingNames.ORDER_STATE_CHANGED_EVENT,
                 "Order",
                 order.getId().toString(),
                 order.getAggregateVersion(),

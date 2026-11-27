@@ -1,6 +1,7 @@
 package com.foodrescue.order.application.usecase;
 
 import com.foodrescue.buildingblocks.events.EventEnvelope;
+import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
@@ -94,7 +95,7 @@ public class OrderSchedulerUseCase {
                 .toList());
 
         outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
+                MessagingNames.ORDER_STATE_CHANGED_EVENT,
                 "Order",
                 order.getId().toString(),
                 order.getAggregateVersion(),

@@ -5,6 +5,9 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.core.MessageDeliveryMode;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -36,12 +39,21 @@ public class OutboxPublisher {
             String id = (String) row.get("id");
             String routingKey = (String) row.get("type");
             String payload = (String) row.get("payload");
+            CorrelationData correlation = new CorrelationData(id);
             rabbit.invoke(ops -> {
                 ops.convertAndSend(MessagingNames.EVENTS_EXCHANGE, routingKey, payload,
-                    message -> { message.getMessageProperties().setMessageId(id); return message; });
+                    message -> {
+                        message.getMessageProperties().setMessageId(id);
+                        message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
+                        message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+                        return message;
+                    }, correlation);
                 ops.waitForConfirmsOrDie(5000);
                 return null;
             });
+            if (correlation.getReturned() != null) {
+                throw new IllegalStateException("RabbitMQ returned unroutable event " + id);
+            }
             jdbc.update("UPDATE outbox_events SET published_at = CURRENT_TIMESTAMP, attempts = attempts + 1 WHERE event_id = ?", id);
         }
     }
