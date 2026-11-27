@@ -16,11 +16,13 @@ import com.foodrescue.catalog.domain.model.RescueBatch;
 import com.foodrescue.catalog.domain.model.StockMovement;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class BatchManagementUseCaseTest {
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final IBatchManagementRepository batches = mock(IBatchManagementRepository.class);
     private final IStoreProjectionRepository projections = mock(IStoreProjectionRepository.class);
     private final IStoreOwnerLookupPort ownerLookup = mock(IStoreOwnerLookupPort.class);
@@ -32,8 +34,11 @@ class BatchManagementUseCaseTest {
     private final Actor staff = new Actor(30L, "STORE_STAFF", 15L);
     private final RescueBatch batch = new RescueBatch(5L, 15L, 2L, "Túi", null, null,
             BigDecimal.valueOf(100_000), BigDecimal.valueOf(50_000), 5, 2,
-            LocalDateTime.now().plusHours(1), LocalDateTime.now().plusHours(2),
-            "AVAILABLE", LocalDateTime.now(), 3L, false);
+            now().plusHours(1), now().plusHours(2), "AVAILABLE", now(), 3L, false);
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now(BUSINESS_ZONE);
+    }
 
     private void approvedStore() {
         CatalogStore approved = new CatalogStore(15L, 7L, "APPROVED", 2L);

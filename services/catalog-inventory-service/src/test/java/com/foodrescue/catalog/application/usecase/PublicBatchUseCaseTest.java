@@ -18,6 +18,7 @@ import com.foodrescue.catalog.domain.model.RouteMetrics;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 class PublicBatchUseCaseTest {
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final IPublicBatchRepository batches = mock(IPublicBatchRepository.class);
     private final ICategoryRepository categories = mock(ICategoryRepository.class);
     private final IStoreDirectoryPort stores = mock(IStoreDirectoryPort.class);
@@ -84,11 +86,11 @@ class PublicBatchUseCaseTest {
         CatalogStoreSummary details = new CatalogStoreSummary(10L, "Bếp Xanh", null, null, "Quận 1",
                 null, BigDecimal.TEN, BigDecimal.TEN, null, 0, null,
                 LocalTime.of(8, 0), LocalTime.of(22, 0));
-        LocalDateTime start = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0);
+        LocalDateTime start = now().plusDays(1).withHour(9).withMinute(0);
         LocalDateTime end = start.plusDays(4).withHour(18);
         RescueBatch multiDayBatch = new RescueBatch(5L, 10L, 2L, "Túi", "Mô tả", null,
                 BigDecimal.valueOf(100), BigDecimal.valueOf(50), 3, 2, start, end,
-                "AVAILABLE", LocalDateTime.now(), 1, false);
+                "AVAILABLE", now(), 1, false);
         when(stores.findApprovedStores(null, null, null)).thenReturn(List.of(summary));
         when(stores.findApprovedStore(10L)).thenReturn(Optional.of(details));
         when(batches.search(anyCollection(), anyCollection(), eq(null), eq(null), eq(null),
@@ -106,8 +108,8 @@ class PublicBatchUseCaseTest {
     void detailDoesNotExposeExpiredBatchOrCallStoreService() {
         when(batches.findById(6L)).thenReturn(Optional.of(new RescueBatch(6L, 10L, 2L,
                 "Hết hạn", null, null, BigDecimal.valueOf(100), BigDecimal.valueOf(50), 2, 1,
-                LocalDateTime.now().minusHours(2), LocalDateTime.now().minusHours(1), "AVAILABLE",
-                LocalDateTime.now().minusDays(1), 1, false)));
+                now().minusHours(2), now().minusHours(1), "AVAILABLE",
+                now().minusDays(1), 1, false)));
 
         CatalogException error = assertThrows(CatalogException.class, () -> useCase.get(6L, null, null));
 
@@ -130,7 +132,10 @@ class PublicBatchUseCaseTest {
     private RescueBatch batch(String status, int remaining) {
         return new RescueBatch(5L, 10L, 2L, "Túi", "Mô tả", null,
                 BigDecimal.valueOf(100), BigDecimal.valueOf(50), 3, remaining,
-                LocalDateTime.now().plusMinutes(30), LocalDateTime.now().plusHours(2),
-                status, LocalDateTime.now(), 1, false);
+                now().plusMinutes(30), now().plusHours(2), status, now(), 1, false);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now(BUSINESS_ZONE);
     }
 }
