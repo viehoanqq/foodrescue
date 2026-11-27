@@ -36,4 +36,8 @@ public class OrderException extends RuntimeException {
     public static OrderException validation(String message) {
         return new OrderException("VALIDATION_ERROR", message, 400);
     }
+
+    public static OrderException serviceUnavailable(String message) {
+        return new OrderException("DEPENDENCY_UNAVAILABLE", message, 503);
+    }
 }

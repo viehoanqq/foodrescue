@@ -1,15 +1,15 @@
 package com.foodrescue.order.api;
 
 import com.foodrescue.buildingblocks.security.AuthenticatedUser;
-import com.foodrescue.order.api.dto.CreateOrderRequest;
 import com.foodrescue.order.api.dto.OrderResponse;
+import com.foodrescue.order.api.dto.PageResponse;
 import com.foodrescue.order.application.usecase.CreateOrderUseCase;
 import com.foodrescue.order.application.usecase.CustomerOrderUseCase;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.validation.Valid;
-import java.util.List;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -30,16 +30,20 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(
             @AuthenticationPrincipal AuthenticatedUser user,
-            @RequestHeader(value = "X-Correlation-Id", required = false) UUID correlationId,
-            @Valid @RequestBody(required = false) CreateOrderRequest request) {
-        return createOrderUseCase.createOrder(user.id(), request, correlationId);
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "X-Correlation-Id", required = false) UUID correlationId) {
+        return createOrderUseCase.createOrder(user.id(), idempotencyKey, correlationId);
     }
 
     @GetMapping
-    public List<OrderResponse> getMyOrders(
+    public PageResponse<OrderResponse> getMyOrders(
             @AuthenticationPrincipal AuthenticatedUser user,
-            @RequestParam(required = false) String status) {
-        return customerOrderUseCase.getMyOrders(user.id(), status);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String code,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return customerOrderUseCase.getMyOrders(user.id(), status, date, code, page, size);
     }
 
     @GetMapping("/{id}")

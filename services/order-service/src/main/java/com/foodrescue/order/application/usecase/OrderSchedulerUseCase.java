@@ -1,106 +1,83 @@
 package com.foodrescue.order.application.usecase;
 
-import com.foodrescue.buildingblocks.events.EventEnvelope;
-import com.foodrescue.order.application.port.out.IInventoryPort;
-import com.foodrescue.order.application.port.out.IOutboxPort;
-import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
-import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class OrderSchedulerUseCase {
     private static final Logger log = LoggerFactory.getLogger(OrderSchedulerUseCase.class);
 
     private final SpringDataOrderRepository orderRepository;
-    private final SpringDataOrderItemRepository orderItemRepository;
-    private final IInventoryPort inventoryPort;
-    private final IOutboxPort outboxPort;
+    private final InventoryReleaseService inventoryReleaseService;
+    private final OrderSupport orderSupport;
+    private final TransactionTemplate transactionTemplate;
 
     public OrderSchedulerUseCase(
             SpringDataOrderRepository orderRepository,
-            SpringDataOrderItemRepository orderItemRepository,
-            IInventoryPort inventoryPort,
-            IOutboxPort outboxPort) {
+            InventoryReleaseService inventoryReleaseService,
+            OrderSupport orderSupport,
+            PlatformTransactionManager transactionManager) {
         this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
-        this.inventoryPort = inventoryPort;
-        this.outboxPort = outboxPort;
+        this.inventoryReleaseService = inventoryReleaseService;
+        this.orderSupport = orderSupport;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Scheduled(fixedDelay = 60000) // Mỗi 1 phút
-    @Transactional
     public void expireUnpaidOrders() {
         LocalDateTime now = LocalDateTime.now();
         List<OrderEntity> expiredOrders = orderRepository.findExpiredPendingOrders("PENDING_PAYMENT", now);
-        for (OrderEntity order : expiredOrders) {
-            order.setStatus("EXPIRED");
-            order.setCancelReason("Hết hạn thanh toán (quá 15 phút)");
-            order.setAggregateVersion(order.getAggregateVersion() + 1);
-            orderRepository.save(order);
-
-            if (order.getReservationId() != null) {
-                try {
-                    inventoryPort.release(order.getReservationId(), UUID.randomUUID());
-                } catch (Exception ex) {
-                    log.warn("Failed to release reservation on expire orderId={}: {}", order.getId(), ex.getMessage());
+        for (OrderEntity candidate : expiredOrders) {
+            transactionTemplate.executeWithoutResult(tx -> {
+                OrderEntity order = orderRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+                if (order == null || !"PENDING_PAYMENT".equalsIgnoreCase(order.getStatus())) {
+                    return;
                 }
-            }
+                order.setStatus("EXPIRED");
+                order.setCancelReason("Hết hạn thanh toán (quá 15 phút)");
+                order.setAggregateVersion(order.getAggregateVersion() + 1);
+                orderRepository.save(order);
 
-            emitStateChangedEvent(order);
-            log.info("Expired unpaid order: {}", order.getOrderCode());
+                inventoryReleaseService.releaseOrEnqueue(order.getReservationId(), "PAYMENT_EXPIRED", UUID.randomUUID());
+                orderSupport.emitOrderStateChanged(order, null, UUID.randomUUID(), null);
+                log.info("Expired unpaid order: {}", order.getOrderCode());
+            });
         }
     }
 
     @Scheduled(fixedDelay = 300000) // Mỗi 5 phút
-    @Transactional
     public void markNoShowOrders() {
         LocalDateTime deadline = LocalDateTime.now().minusMinutes(30);
         List<OrderEntity> noShowOrders = orderRepository.findNoShowOrders("CONFIRMED", deadline);
-        for (OrderEntity order : noShowOrders) {
-            order.setStatus("NO_SHOW");
-            order.setCompletedAt(LocalDateTime.now());
-            order.setCancelReason("Khách hàng không đến nhận trong khung giờ");
-            order.setAggregateVersion(order.getAggregateVersion() + 1);
-            orderRepository.save(order);
+        for (OrderEntity candidate : noShowOrders) {
+            transactionTemplate.executeWithoutResult(tx -> {
+                OrderEntity order = orderRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+                if (order == null || !"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
+                    return;
+                }
+                order.setStatus("NO_SHOW");
+                order.setCompletedAt(LocalDateTime.now());
+                order.setCancelReason("Khách hàng không đến nhận trong khung giờ");
+                order.setAggregateVersion(order.getAggregateVersion() + 1);
+                orderRepository.save(order);
 
-            emitStateChangedEvent(order);
-            log.info("Marked order as NO_SHOW: {}", order.getOrderCode());
+                orderSupport.emitOrderStateChanged(order, null, UUID.randomUUID(), null);
+                log.info("Marked order as NO_SHOW: {}", order.getOrderCode());
+            });
         }
     }
 
-    private void emitStateChangedEvent(OrderEntity order) {
-        List<OrderItemEntity> items = orderItemRepository.findByOrderId(order.getId());
-        Map<String, Object> statePayload = new LinkedHashMap<>();
-        statePayload.put("orderId", order.getId());
-        statePayload.put("storeId", order.getStoreId());
-        statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
-        statePayload.put("totalAmount", order.getTotalAmount().longValue());
-        statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
-        statePayload.put("storeEarning", order.getStoreEarning().longValue());
-        statePayload.put("completedAt", order.getCompletedAt() != null ? order.getCompletedAt().toString() : null);
-        statePayload.put("reservationId", order.getReservationId() != null ? order.getReservationId().toString() : null);
-        statePayload.put("items", items.stream()
-                .map(it -> Map.of("batchId", it.getBatchId(), "quantity", it.getQuantity()))
-                .toList());
-
-        outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
-                "Order",
-                order.getId().toString(),
-                order.getAggregateVersion(),
-                UUID.randomUUID(),
-                null,
-                null,
-                statePayload));
+    @Scheduled(fixedDelay = 30000) // Mỗi 30 giây thử trả kho lại cho các đơn bị lỗi release trước đó
+    public void retryFailedInventoryReleases() {
+        inventoryReleaseService.retryPendingReleases();
     }
 }

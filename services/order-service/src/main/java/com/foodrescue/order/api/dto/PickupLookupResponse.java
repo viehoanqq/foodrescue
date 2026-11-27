@@ -9,11 +9,14 @@ public record PickupLookupResponse(
         String orderCode,
         String pickupCode,
         Long customerId,
+        String status,
+        String paymentStatus,
         Integer itemCount,
         BigDecimal totalAmount,
         LocalDateTime pickupStart,
         LocalDateTime pickupEnd,
         boolean early,
         boolean late,
+        boolean canHandover,
         List<OrderItemResponse> items
 ) {}

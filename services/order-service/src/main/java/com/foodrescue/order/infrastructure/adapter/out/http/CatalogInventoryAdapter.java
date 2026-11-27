@@ -32,4 +32,9 @@ public class CatalogInventoryAdapter implements IInventoryPort {
     public StockReservation release(UUID reservationId, UUID correlationId) {
         return client.post("/internal/reservations/" + reservationId + "/release", correlationId, StockReservation.class);
     }
+
+    @Override
+    public BatchInfo getBatch(Long batchId, UUID correlationId) {
+        return client.get("/internal/batches/" + batchId, correlationId, BatchInfo.class);
+    }
 }

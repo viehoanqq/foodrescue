@@ -3,8 +3,9 @@ package com.foodrescue.order.infrastructure.messaging.consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.EventEnvelope;
-import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
+import com.foodrescue.order.application.usecase.InventoryReleaseService;
+import com.foodrescue.order.application.usecase.OrderSupport;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -27,34 +28,37 @@ public class BatchCancelledConsumer {
     private static final String CONSUMER_NAME = "order.batch-cancelled";
 
     private final JdbcTemplate jdbc;
-    private final ObjectMapper json;
+    private final ObjectMapper objectMapper;
     private final SpringDataOrderRepository orderRepository;
     private final SpringDataOrderItemRepository orderItemRepository;
-    private final IInventoryPort inventoryPort;
+    private final InventoryReleaseService inventoryReleaseService;
     private final IOutboxPort outboxPort;
+    private final OrderSupport orderSupport;
 
     public BatchCancelledConsumer(
             JdbcTemplate jdbc,
-            ObjectMapper json,
+            ObjectMapper objectMapper,
             SpringDataOrderRepository orderRepository,
             SpringDataOrderItemRepository orderItemRepository,
-            IInventoryPort inventoryPort,
-            IOutboxPort outboxPort) {
+            InventoryReleaseService inventoryReleaseService,
+            IOutboxPort outboxPort,
+            OrderSupport orderSupport) {
         this.jdbc = jdbc;
-        this.json = json;
+        this.objectMapper = objectMapper;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
-        this.inventoryPort = inventoryPort;
+        this.inventoryReleaseService = inventoryReleaseService;
         this.outboxPort = outboxPort;
+        this.orderSupport = orderSupport;
     }
 
     @RabbitListener(queues = RabbitConfiguration.ORDER_BATCH_CANCELLED_QUEUE)
     @Transactional
-    public void receive(String message) throws Exception {
-        JsonNode event = json.readTree(message);
-        String eventIdStr = event.path("eventId").asText();
-        String eventType = event.path("eventType").asText();
-        if (eventIdStr.isBlank() || eventType.isBlank()) {
+    public void onMessage(String message) throws Exception {
+        JsonNode event = objectMapper.readTree(message);
+        String eventIdStr = event.path("eventId").asText(null);
+        String eventType = event.path("eventType").asText("");
+        if (eventIdStr == null || eventIdStr.isBlank() || !"catalog.batch-cancelled.v1".equals(eventType)) {
             return;
         }
 
@@ -71,7 +75,7 @@ public class BatchCancelledConsumer {
 
         JsonNode payload = event.path("payload");
         long batchId = payload.path("batchId").asLong();
-        String reason = payload.path("reason").asText("Túi cứu trợ bị huỷ");
+        String reason = payload.path("reason").asText("Batch cancelled by store");
 
         if (batchId <= 0) {
             return;
@@ -90,7 +94,7 @@ public class BatchCancelledConsumer {
                 continue;
             }
 
-            OrderEntity order = orderRepository.findById(orderId).orElse(null);
+            OrderEntity order = orderRepository.findByIdForUpdate(orderId).orElse(null);
             if (order == null) {
                 continue;
             }
@@ -109,18 +113,12 @@ public class BatchCancelledConsumer {
 
                 OrderEntity savedOrder = orderRepository.save(order);
 
-                // Release inventory reservation
-                if (savedOrder.getReservationId() != null) {
-                    try {
-                        inventoryPort.release(savedOrder.getReservationId(), correlationId);
-                    } catch (Exception ex) {
-                        log.warn("Failed to release reservation on batch-cancelled orderId={}: {}", orderId, ex.getMessage());
-                    }
-                }
+                // Release inventory reservation (với retry nếu lỗi)
+                inventoryReleaseService.releaseOrEnqueue(savedOrder.getReservationId(), "BATCH_CANCELLED", correlationId);
 
-                emitOrderStateChanged(savedOrder, correlationId);
+                orderSupport.emitOrderStateChanged(savedOrder, null, correlationId, null);
 
-                if (wasPaid) {
+                if (wasPaid && orderRepository.claimRefundRequest(savedOrder.getId()) > 0) {
                     Map<String, Object> refundPayload = Map.of(
                             "orderId", savedOrder.getId(),
                             "amount", savedOrder.getTotalAmount().longValue(),
@@ -141,33 +139,5 @@ public class BatchCancelledConsumer {
                 log.info("Cancelled order {} due to batch {} cancellation", savedOrder.getOrderCode(), batchId);
             }
         }
-    }
-
-    private void emitOrderStateChanged(OrderEntity order, UUID correlationId) {
-        List<OrderItemEntity> items = orderItemRepository.findByOrderId(order.getId());
-        Map<String, Object> statePayload = new LinkedHashMap<>();
-        statePayload.put("orderId", order.getId());
-        statePayload.put("storeId", order.getStoreId());
-        statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
-        statePayload.put("totalAmount", order.getTotalAmount().longValue());
-        statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
-        statePayload.put("storeEarning", order.getStoreEarning().longValue());
-        statePayload.put("completedAt", order.getCompletedAt() != null ? order.getCompletedAt().toString() : null);
-        statePayload.put("reservationId", order.getReservationId() != null ? order.getReservationId().toString() : null);
-        statePayload.put("items", items.stream()
-                .map(it -> Map.of("batchId", it.getBatchId(), "quantity", it.getQuantity()))
-                .toList());
-
-        outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
-                "Order",
-                order.getId().toString(),
-                order.getAggregateVersion(),
-                correlationId,
-                null,
-                null,
-                statePayload));
     }
 }

@@ -3,17 +3,17 @@ package com.foodrescue.order.infrastructure.messaging.consumer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.EventEnvelope;
-import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
-import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
+import com.foodrescue.order.application.usecase.InventoryReleaseService;
+import com.foodrescue.order.application.usecase.OrderSupport;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
-import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
 import com.foodrescue.order.infrastructure.messaging.RabbitConfiguration;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -27,34 +27,34 @@ public class PaymentResultsConsumer {
     private static final String CONSUMER_NAME = "order.payment-results";
 
     private final JdbcTemplate jdbc;
-    private final ObjectMapper json;
+    private final ObjectMapper objectMapper;
     private final SpringDataOrderRepository orderRepository;
-    private final SpringDataOrderItemRepository orderItemRepository;
-    private final IInventoryPort inventoryPort;
     private final IOutboxPort outboxPort;
+    private final InventoryReleaseService inventoryReleaseService;
+    private final OrderSupport orderSupport;
 
     public PaymentResultsConsumer(
             JdbcTemplate jdbc,
-            ObjectMapper json,
+            ObjectMapper objectMapper,
             SpringDataOrderRepository orderRepository,
-            SpringDataOrderItemRepository orderItemRepository,
-            IInventoryPort inventoryPort,
-            IOutboxPort outboxPort) {
+            IOutboxPort outboxPort,
+            InventoryReleaseService inventoryReleaseService,
+            OrderSupport orderSupport) {
         this.jdbc = jdbc;
-        this.json = json;
+        this.objectMapper = objectMapper;
         this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
-        this.inventoryPort = inventoryPort;
         this.outboxPort = outboxPort;
+        this.inventoryReleaseService = inventoryReleaseService;
+        this.orderSupport = orderSupport;
     }
 
     @RabbitListener(queues = RabbitConfiguration.ORDER_PAYMENT_RESULTS_QUEUE)
     @Transactional
-    public void receive(String message) throws Exception {
-        JsonNode event = json.readTree(message);
-        String eventIdStr = event.path("eventId").asText();
-        String eventType = event.path("eventType").asText();
-        if (eventIdStr.isBlank() || eventType.isBlank()) {
+    public void onMessage(String message) throws Exception {
+        JsonNode event = objectMapper.readTree(message);
+        String eventIdStr = event.path("eventId").asText(null);
+        String eventType = event.path("eventType").asText("");
+        if (eventIdStr == null || eventIdStr.isBlank()) {
             log.warn("Invalid message envelope: {}", message);
             return;
         }
@@ -76,7 +76,7 @@ public class PaymentResultsConsumer {
             return;
         }
 
-        OrderEntity order = orderRepository.findById(orderId).orElse(null);
+        OrderEntity order = orderRepository.findByIdForUpdate(orderId).orElse(null);
         if (order == null) {
             log.warn("Order not found for payment result: {}", orderId);
             return;
@@ -94,7 +94,7 @@ public class PaymentResultsConsumer {
                 order.setAggregateVersion(order.getAggregateVersion() + 1);
                 orderRepository.save(order);
 
-                emitOrderStateChanged(order, correlationId);
+                orderSupport.emitOrderStateChanged(order, null, correlationId, null);
 
                 // Audit log
                 Map<String, Object> auditPayload = Map.of(
@@ -109,56 +109,40 @@ public class PaymentResultsConsumer {
 
                 log.info("Order {} confirmed by payment success", order.getOrderCode());
             } else if ("CANCELLED".equalsIgnoreCase(status) || "EXPIRED".equalsIgnoreCase(status)) {
-                // Payment received after cancel/expired -> trigger refund required
-                order.setPaymentStatus("REFUND_PENDING");
-                order.setAggregateVersion(order.getAggregateVersion() + 1);
-                orderRepository.save(order);
+                // Thanh toán về muộn sau khi đã huỷ/hết hạn -> chỉ phát order.refund-required.v1 nếu chưa từng yêu cầu hoàn tiền
+                if (orderRepository.claimRefundRequest(order.getId()) > 0) {
+                    order.setPaymentStatus("REFUND_PENDING");
+                    order.setAggregateVersion(order.getAggregateVersion() + 1);
+                    orderRepository.save(order);
 
-                emitOrderStateChanged(order, correlationId);
+                    orderSupport.emitOrderStateChanged(order, null, correlationId, null);
 
-                Map<String, Object> refundPayload = Map.of(
-                        "orderId", order.getId(),
-                        "amount", order.getTotalAmount().longValue(),
-                        "reason", "LATE_PAYMENT",
-                        "cancelledAt", LocalDateTime.now().toString()
-                );
-                outboxPort.append(EventEnvelope.create("order.refund-required.v1", "Order", order.getId().toString(),
-                        order.getAggregateVersion(), correlationId, null, order.getCustomerId(), refundPayload));
+                    Map<String, Object> refundPayload = Map.of(
+                            "orderId", order.getId(),
+                            "amount", order.getTotalAmount().longValue(),
+                            "reason", "LATE_PAYMENT",
+                            "cancelledAt", LocalDateTime.now().toString()
+                    );
+                    outboxPort.append(EventEnvelope.create("order.refund-required.v1", "Order", order.getId().toString(),
+                            order.getAggregateVersion(), correlationId, null, order.getCustomerId(), refundPayload));
 
-                log.info("Late payment for order {}, emitted refund-required", order.getOrderCode());
+                    log.info("Late payment for order {}, emitted refund-required once", order.getOrderCode());
+                } else {
+                    log.info("Refund already requested for order {}, skipping duplicate refund-required", order.getOrderCode());
+                }
             }
         } else if ("payment.failed.v1".equals(eventType)) {
             if ("PENDING_PAYMENT".equalsIgnoreCase(order.getStatus())) {
-                log.info("Payment failed for order: {}", order.getOrderCode());
+                order.setStatus("CANCELLED");
+                order.setCancelReason("Thanh toán thất bại");
+                order.setCancelledAt(LocalDateTime.now());
+                order.setAggregateVersion(order.getAggregateVersion() + 1);
+                orderRepository.save(order);
+
+                inventoryReleaseService.releaseOrEnqueue(order.getReservationId(), "PAYMENT_FAILED", correlationId);
+                orderSupport.emitOrderStateChanged(order, null, correlationId, null);
+                log.info("Order {} cancelled and inventory released due to payment.failed.v1", order.getOrderCode());
             }
         }
-    }
-
-    private void emitOrderStateChanged(OrderEntity order, UUID correlationId) {
-        List<OrderItemEntity> items = orderItemRepository.findByOrderId(order.getId());
-        Map<String, Object> statePayload = new LinkedHashMap<>();
-        statePayload.put("orderId", order.getId());
-        statePayload.put("storeId", order.getStoreId());
-        statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
-        statePayload.put("totalAmount", order.getTotalAmount().longValue());
-        statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
-        statePayload.put("storeEarning", order.getStoreEarning().longValue());
-        statePayload.put("completedAt", order.getCompletedAt() != null ? order.getCompletedAt().toString() : null);
-        statePayload.put("reservationId", order.getReservationId() != null ? order.getReservationId().toString() : null);
-        statePayload.put("items", items.stream()
-                .map(it -> Map.of("batchId", it.getBatchId(), "quantity", it.getQuantity()))
-                .toList());
-
-        outboxPort.append(EventEnvelope.create(
-                "order.state-changed.v1",
-                "Order",
-                order.getId().toString(),
-                order.getAggregateVersion(),
-                correlationId,
-                null,
-                null,
-                statePayload));
     }
 }

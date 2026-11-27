@@ -85,6 +85,9 @@ public class OrderEntity {
     @Column(name = "aggregate_version", nullable = false)
     private Long aggregateVersion = 1L;
 
+    @Column(name = "refund_requested", nullable = false)
+    private boolean refundRequested = false;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -153,4 +156,7 @@ public class OrderEntity {
 
     public Long getAggregateVersion() { return aggregateVersion; }
     public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
+
+    public boolean isRefundRequested() { return refundRequested; }
+    public void setRefundRequested(boolean refundRequested) { this.refundRequested = refundRequested; }
 }
