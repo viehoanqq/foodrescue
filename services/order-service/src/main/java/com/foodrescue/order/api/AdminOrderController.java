@@ -1,6 +1,7 @@
 package com.foodrescue.order.api;
 
 import com.foodrescue.order.api.dto.OrderResponse;
+import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.application.usecase.CustomerOrderUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,9 +24,12 @@ public class AdminOrderController {
 
     @GetMapping
     @Operation(summary = "Xem danh sách toàn bộ đơn hàng trong hệ thống")
-    public ResponseEntity<List<OrderResponse>> getAllOrders(
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(customerOrderUseCase.getAllOrdersForAdmin(status));
+    public ResponseEntity<OrderPageResponse> getAllOrders(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(customerOrderUseCase.getAllOrdersForAdmin(code, status, page, size));
     }
 
     @GetMapping("/{id}")

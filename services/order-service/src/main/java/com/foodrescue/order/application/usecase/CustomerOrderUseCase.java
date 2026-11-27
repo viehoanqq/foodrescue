@@ -4,6 +4,7 @@ import com.foodrescue.buildingblocks.events.EventEnvelope;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.api.dto.OrderItemResponse;
 import com.foodrescue.order.api.dto.OrderResponse;
+import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.domain.exception.OrderException;
@@ -17,6 +18,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,12 +43,9 @@ public class CustomerOrderUseCase {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getMyOrders(Long customerId, String status) {
-        List<OrderEntity> orders = (status != null && !status.isBlank())
-                ? orderRepository.findByCustomerIdAndStatusOrderByCreatedAtDesc(customerId, status.trim().toUpperCase())
-                : orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
-
-        return orders.stream().map(this::toResponse).toList();
+    public OrderPageResponse getMyOrders(Long customerId, String status, int page, int size) {
+        return OrderPageResponse.from(orderRepository.findCustomerOrders(customerId, normalize(status), paging(page, size))
+                .map(this::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -167,14 +166,21 @@ public class CustomerOrderUseCase {
         return toResponse(savedOrder);
     }
 
-    public List<OrderResponse> getAllOrdersForAdmin(String status) {
-        List<OrderEntity> orders;
-        if (status != null && !status.isBlank()) {
-            orders = orderRepository.findByStatusOrderByCreatedAtDesc(status.toUpperCase());
-        } else {
-            orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+    @Transactional(readOnly = true)
+    public OrderPageResponse getAllOrdersForAdmin(String code, String status, int page, int size) {
+        return OrderPageResponse.from(orderRepository.findAdminOrders(normalize(status), normalize(code), paging(page, size))
+                .map(this::toResponse));
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public static PageRequest paging(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw OrderException.validation("page phải >= 0 và size phải từ 1 đến 100");
         }
-        return orders.stream().map(this::toResponse).toList();
+        return PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
     }
 
     @Transactional(readOnly = true)

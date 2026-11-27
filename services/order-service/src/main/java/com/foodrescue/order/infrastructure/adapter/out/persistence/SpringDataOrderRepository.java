@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -24,13 +26,23 @@ public interface SpringDataOrderRepository extends JpaRepository<OrderEntity, Lo
     @Query("SELECT o FROM OrderEntity o WHERE o.pickupCode = :pickupCode")
     Optional<OrderEntity> findLockedByPickupCode(@Param("pickupCode") String pickupCode);
 
-    List<OrderEntity> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
-    List<OrderEntity> findByCustomerIdAndStatusOrderByCreatedAtDesc(Long customerId, String status);
+    @Query("SELECT o FROM OrderEntity o WHERE o.customerId = :customerId "
+            + "AND (:status IS NULL OR o.status = :status)")
+    Page<OrderEntity> findCustomerOrders(@Param("customerId") Long customerId,
+            @Param("status") String status, Pageable pageable);
 
-    List<OrderEntity> findByStoreIdOrderByCreatedAtDesc(Long storeId);
-    List<OrderEntity> findByStoreIdAndStatusOrderByCreatedAtDesc(Long storeId, String status);
+    @Query("SELECT o FROM OrderEntity o WHERE o.storeId = :storeId "
+            + "AND (:status IS NULL OR o.status = :status) "
+            + "AND (:from IS NULL OR o.createdAt >= :from) "
+            + "AND (:until IS NULL OR o.createdAt < :until)")
+    Page<OrderEntity> findStoreOrders(@Param("storeId") Long storeId,
+            @Param("status") String status, @Param("from") LocalDateTime from,
+            @Param("until") LocalDateTime until, Pageable pageable);
 
-    List<OrderEntity> findByStatusOrderByCreatedAtDesc(String status);
+    @Query("SELECT o FROM OrderEntity o WHERE (:status IS NULL OR o.status = :status) "
+            + "AND (:code IS NULL OR LOWER(o.orderCode) LIKE LOWER(CONCAT('%', :code, '%')))")
+    Page<OrderEntity> findAdminOrders(@Param("status") String status,
+            @Param("code") String code, Pageable pageable);
 
     @Query("SELECT o.id FROM OrderEntity o WHERE o.status = :status AND o.paymentExpiresAt < :now")
     List<Long> findExpiredPendingOrderIds(@Param("status") String status, @Param("now") LocalDateTime now);

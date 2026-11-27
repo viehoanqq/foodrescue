@@ -2,6 +2,7 @@ package com.foodrescue.order.api;
 
 import com.foodrescue.buildingblocks.security.AuthenticatedUser;
 import com.foodrescue.order.api.dto.OrderResponse;
+import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.application.usecase.CreateOrderUseCase;
 import com.foodrescue.order.application.usecase.CustomerOrderUseCase;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -39,10 +40,12 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderResponse> getMyOrders(
+    public OrderPageResponse getMyOrders(
             @AuthenticationPrincipal AuthenticatedUser user,
-            @RequestParam(required = false) String status) {
-        return customerOrderUseCase.getMyOrders(user.id(), status);
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return customerOrderUseCase.getMyOrders(user.id(), status, page, size);
     }
 
     @GetMapping("/{id}")

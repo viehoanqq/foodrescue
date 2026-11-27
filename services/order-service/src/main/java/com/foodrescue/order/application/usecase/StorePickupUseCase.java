@@ -4,6 +4,7 @@ import com.foodrescue.buildingblocks.events.EventEnvelope;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.api.dto.OrderItemResponse;
 import com.foodrescue.order.api.dto.OrderResponse;
+import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.api.dto.PickupLookupResponse;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.domain.exception.OrderException;
@@ -12,6 +13,7 @@ import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrd
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -36,12 +38,12 @@ public class StorePickupUseCase {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getStoreOrders(Long storeId, String status) {
-        List<OrderEntity> orders = (status != null && !status.isBlank())
-                ? orderRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(storeId, status.trim().toUpperCase())
-                : orderRepository.findByStoreIdOrderByCreatedAtDesc(storeId);
-
-        return orders.stream().map(this::toOrderResponse).toList();
+    public OrderPageResponse getStoreOrders(Long storeId, LocalDate date, String status, int page, int size) {
+        LocalDateTime from = date == null ? null : date.atStartOfDay();
+        LocalDateTime until = date == null ? null : date.plusDays(1).atStartOfDay();
+        String normalizedStatus = status == null || status.isBlank() ? null : status.trim().toUpperCase(Locale.ROOT);
+        return OrderPageResponse.from(orderRepository.findStoreOrders(storeId, normalizedStatus, from, until,
+                CustomerOrderUseCase.paging(page, size)).map(this::toOrderResponse));
     }
 
     @Transactional(readOnly = true)
