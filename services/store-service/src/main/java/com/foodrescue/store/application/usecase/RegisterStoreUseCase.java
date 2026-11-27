@@ -5,6 +5,7 @@ import com.foodrescue.store.application.port.out.IImageStorage.Upload;
 import com.foodrescue.store.application.port.out.IStoreRepository;
 import com.foodrescue.store.domain.exception.StoreException;
 import com.foodrescue.store.domain.model.StoreRegistration;
+import com.foodrescue.store.domain.model.enums.StoreStatus;
 import java.time.LocalDateTime;
 
 public class RegisterStoreUseCase {
@@ -24,7 +25,7 @@ public class RegisterStoreUseCase {
             licenseUrl = images.saveLicense(license);
             if (image != null && !image.isEmpty()) imageUrl = images.saveImage(image);
             var saved = stores.save(ownerId, data, licenseUrl, imageUrl);
-            return new Result(saved.storeId(), ownerId, "PENDING", saved.createdAt());
+            return new Result(saved.storeId(), ownerId, StoreStatus.PENDING.name(), saved.createdAt());
         } catch (RuntimeException ex) {
             images.delete(licenseUrl);
             images.delete(imageUrl);

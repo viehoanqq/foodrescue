@@ -37,6 +37,16 @@ public class IdentityController {
         service.sendRegistrationOtp(request.email());
     }
 
+    @PostMapping("/api/auth/forgot-password/otp")
+    public void sendForgotPasswordOtp(@Valid @RequestBody ForgotPasswordOtpRequest request) {
+        service.sendPasswordResetOtp(request.email());
+    }
+
+    @PostMapping("/api/auth/forgot-password/reset")
+    public void resetPasswordWithOtp(@Valid @RequestBody ForgotPasswordResetRequest request) {
+        service.resetPasswordWithOtp(request.email(), request.otp(), request.newPassword());
+    }
+
     @PostMapping("/api/auth/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         var result = service.login(request.email(), request.password());
@@ -83,6 +93,11 @@ public class IdentityController {
                                   @NotBlank @Size(max = 20) String phone,
                                   @NotBlank @jakarta.validation.constraints.Pattern(regexp = "[0-9]{6}") String otp) {}
     public record RegistrationOtpRequest(@NotBlank @Email String email) {}
+    public record ForgotPasswordOtpRequest(@NotBlank @Email String email) {}
+    public record ForgotPasswordResetRequest(
+            @NotBlank @Email String email,
+            @NotBlank @jakarta.validation.constraints.Pattern(regexp = "[0-9]{6}") String otp,
+            @NotBlank @Size(min = 8, max = 72) String newPassword) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
     public record GoogleLoginRequest(@NotBlank String idToken) {}
     public record LinkGoogleRequest(@NotBlank String idToken, @NotBlank String password) {}
@@ -99,8 +114,8 @@ public class IdentityController {
                            LocalDateTime createdAt, String address, BigDecimal latitude, BigDecimal longitude,
                            boolean googleLinked) {
         public static UserView from(UserAccount user) {
-            return new UserView(user.id(), user.email(), user.fullName(), user.phone(), user.role(),
-                    user.storeId(), user.status(), user.mustChangePassword(), user.createdAt(),
+            return new UserView(user.id(), user.email(), user.fullName(), user.phone(), user.role().name(),
+                    user.storeId(), user.status().name(), user.mustChangePassword(), user.createdAt(),
                     user.address(), user.latitude(), user.longitude(), user.googleSub() != null);
         }
     }

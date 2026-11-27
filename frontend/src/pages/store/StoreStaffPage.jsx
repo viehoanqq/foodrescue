@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Form, Input, Modal, Space, Table, Tag, message } from 'antd';
+import { Alert, Button, Form, Input, Modal, Space, Table, Tag } from 'antd';
 import { LockOutlined, PlusOutlined, UnlockOutlined } from '@ant-design/icons';
 import { storeApi } from '../../services/storeApi';
+import { confirmDialog, toast } from '../../components/feedback';
 import './storePages.css';
 
 export default function StoreStaffPage() {
@@ -28,21 +29,21 @@ export default function StoreStaffPage() {
     try {
       const created = await storeApi.createStaff(values);
       setOpen(false); form.resetFields(); setPassword(created.temporaryPassword);
-      message.success('Đã tạo tài khoản nhân viên');
+      toast.success('Đã tạo tài khoản nhân viên');
       setPage(0); await load(0);
-    } catch (failure) { message.error(failure.message || 'Không tạo được nhân viên'); }
+    } catch (failure) { toast.error(failure.message || 'Không tạo được nhân viên'); }
     finally { setSaving(false); }
   }
 
   function changeStatus(row) {
     const locked = row.status === 'ACTIVE';
-    Modal.confirm({ title: locked ? 'Khóa tài khoản nhân viên?' : 'Mở khóa tài khoản nhân viên?',
+    confirmDialog({ title: locked ? 'Khóa tài khoản nhân viên?' : 'Mở khóa tài khoản nhân viên?',
       content: `${row.fullName} (${row.email})`, okText: locked ? 'Khóa' : 'Mở khóa',
-      okButtonProps: { danger: locked }, cancelText: 'Hủy',
+      danger: locked, tone: locked ? 'danger' : 'eco', cancelText: 'Hủy',
       async onOk() {
         setBusyId(row.id);
-        try { await storeApi.setStaffLocked(row.id, locked); await load(); message.success('Đã cập nhật trạng thái'); }
-        catch (failure) { message.error(failure.message || 'Không cập nhật được trạng thái'); throw failure; }
+        try { await storeApi.setStaffLocked(row.id, locked); await load(); toast.success('Đã cập nhật trạng thái'); }
+        catch (failure) { toast.error(failure.message || 'Không cập nhật được trạng thái'); throw failure; }
         finally { setBusyId(null); }
       },
     });
@@ -61,6 +62,6 @@ export default function StoreStaffPage() {
       <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }, { max: 100 }]}><Input /></Form.Item>
       <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, pattern: /^0\d{9,10}$/, message: 'Nhập số điện thoại hợp lệ' }]}><Input maxLength={20} /></Form.Item>
     </Form></Modal>
-    <Modal title="Mật khẩu tạm của nhân viên" open={Boolean(password)} onOk={() => setPassword('')} onCancel={() => setPassword('')} okText="Tôi đã lưu lại" cancelButtonProps={{ style: { display: 'none' } }} closable={false} maskClosable={false}><Alert type="warning" showIcon message="Mật khẩu này chỉ hiển thị một lần. Hãy chuyển riêng cho nhân viên và yêu cầu đổi ngay sau khi đăng nhập." /><p className="store-temp-password">{password}</p><Space><Button onClick={() => { navigator.clipboard.writeText(password); message.success('Đã sao chép'); }}>Sao chép mật khẩu</Button></Space></Modal>
+    <Modal title="Mật khẩu tạm của nhân viên" open={Boolean(password)} onOk={() => setPassword('')} onCancel={() => setPassword('')} okText="Tôi đã lưu lại" cancelButtonProps={{ style: { display: 'none' } }} closable={false} maskClosable={false}><Alert type="warning" showIcon message="Mật khẩu này chỉ hiển thị một lần. Hãy chuyển riêng cho nhân viên và yêu cầu đổi ngay sau khi đăng nhập." /><p className="store-temp-password">{password}</p><Space><Button onClick={() => { navigator.clipboard.writeText(password); toast.success('Đã sao chép'); }}>Sao chép mật khẩu</Button></Space></Modal>
   </main>;
 }

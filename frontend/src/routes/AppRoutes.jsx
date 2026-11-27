@@ -2,11 +2,13 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import ProfileLayout from '../layouts/ProfileLayout';
 import AuthScreen from '../pages/AuthScreen';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
 import AdminStoresPage from '../pages/admin/AdminStoresPage';
 import AdminCatalogPage from '../pages/admin/AdminCatalogPage';
 import ProfilePage from '../pages/ProfilePage';
+import AddressPage from '../pages/AddressPage';
 import MyStorePage from '../pages/MyStorePage';
 import PasswordPage from '../pages/PasswordPage';
 import CustomerLanding from '../pages/customer/CustomerLanding';
@@ -50,6 +52,7 @@ export default function AppRoutes() {
       <Route path="/admin/login" element={<AuthScreen mode="login" portal="admin" />} />
       <Route path="/store/login" element={<AuthScreen mode="login" portal="store" />} />
       <Route path="/register" element={<AuthScreen mode="register" />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     </Route>
     <Route element={<PasswordChangeRoute />}>
       <Route path="/change-password" element={<AuthScreen mode="change-password" />} />
@@ -60,6 +63,7 @@ export default function AppRoutes() {
           <Route path="/me" element={<ProfilePage />} />
           <Route path="/me/password" element={<PasswordPage />} />
           <Route element={<RoleRoute roles={['CUSTOMER']} />}>
+            <Route path="/me/address" element={<AddressPage />} />
             <Route path="/me/orders" element={<CustomerOrdersPage />} />
             <Route path="/me/orders/:orderId" element={<CustomerOrderDetailPage />} />
           </Route>

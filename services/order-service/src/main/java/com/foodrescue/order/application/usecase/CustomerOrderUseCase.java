@@ -8,6 +8,8 @@ import com.foodrescue.order.api.dto.OrderPageResponse;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.domain.exception.OrderException;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
+import com.foodrescue.order.domain.model.enums.PaymentStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -44,7 +46,7 @@ public class CustomerOrderUseCase {
 
     @Transactional(readOnly = true)
     public OrderPageResponse getMyOrders(Long customerId, String status, int page, int size) {
-        return OrderPageResponse.from(orderRepository.findCustomerOrders(customerId, normalize(status), paging(page, size))
+        return OrderPageResponse.from(orderRepository.findCustomerOrders(customerId, parseStatusFilter(status), paging(page, size))
                 .map(this::toResponse));
     }
 
@@ -69,21 +71,21 @@ public class CustomerOrderUseCase {
             throw OrderException.forbidden("Bạn không có quyền huỷ đơn hàng này");
         }
 
-        String currentStatus = order.getStatus();
-        if (!"PENDING_PAYMENT".equals(currentStatus) && !"CONFIRMED".equals(currentStatus)) {
+        OrderStatus currentStatus = order.getStatus();
+        if (currentStatus == null || !currentStatus.canCancelByCustomer()) {
             throw OrderException.conflict("ORDER_STATUS_CONFLICT", "Đơn hàng ở trạng thái " + currentStatus + " không thể huỷ");
         }
 
         LocalDateTime now = LocalDateTime.now();
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
         order.setCancelReason(reason != null && !reason.isBlank() ? reason : "Khách hàng huỷ đơn");
         order.setCancelledBy(customerId);
         order.setCancelledAt(now);
         order.setAggregateVersion(order.getAggregateVersion() + 1);
 
-        boolean wasPaid = "PAID".equals(order.getPaymentStatus());
+        boolean wasPaid = order.getPaymentStatus() != null && order.getPaymentStatus().isPaid();
         if (wasPaid) {
-            order.setPaymentStatus("REFUND_PENDING");
+            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
         }
 
         OrderEntity savedOrder = orderRepository.save(order);
@@ -105,8 +107,8 @@ public class CustomerOrderUseCase {
         statePayload.put("orderId", savedOrder.getId());
         statePayload.put("storeId", savedOrder.getStoreId());
         statePayload.put("customerId", savedOrder.getCustomerId());
-        statePayload.put("status", savedOrder.getStatus());
-        statePayload.put("paymentStatus", savedOrder.getPaymentStatus());
+        statePayload.put("status", savedOrder.getStatus().name());
+        statePayload.put("paymentStatus", savedOrder.getPaymentStatus().name());
         statePayload.put("totalAmount", savedOrder.getTotalAmount().longValue());
         statePayload.put("commissionAmount", savedOrder.getCommissionAmount().longValue());
         statePayload.put("storeEarning", savedOrder.getStoreEarning().longValue());
@@ -168,8 +170,16 @@ public class CustomerOrderUseCase {
 
     @Transactional(readOnly = true)
     public OrderPageResponse getAllOrdersForAdmin(String code, String status, int page, int size) {
-        return OrderPageResponse.from(orderRepository.findAdminOrders(normalize(status), normalize(code), paging(page, size))
+        return OrderPageResponse.from(orderRepository.findAdminOrders(parseStatusFilter(status), normalize(code), paging(page, size))
                 .map(this::toResponse));
+    }
+
+    public static OrderStatus parseStatusFilter(String raw) {
+        try {
+            return OrderStatus.fromNullable(raw).orElse(null);
+        } catch (IllegalArgumentException ex) {
+            throw OrderException.validation("Trạng thái đơn hàng không hợp lệ: " + raw);
+        }
     }
 
     private static String normalize(String value) {
@@ -195,21 +205,21 @@ public class CustomerOrderUseCase {
         OrderEntity order = orderRepository.findLockedById(orderId)
                 .orElseThrow(() -> OrderException.notFound("Không tìm thấy đơn hàng #" + orderId));
 
-        String currentStatus = order.getStatus();
-        if ("CANCELLED".equals(currentStatus) || "COMPLETED".equals(currentStatus) || "NO_SHOW".equals(currentStatus)) {
+        OrderStatus currentStatus = order.getStatus();
+        if (currentStatus != null && currentStatus.isTerminalForAdmin()) {
             throw OrderException.conflict("ORDER_STATUS_CONFLICT", "Đơn hàng ở trạng thái " + currentStatus + " không thể huỷ");
         }
 
         LocalDateTime now = LocalDateTime.now();
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
         order.setCancelReason(reason != null && !reason.isBlank() ? reason : "Quản trị viên huỷ đơn");
         order.setCancelledBy(adminId);
         order.setCancelledAt(now);
         order.setAggregateVersion(order.getAggregateVersion() + 1);
 
-        boolean wasPaid = "PAID".equals(order.getPaymentStatus());
+        boolean wasPaid = order.getPaymentStatus() != null && order.getPaymentStatus().isPaid();
         if (wasPaid) {
-            order.setPaymentStatus("REFUND_PENDING");
+            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
         }
 
         OrderEntity savedOrder = orderRepository.save(order);
@@ -231,8 +241,8 @@ public class CustomerOrderUseCase {
         statePayload.put("orderId", savedOrder.getId());
         statePayload.put("storeId", savedOrder.getStoreId());
         statePayload.put("customerId", savedOrder.getCustomerId());
-        statePayload.put("status", savedOrder.getStatus());
-        statePayload.put("paymentStatus", savedOrder.getPaymentStatus());
+        statePayload.put("status", savedOrder.getStatus().name());
+        statePayload.put("paymentStatus", savedOrder.getPaymentStatus().name());
         statePayload.put("totalAmount", savedOrder.getTotalAmount().longValue());
         statePayload.put("commissionAmount", savedOrder.getCommissionAmount().longValue());
         statePayload.put("storeEarning", savedOrder.getStoreEarning().longValue());
@@ -310,9 +320,9 @@ public class CustomerOrderUseCase {
                 o.getStoreEarning(),
                 o.getPickupStart(),
                 o.getPickupEnd(),
-                "PAID".equals(o.getPaymentStatus()) ? o.getPickupCode() : null,
-                o.getStatus(),
-                o.getPaymentStatus(),
+                o.getPaymentStatus() != null && o.getPaymentStatus().isPaid() ? o.getPickupCode() : null,
+                o.getStatus() != null ? o.getStatus().name() : null,
+                o.getPaymentStatus() != null ? o.getPaymentStatus().name() : null,
                 o.getCancelReason(),
                 o.getPaymentExpiresAt(),
                 o.getCompletedAt(),

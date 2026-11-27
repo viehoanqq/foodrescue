@@ -1,3 +1,89 @@
 html, body, #root { width: 100%; min-height: 100%; margin: 0; }
 body { overflow-x: hidden; }
 *, *::before, *::after { box-sizing: border-box; }
+
+.google-signin { width: 100%; }
+.google-signin-button { display: flex; justify-content: center; min-height: 44px; }
+.google-signin-disabled { opacity: .6; pointer-events: none; }
+.google-signin-error { margin: 8px 0 0; color: #b42318; font-size: 13px; }
+
+.fr-feedback-modal .ant-modal-content,
+.ant-modal-confirm .ant-modal-content {
+  padding: 24px 26px !important;
+  border-radius: 20px !important;
+  border: 1px solid #e5eae4;
+  box-shadow: 0 20px 48px rgba(23, 61, 43, 0.16) !important;
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+.fr-feedback-modal .ant-modal-confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.fr-feedback-modal .ant-modal-confirm-paragraph {
+  flex: 1;
+  min-width: 0;
+}
+
+.fr-feedback-modal .ant-modal-confirm-title {
+  color: #173d2f !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.fr-feedback-modal .ant-modal-confirm-content {
+  margin-top: 6px !important;
+  color: #566477 !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+
+.fr-feedback-modal .ant-modal-confirm-btns {
+  margin-top: 22px !important;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fr-feedback-modal .ant-modal-confirm-btns .ant-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.fr-modal-badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.fr-modal-badge-warning {
+  background: #FFF1E6;
+  color: #FF7A1A;
+}
+
+.fr-modal-badge-eco {
+  background: #E8F5EE;
+  color: #1E8E4E;
+}
+
+.fr-modal-badge-danger {
+  background: #FEECEE;
+  color: #E5484D;
+}
+
+.ant-message .ant-message-notice-content {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5eae4;
+  box-shadow: 0 10px 28px rgba(23, 61, 43, 0.12);
+  font-weight: 500;
+}

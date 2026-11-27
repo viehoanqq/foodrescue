@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Button, Form, Input, Modal, message } from 'antd';
+import { Button, Form, Input } from 'antd';
 import { LockOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { homeForRole, loginForRole } from '../routes/paths';
 import { toFormErrors } from '../services/axios';
 import GoogleSignInButton from '../components/GoogleSignInButton';
+import { infoDialog, toast } from '../components/feedback';
 import { identityApi } from '../services/identityApi';
 import './authScreen.css';
 
@@ -37,10 +38,10 @@ export default function AuthScreen({ mode = 'login', portal }) {
       await identityApi.sendRegistrationOtp(email);
       setOtpCooldown(60);
       setLastOtpEmail(email);
-      message.success('Đã gửi mã xác minh đến email của bạn');
+      toast.success('Đã gửi mã xác minh đến email của bạn');
       return true;
     } catch (error) {
-      message.error(error.message || 'Không gửi được mã xác minh');
+      toast.error(error.message || 'Không gửi được mã xác minh');
       return false;
     } finally {
       setOtpSending(false);
@@ -66,7 +67,7 @@ export default function AuthScreen({ mode = 'login', portal }) {
       if (isPasswordChange) {
         const loginPath = loginForRole(currentUser.role);
         await changePassword(details);
-        message.success('Đã đổi mật khẩu. Vui lòng đăng nhập lại.');
+        toast.success('Đã đổi mật khẩu. Vui lòng đăng nhập lại.');
         navigate(loginPath, { replace: true });
         return;
       }
@@ -77,7 +78,7 @@ export default function AuthScreen({ mode = 'login', portal }) {
       navigate(destination, { replace: true });
     } catch (error) {
       if (error.details?.length) form.setFields(toFormErrors(error));
-      message.error(error.message || 'Không thể xác thực');
+      toast.error(error.message || 'Không thể xác thực');
     } finally {
       setBusy(false);
     }
@@ -88,17 +89,17 @@ export default function AuthScreen({ mode = 'login', portal }) {
     setBusy(true);
     try {
       const user = await authenticateGoogle(idToken);
-      if (!user.phone) message.info('Hãy bổ sung số điện thoại trong hồ sơ để cửa hàng liên hệ khi cần.');
+      if (!user.phone) toast.info('Hãy bổ sung số điện thoại trong hồ sơ để cửa hàng liên hệ khi cần.');
       const destination = !user.phone && user.role === 'CUSTOMER' ? '/me'
         : location.state?.from?.pathname && !isRegister ? location.state.from.pathname : homeForRole(user.role);
       navigate(destination, { replace: true });
     } catch (error) {
       if (error.code === 'GOOGLE_LINK_REQUIRED') {
-        Modal.info({ title: 'Email đã có tài khoản',
+        infoDialog({ title: 'Email đã có tài khoản',
           content: 'Hãy đăng nhập bằng mật khẩu, mở Hồ sơ cá nhân và chọn Liên kết Google.',
           okText: 'Đã hiểu' });
       } else {
-        message.error(error.message || 'Không thể đăng nhập bằng Google');
+        toast.error(error.message || 'Không thể đăng nhập bằng Google');
       }
     } finally {
       setBusy(false);
@@ -173,6 +174,9 @@ export default function AuthScreen({ mode = 'login', portal }) {
           })]}>
           <Input.Password size="large" autoComplete="new-password" />
         </Form.Item>}
+        {!isRegister && !isPasswordChange && <div className="auth-forgot-row">
+          <Link to="/forgot-password" state={{ portal }}>Quên mật khẩu?</Link>
+        </div>}
         <Button type="primary" htmlType="submit" loading={busy} size="large" block className="auth-submit">
           {isPasswordChange ? 'Đổi mật khẩu' : isRegister ? otpEmail ? 'Xác nhận và tạo tài khoản' : 'Tiếp tục' : 'Đăng nhập'}
         </Button>

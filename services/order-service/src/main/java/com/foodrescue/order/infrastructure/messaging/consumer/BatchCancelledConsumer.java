@@ -7,6 +7,8 @@ import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IInventoryPort;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.application.port.out.IInboxPort;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
+import com.foodrescue.order.domain.model.enums.PaymentStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -86,16 +88,16 @@ public class BatchCancelledConsumer {
                 continue;
             }
 
-            String status = order.getStatus();
-            if ("PENDING_PAYMENT".equalsIgnoreCase(status) || "CONFIRMED".equalsIgnoreCase(status)) {
-                boolean wasPaid = "PAID".equalsIgnoreCase(order.getPaymentStatus());
-                order.setStatus("CANCELLED");
+            OrderStatus status = order.getStatus();
+            if (status != null && status.isActiveForBatchCancel()) {
+                boolean wasPaid = order.getPaymentStatus() != null && order.getPaymentStatus().isPaid();
+                order.setStatus(OrderStatus.CANCELLED);
                 order.setCancelReason("Túi cứu trợ bị huỷ: " + reason);
                 order.setCancelledAt(LocalDateTime.now());
                 order.setAggregateVersion(order.getAggregateVersion() + 1);
 
                 if (wasPaid) {
-                    order.setPaymentStatus("REFUND_PENDING");
+                    order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
                 }
 
                 OrderEntity savedOrder = orderRepository.save(order);
@@ -140,8 +142,8 @@ public class BatchCancelledConsumer {
         statePayload.put("orderId", order.getId());
         statePayload.put("storeId", order.getStoreId());
         statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
+        statePayload.put("status", order.getStatus().name());
+        statePayload.put("paymentStatus", order.getPaymentStatus().name());
         statePayload.put("totalAmount", order.getTotalAmount().longValue());
         statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
         statePayload.put("storeEarning", order.getStoreEarning().longValue());

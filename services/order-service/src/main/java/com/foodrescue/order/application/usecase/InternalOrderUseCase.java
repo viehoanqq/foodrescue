@@ -27,8 +27,8 @@ public class InternalOrderUseCase {
                 order.getCustomerId(),
                 order.getStoreId(),
                 order.getTotalAmount(),
-                order.getStatus(),
-                order.getPaymentStatus(),
+                order.getStatus().name(),
+                order.getPaymentStatus().name(),
                 order.getPaymentExpiresAt()
         );
     }
@@ -39,14 +39,14 @@ public class InternalOrderUseCase {
                 .orElseThrow(() -> OrderException.notFound("Không tìm thấy đơn hàng #" + orderId));
 
         boolean matchCustomer = customerId == null || order.getCustomerId().equals(customerId);
-        boolean isCompleted = "COMPLETED".equalsIgnoreCase(order.getStatus());
+        boolean isCompleted = order.getStatus() != null && order.getStatus().isCompleted();
 
         return new ReviewEligibilityResponse(
                 order.getId(),
                 order.getCustomerId(),
                 order.getStoreId(),
                 matchCustomer && isCompleted,
-                order.getStatus()
+                order.getStatus() != null ? order.getStatus().name() : null
         );
     }
 }

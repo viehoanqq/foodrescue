@@ -1,6 +1,7 @@
-import { Alert, Button, Card, Col, Descriptions, Modal, Row, Statistic, Table, Tag, message } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Row, Statistic, Table, Tag } from 'antd';
 import { money, updateDemo } from './data';
 import { useDemo } from './useDemo';
+import { confirmDialog, toast } from '../components/feedback';
 
 const titles = { dashboard: 'Tổng quan', orders: 'Đơn hàng', refunds: 'Hoàn tiền', payouts: 'Chi trả', finance: 'Đối soát' };
 const statuses = { PENDING_PAYMENT: 'Chờ thanh toán', CONFIRMED: 'Chờ nhận', COMPLETED: 'Đã hoàn thành', CANCELLED: 'Đã hủy', PENDING: 'Chờ xử lý', PAID: 'Đã chi trả' };
@@ -10,8 +11,8 @@ function status(value) {
 }
 
 function confirmAction({ title, content, danger = false, run }) {
-  Modal.confirm({ title, content, okText: 'Xác nhận', cancelText: 'Quay lại',
-    okButtonProps: { danger }, onOk: run });
+  confirmDialog({ title, content, okText: 'Xác nhận', cancelText: 'Quay lại',
+    danger, onOk: run });
 }
 
 export default function DemoAdminPage({ section }) {
@@ -33,7 +34,7 @@ export default function DemoAdminPage({ section }) {
           current.paymentStatus = 'REFUND_PENDING';
           if (!next.refunds.some(row => row.orderId === current.id)) next.refunds.push({ id: Date.now(), orderId: current.id, amount: current.total, status: 'PENDING', reason: 'ADMIN_CANCELLED' });
         }
-      }); message.success('Đã hủy đơn'); } });
+      }); toast.success('Đã hủy đơn'); } });
   }
 
   function completeRefund(refund) {
@@ -45,7 +46,7 @@ export default function DemoAdminPage({ section }) {
         current.status = 'COMPLETED';
         const order = next.orders.find(row => row.id === current.orderId);
         if (order) order.paymentStatus = 'REFUNDED';
-      }); message.success('Đã xác nhận hoàn tiền'); } });
+      }); toast.success('Đã xác nhận hoàn tiền'); } });
   }
 
   function completePayout(payout) {
@@ -54,7 +55,7 @@ export default function DemoAdminPage({ section }) {
       run: () => { updateDemo(next => {
         const current = next.payouts.find(row => row.id === payout.id);
         if (current && current.status !== 'PAID') current.status = 'PAID';
-      }); message.success('Đã xác nhận chi trả'); } });
+      }); toast.success('Đã xác nhận chi trả'); } });
   }
 
   const columns = section === 'orders' ? [

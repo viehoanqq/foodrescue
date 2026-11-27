@@ -12,6 +12,9 @@ import com.foodrescue.order.application.port.out.IReservationRecoveryPort;
 import com.foodrescue.order.domain.exception.OrderException;
 import com.foodrescue.order.domain.model.StockReservation;
 import com.foodrescue.order.domain.model.StockReservationCommand;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
+import com.foodrescue.order.domain.model.enums.PaymentStatus;
+import com.foodrescue.order.domain.model.enums.ReservationStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataCartItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
@@ -152,7 +155,7 @@ public class CreateOrderUseCase {
         }
 
         if (reservation == null || !reservationId.equals(reservation.reservationId())
-                || !"HELD".equals(reservation.status())) {
+                || ReservationStatus.tryParse(reservation.status()).orElse(null) != ReservationStatus.HELD) {
             throw OrderException.conflict("RESERVATION_NOT_HELD", "Inventory reservation is not active");
         }
         Map<Long, Integer> requested = new HashMap<>();
@@ -207,8 +210,8 @@ public class CreateOrderUseCase {
             order.setPickupStart(reservation.pickupStart() != null ? reservation.pickupStart() : now.plusHours(1));
             order.setPickupEnd(reservation.pickupEnd() != null ? reservation.pickupEnd() : now.plusHours(3));
             order.setPickupCode(pickupCode);
-            order.setStatus("PENDING_PAYMENT");
-            order.setPaymentStatus("UNPAID");
+            order.setStatus(OrderStatus.PENDING_PAYMENT);
+            order.setPaymentStatus(PaymentStatus.UNPAID);
             order.setPaymentExpiresAt(now.plusMinutes(15));
             order.setCreatedAt(now);
             order.setReservationId(reservationId);
@@ -235,8 +238,8 @@ public class CreateOrderUseCase {
             payload.put("orderId", savedOrder.getId());
             payload.put("storeId", savedOrder.getStoreId());
             payload.put("customerId", savedOrder.getCustomerId());
-            payload.put("status", savedOrder.getStatus());
-            payload.put("paymentStatus", savedOrder.getPaymentStatus());
+            payload.put("status", savedOrder.getStatus().name());
+            payload.put("paymentStatus", savedOrder.getPaymentStatus().name());
             payload.put("totalAmount", savedOrder.getTotalAmount().longValue());
             payload.put("commissionAmount", savedOrder.getCommissionAmount().longValue());
             payload.put("storeEarning", savedOrder.getStoreEarning().longValue());
@@ -287,9 +290,9 @@ public class CreateOrderUseCase {
                 o.getStoreEarning(),
                 o.getPickupStart(),
                 o.getPickupEnd(),
-                "PAID".equals(o.getPaymentStatus()) ? o.getPickupCode() : null,
-                o.getStatus(),
-                o.getPaymentStatus(),
+                o.getPaymentStatus() != null && o.getPaymentStatus().isPaid() ? o.getPickupCode() : null,
+                o.getStatus() != null ? o.getStatus().name() : null,
+                o.getPaymentStatus() != null ? o.getPaymentStatus().name() : null,
                 o.getCancelReason(),
                 o.getPaymentExpiresAt(),
                 o.getCompletedAt(),

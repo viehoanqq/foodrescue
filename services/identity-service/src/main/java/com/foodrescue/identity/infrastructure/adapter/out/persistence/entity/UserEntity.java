@@ -1,9 +1,13 @@
 package com.foodrescue.identity.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -16,8 +20,10 @@ public class UserEntity {
     @Column(name = "id", nullable = false)
     private Long id;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "role", nullable = false, length = 20)
-    private String role;
+    private UserRole role;
 
     @Column(name = "email", nullable = false, length = 100)
     private String email;
@@ -46,8 +52,10 @@ public class UserEntity {
     @Column(name = "store_id")
     private Long storeId;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private UserStatus status;
 
     @Column(name = "must_change_password", nullable = false)
     private Boolean mustChangePassword;
@@ -61,8 +69,8 @@ public class UserEntity {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -88,8 +96,8 @@ public class UserEntity {
     public Long getStoreId() { return storeId; }
     public void setStoreId(Long storeId) { this.storeId = storeId; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public UserStatus getStatus() { return status; }
+    public void setStatus(UserStatus status) { this.status = status; }
 
     public Boolean getMustChangePassword() { return mustChangePassword; }
     public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Badge, Button, Drawer, Dropdown, Layout, Menu, Modal, Typography } from 'antd';
+import { Badge, Button, Drawer, Dropdown, Layout, Menu, Typography } from 'antd';
 import {
-  AppstoreOutlined, AuditOutlined, BankOutlined, DashboardOutlined, DollarOutlined,
+  AppstoreOutlined, AuditOutlined, BankOutlined, DashboardOutlined, DollarOutlined, EnvironmentOutlined,
   GiftOutlined, InboxOutlined, LogoutOutlined, MenuOutlined, DownOutlined, ProfileOutlined, ReloadOutlined,
   ShopOutlined, ShoppingCartOutlined, TeamOutlined, UserOutlined,
 } from '@ant-design/icons';
@@ -9,6 +9,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { homeForRole, loginForRole } from '../routes/paths';
 import { useDemo } from '../demo/useDemo';
+import { confirmDialog } from '../components/feedback';
 import './layout.css';
 
 const customerMenu = [
@@ -62,7 +63,7 @@ export default function AppLayout() {
   }
 
   function signOut() {
-    Modal.confirm({ title: 'Đăng xuất khỏi tài khoản?', content: 'Bạn sẽ cần đăng nhập lại để tiếp tục.',
+    confirmDialog({ title: 'Đăng xuất khỏi tài khoản?', content: 'Bạn sẽ cần đăng nhập lại để tiếp tục.',
       okText: 'Đăng xuất', cancelText: 'Ở lại', onOk: () => {
         const loginPath = loginForRole(user?.role);
         logout();
@@ -73,7 +74,10 @@ export default function AppLayout() {
   const accountItems = [
     { key: 'profile', icon: <UserOutlined />, label: 'Hồ sơ cá nhân', onClick: () => navigate('/me') },
     ...(user?.role === 'CUSTOMER'
-      ? [{ key: 'orders', icon: <InboxOutlined />, label: 'Đơn của tôi', onClick: () => navigate('/me/orders') }]
+      ? [
+          { key: 'address', icon: <EnvironmentOutlined />, label: 'Địa chỉ của tôi', onClick: () => navigate('/me/address') },
+          { key: 'orders', icon: <InboxOutlined />, label: 'Đơn của tôi', onClick: () => navigate('/me/orders') },
+        ]
       : []),
     ...(user?.role === 'CUSTOMER' || user?.role === 'STORE_OWNER'
       ? [{ key: 'store', icon: <ShopOutlined />, label: 'Cửa hàng của tôi', onClick: () => navigate('/me/store') }]

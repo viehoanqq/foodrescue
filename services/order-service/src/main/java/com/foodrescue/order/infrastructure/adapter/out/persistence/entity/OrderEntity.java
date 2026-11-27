@@ -1,5 +1,7 @@
 package com.foodrescue.order.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.order.domain.model.enums.OrderStatus;
+import com.foodrescue.order.domain.model.enums.PaymentStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
@@ -51,11 +53,15 @@ public class OrderEntity {
     @Column(name = "pickup_code", nullable = false, length = 10)
     private String pickupCode;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private OrderStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "payment_status", nullable = false, length = 20)
-    private String paymentStatus;
+    private PaymentStatus paymentStatus;
 
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
@@ -121,11 +127,11 @@ public class OrderEntity {
     public String getPickupCode() { return pickupCode; }
     public void setPickupCode(String pickupCode) { this.pickupCode = pickupCode; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public OrderStatus getStatus() { return status; }
+    public void setStatus(OrderStatus status) { this.status = status; }
 
-    public String getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public PaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
 
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }

@@ -1,10 +1,15 @@
 package com.foodrescue.identity.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.identity.domain.model.enums.StoreProjectionStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "store_status_projection")
@@ -16,8 +21,10 @@ public class StoreStatusProjectionEntity {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private StoreProjectionStatus status;
 
     @Column(name = "aggregate_version", nullable = false)
     private Long aggregateVersion;

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Descriptions, Form, Image, Input, InputNumber, Modal, Row, Spin, Tag, TimePicker, message } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Form, Image, Input, InputNumber, Modal, Row, Spin, Tag, TimePicker } from 'antd';
 import dayjs from 'dayjs';
 import { storeApi } from '../../services/storeApi';
+import { confirmDialog, toast } from '../../components/feedback';
 import './storePages.css';
 
 const statusText = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Bị từ chối', LOCKED: 'Đã khóa' };
@@ -36,7 +37,7 @@ export default function StoreProfilePage() {
       bankAccountNo: values.bankAccountNo?.trim() || null,
     };
     if (request.closeTime <= request.openTime) {
-      message.error('Giờ đóng cửa phải sau giờ mở cửa');
+      toast.error('Giờ đóng cửa phải sau giờ mở cửa');
       return;
     }
     setSaving(true);
@@ -44,8 +45,8 @@ export default function StoreProfilePage() {
       const updated = await storeApi.updateProfile(request);
       setProfile(updated);
       setEditOpen(false);
-      message.success('Đã cập nhật hồ sơ cửa hàng');
-    } catch (failure) { message.error(failure.message || 'Không cập nhật được hồ sơ'); }
+      toast.success('Đã cập nhật hồ sơ cửa hàng');
+    } catch (failure) { toast.error(failure.message || 'Không cập nhật được hồ sơ'); }
     finally { setSaving(false); }
   }
   return <main className="store-page"><div className="store-page-heading"><span>CỬA HÀNG CỦA BẠN</span><h1>Hồ sơ cửa hàng</h1><p>Thông tin đang lưu trong hệ thống.</p></div>
@@ -71,8 +72,8 @@ export default function StoreProfilePage() {
       ]} /></Card>
       <Modal title="Chỉnh sửa hồ sơ cửa hàng" open={editOpen} width={760} onCancel={() => setEditOpen(false)}
         onOk={() => form.submit()} okText="Lưu thay đổi" confirmLoading={saving} destroyOnClose>
-        <Form form={form} layout="vertical" onFinish={(values) => Modal.confirm({ title: 'Lưu thay đổi hồ sơ cửa hàng?',
-          content: 'Thông tin mới sẽ hiển thị trên trang cửa hàng.', okText: 'Lưu thay đổi', cancelText: 'Kiểm tra lại', onOk: () => save(values) })}>
+        <Form form={form} layout="vertical" onFinish={(values) => confirmDialog({ title: 'Lưu thay đổi hồ sơ cửa hàng?',
+          content: 'Thông tin mới sẽ hiển thị trên trang cửa hàng.', okText: 'Lưu thay đổi', cancelText: 'Kiểm tra lại', tone: 'eco', onOk: () => save(values) })}>
           <Row gutter={16}><Col xs={24} sm={12}><Form.Item name="name" label="Tên cửa hàng" rules={[{ required: true, whitespace: true }, { max: 150 }]}><Input maxLength={150} /></Form.Item></Col>
             <Col xs={24} sm={12}><Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, whitespace: true }, { max: 20 }]}><Input maxLength={20} /></Form.Item></Col></Row>
           <Form.Item name="description" label="Giới thiệu" rules={[{ max: 1000 }]}><Input.TextArea rows={3} maxLength={1000} showCount /></Form.Item>

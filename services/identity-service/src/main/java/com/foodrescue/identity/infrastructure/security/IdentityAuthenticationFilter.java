@@ -29,6 +29,8 @@ public class IdentityAuthenticationFilter extends OncePerRequestFilter {
         return "POST".equals(req.getMethod()) && ("/api/auth/login".equals(req.getRequestURI())
                 || "/api/auth/register".equals(req.getRequestURI())
                 || "/api/auth/register/otp".equals(req.getRequestURI())
+                || "/api/auth/forgot-password/otp".equals(req.getRequestURI())
+                || "/api/auth/forgot-password/reset".equals(req.getRequestURI())
                 || "/api/auth/google".equals(req.getRequestURI()));
     }
 
@@ -40,7 +42,7 @@ public class IdentityAuthenticationFilter extends OncePerRequestFilter {
             if (token.isPresent()) {
                 var user = users.findById(token.get().userId());
                 if (user.isPresent() && user.get().tokenVersion() == token.get().tokenVersion()) {
-                    if (!"ACTIVE".equals(user.get().status())) {
+                    if (!user.get().status().isActive()) {
                         errors.write(req, res, 403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
                         return;
                     }
@@ -48,10 +50,10 @@ public class IdentityAuthenticationFilter extends OncePerRequestFilter {
                         errors.write(req, res, 403, "PASSWORD_CHANGE_REQUIRED", "Vui lòng đổi mật khẩu trước khi tiếp tục");
                         return;
                     }
-                    var principal = new IdentityPrincipal(user.get().id(), user.get().role(),
+                    var principal = new IdentityPrincipal(user.get().id(), user.get().role().name(),
                             user.get().mustChangePassword());
                     var auth = new UsernamePasswordAuthenticationToken(principal, null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + user.get().role())));
+                            List.of(new SimpleGrantedAuthority("ROLE_" + user.get().role().name())));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }

@@ -10,6 +10,15 @@
 .store-card .ant-card-head-title .anticon { margin-right: 8px; color: #d7742a; }
 .store-card .ant-form-item { margin-bottom: 18px; }
 .store-card .ant-upload-list { max-width: 100%; }
+.store-upload-field { display: grid; gap: 10px; align-content: start; }
+.store-upload-field > p { margin: 0; font-weight: 500; }
+.store-upload-preview { display: grid; gap: 8px; padding: 12px; border: 1px solid #e5eae4; border-radius: 12px; background: #fafcfa; max-width: 340px; }
+.store-upload-preview .ant-image { display: block; width: 100%; }
+.store-upload-preview-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; display: block; }
+.store-upload-preview-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.store-upload-preview-name { font-size: 13px; font-weight: 600; color: #163c2d; word-break: break-word; }
+.store-upload-preview-size { font-size: 12px; color: #66756c; }
+.store-upload-hint { display: block; }
 .store-card strong { color: #c83f32; }
 .store-confirm p { color: #5f6b65; margin-bottom: 16px; }
 .store-success-icon { color: #2e6b53; font-size: 38px; }

@@ -8,6 +8,7 @@ import 'dayjs/locale/vi';
 import { antdTheme } from './theme/theme';
 import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
+import FeedbackBridge from './components/FeedbackBridge';
 import './global.css';
 
 dayjs.locale('vi');
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ConfigProvider theme={antdTheme} locale={viVN}>
       <AntApp>
+        <FeedbackBridge />
         <BrowserRouter>
           <AuthProvider><App /></AuthProvider>
         </BrowserRouter>

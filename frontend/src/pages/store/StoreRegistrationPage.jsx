@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Checkbox, Col, Descriptions, Form, Input, InputNumber, Modal, Row, Space, Spin, Tag, TimePicker, Typography, Upload, message } from 'antd';
-import { BankOutlined, CheckCircleOutlined, EnvironmentOutlined, FileImageOutlined, ShopOutlined, UploadOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Checkbox, Col, Descriptions, Form, Image, Input, InputNumber, Row, Space, Spin, Tag, TimePicker, Typography, Upload } from 'antd';
+import { BankOutlined, CheckCircleOutlined, DeleteOutlined, EnvironmentOutlined, FileImageOutlined, ShopOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { storeApi } from '../../services/storeApi';
 import { useAuth } from '../../auth/AuthProvider';
+import { confirmDialog, toast } from '../../components/feedback';
 import './storePages.css';
 
 const statusText = { PENDING: 'Đang chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Bị từ chối', LOCKED: 'Đã khóa' };
@@ -12,9 +13,44 @@ const display = (value) => value == null || value === '' ? 'Chưa cung cấp' : 
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
 function validImage(file) {
-  if (!imageTypes.includes(file.type)) { message.error('Chỉ nhận ảnh JPEG, PNG hoặc WebP'); return false; }
-  if (file.size > 5 * 1024 * 1024) { message.error('Ảnh không được vượt quá 5 MB'); return false; }
+  if (!imageTypes.includes(file.type)) { toast.error('Chỉ nhận ảnh JPEG, PNG hoặc WebP'); return false; }
+  if (file.size > 5 * 1024 * 1024) { toast.error('Ảnh không được vượt quá 5 MB'); return false; }
   return true;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function ImageUploadField({ title, required = false, buttonLabel, hint, file, previewUrl, onSelect, onClear, alt }) {
+  return (
+    <div className="store-upload-field">
+      <p>{title} {required && <strong>*</strong>}</p>
+      <Upload
+        accept="image/jpeg,image/png,image/webp"
+        beforeUpload={onSelect}
+        showUploadList={false}
+        maxCount={1}
+      >
+        <Button icon={<UploadOutlined />}>{file ? 'Đổi ảnh khác' : buttonLabel}</Button>
+      </Upload>
+      {previewUrl && (
+        <div className="store-upload-preview">
+          <Image src={previewUrl} alt={alt} className="store-upload-preview-img" />
+          <div className="store-upload-preview-meta">
+            <div>
+              <div className="store-upload-preview-name">{file?.name}</div>
+              {file?.size != null && <div className="store-upload-preview-size">{formatSize(file.size)}</div>}
+            </div>
+            <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={onClear}>Xóa</Button>
+          </div>
+        </div>
+      )}
+      <Typography.Text type="secondary" className="store-upload-hint">{hint}</Typography.Text>
+    </div>
+  );
 }
 
 export default function StoreRegistrationPage() {
@@ -27,6 +63,8 @@ export default function StoreRegistrationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [license, setLicense] = useState(null);
   const [image, setImage] = useState(null);
+  const licensePreview = useMemo(() => (license ? URL.createObjectURL(license) : ''), [license]);
+  const imagePreview = useMemo(() => (image ? URL.createObjectURL(image) : ''), [image]);
 
   useEffect(() => {
     let active = true;
@@ -36,13 +74,16 @@ export default function StoreRegistrationPage() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => () => { if (licensePreview) URL.revokeObjectURL(licensePreview); }, [licensePreview]);
+  useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
+
   function chooseFile(file, setFile) {
     if (validImage(file)) setFile(file);
     return false;
   }
 
   async function submit(values) {
-    if (!license) { message.error('Vui lòng tải ảnh giấy phép kinh doanh'); return; }
+    if (!license) { toast.error('Vui lòng tải ảnh giấy phép kinh doanh'); return; }
     const data = {
       ...values,
       storeName: values.storeName.trim(), storePhone: values.storePhone.trim(),
@@ -51,26 +92,33 @@ export default function StoreRegistrationPage() {
       openTime: values.openTime.format('HH:mm'), closeTime: values.closeTime.format('HH:mm'),
     };
     delete data.confirmed;
-    if (data.closeTime <= data.openTime) { message.error('Giờ đóng cửa phải sau giờ mở cửa'); return; }
-    Modal.confirm({
+    if (data.closeTime <= data.openTime) { toast.error('Giờ đóng cửa phải sau giờ mở cửa'); return; }
+    confirmDialog({
       title: 'Xác nhận gửi hồ sơ cửa hàng',
       width: 560,
-      content: <div className="store-confirm"><p>Kiểm tra thông tin trước khi gửi Admin duyệt. Sau khi gửi, bạn chưa thể sửa hồ sơ cho đến khi có chức năng cập nhật.</p><Descriptions size="small" column={1} items={[
-        { key: 'name', label: 'Cửa hàng', children: data.storeName },
-        { key: 'address', label: 'Địa chỉ', children: data.address },
-        { key: 'hours', label: 'Giờ hoạt động', children: `${data.openTime} – ${data.closeTime}` },
-        { key: 'bank', label: 'Tài khoản nhận tiền', children: `${data.bankName} · ${data.bankAccountNo}` },
-        { key: 'license', label: 'Giấy phép', children: license.name },
-      ]} /></div>,
-      okText: 'Xác nhận gửi', cancelText: 'Kiểm tra lại',
+      tone: 'eco',
+      content: (
+        <div className="store-confirm">
+          <p>Kiểm tra thông tin trước khi gửi Admin duyệt. Sau khi gửi, bạn chưa thể sửa hồ sơ cho đến khi có chức năng cập nhật.</p>
+          <Descriptions size="small" column={1} items={[
+            { key: 'name', label: 'Cửa hàng', children: data.storeName },
+            { key: 'address', label: 'Địa chỉ', children: data.address },
+            { key: 'hours', label: 'Giờ hoạt động', children: `${data.openTime} – ${data.closeTime}` },
+            { key: 'bank', label: 'Tài khoản nhận tiền', children: `${data.bankName} · ${data.bankAccountNo}` },
+            { key: 'license', label: 'Giấy phép', children: license.name },
+          ]} />
+        </div>
+      ),
+      okText: 'Xác nhận gửi',
+      cancelText: 'Kiểm tra lại',
       async onOk() {
         setSubmitting(true);
         try {
           await storeApi.register(data, license, image);
           setExisting(await storeApi.registration());
-          message.success('Đã gửi hồ sơ. Vui lòng chờ Admin duyệt.');
+          toast.success('Đã gửi hồ sơ. Vui lòng chờ Admin duyệt.');
         } catch (failure) {
-          message.error(failure.message || 'Không gửi được hồ sơ');
+          toast.error(failure.message || 'Không gửi được hồ sơ');
           throw failure;
         } finally { setSubmitting(false); }
       },
@@ -102,7 +150,33 @@ export default function StoreRegistrationPage() {
           <Row gutter={20}><Col xs={12}><Form.Item name="latitude" label="Vĩ độ" extra="Tọa độ giúp khách tìm cửa hàng gần họ." rules={[{ required: true, message: 'Nhập vĩ độ' }]}><InputNumber min={-90} max={90} precision={8} style={{ width: '100%' }} placeholder="10.776890" /></Form.Item></Col><Col xs={12}><Form.Item name="longitude" label="Kinh độ" rules={[{ required: true, message: 'Nhập kinh độ' }]}><InputNumber min={-180} max={180} precision={8} style={{ width: '100%' }} placeholder="106.700806" /></Form.Item></Col></Row>
         </Card>
         <Card className="store-card" title={<><FileImageOutlined /> Hình ảnh và giấy phép</>}>
-          <Row gutter={20}><Col xs={24} md={12}><p>Ảnh giấy phép kinh doanh <strong>*</strong></p><Upload accept="image/jpeg,image/png,image/webp" beforeUpload={(file) => chooseFile(file, setLicense)} fileList={license ? [license] : []} onRemove={() => setLicense(null)} maxCount={1}><Button icon={<UploadOutlined />}>Chọn ảnh giấy phép</Button></Upload><Typography.Text type="secondary">Chỉ Admin xem ảnh này. JPEG, PNG hoặc WebP, tối đa 5 MB.</Typography.Text></Col><Col xs={24} md={12}><p>Ảnh cửa hàng</p><Upload accept="image/jpeg,image/png,image/webp" beforeUpload={(file) => chooseFile(file, setImage)} fileList={image ? [image] : []} onRemove={() => setImage(null)} maxCount={1}><Button icon={<UploadOutlined />}>Chọn ảnh cửa hàng</Button></Upload><Typography.Text type="secondary">Ảnh này hiển thị công khai sau khi cửa hàng được duyệt.</Typography.Text></Col></Row>
+          <Row gutter={20}>
+            <Col xs={24} md={12}>
+              <ImageUploadField
+                title="Ảnh giấy phép kinh doanh"
+                required
+                buttonLabel="Chọn ảnh giấy phép"
+                hint="Chỉ Admin xem ảnh này. JPEG, PNG hoặc WebP, tối đa 5 MB."
+                file={license}
+                previewUrl={licensePreview}
+                onSelect={(file) => chooseFile(file, setLicense)}
+                onClear={() => setLicense(null)}
+                alt="Xem trước ảnh giấy phép kinh doanh"
+              />
+            </Col>
+            <Col xs={24} md={12}>
+              <ImageUploadField
+                title="Ảnh cửa hàng"
+                buttonLabel="Chọn ảnh cửa hàng"
+                hint="Ảnh này hiển thị công khai sau khi cửa hàng được duyệt."
+                file={image}
+                previewUrl={imagePreview}
+                onSelect={(file) => chooseFile(file, setImage)}
+                onClear={() => setImage(null)}
+                alt="Xem trước ảnh cửa hàng"
+              />
+            </Col>
+          </Row>
         </Card>
         <Card className="store-card" title={<><BankOutlined /> Tài khoản nhận tiền</>}>
           <Row gutter={20}><Col xs={24} md={8}><Form.Item name="bankName" label="Ngân hàng" rules={[{ required: true, whitespace: true, message: 'Nhập ngân hàng' }, { max: 100 }]}><Input maxLength={100} /></Form.Item></Col><Col xs={24} md={8}><Form.Item name="bankAccountNo" label="Số tài khoản" rules={[{ required: true, message: 'Nhập số tài khoản' }, { pattern: /^\d{6,30}$/, message: 'Số tài khoản gồm 6–30 chữ số' }]}><Input maxLength={30} /></Form.Item></Col><Col xs={24} md={8}><Form.Item name="bankAccountName" label="Tên chủ tài khoản" rules={[{ required: true, whitespace: true, message: 'Nhập tên chủ tài khoản' }, { max: 100 }]}><Input maxLength={100} /></Form.Item></Col></Row>

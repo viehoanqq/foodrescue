@@ -6,6 +6,8 @@ import com.foodrescue.buildingblocks.events.EventEnvelope;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IOutboxPort;
 import com.foodrescue.order.application.port.out.IInboxPort;
+import com.foodrescue.order.domain.model.enums.OrderStatus;
+import com.foodrescue.order.domain.model.enums.PaymentStatus;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
@@ -76,16 +78,15 @@ public class RefundStatusConsumer {
                 : UUID.randomUUID();
 
         if (MessagingNames.REFUND_REQUESTED_EVENT.equals(eventType)
-                && !"REFUND_PENDING".equals(order.getPaymentStatus())
-                && !"REFUNDED".equals(order.getPaymentStatus())) {
-            order.setPaymentStatus("REFUND_PENDING");
+                && (order.getPaymentStatus() == null || !order.getPaymentStatus().isRefundInitiated())) {
+            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);
             emitOrderStateChanged(order, correlationId);
             log.info("Order {} updated paymentStatus to REFUND_PENDING", order.getOrderCode());
         } else if (MessagingNames.REFUND_COMPLETED_EVENT.equals(eventType)
-                && !"REFUNDED".equals(order.getPaymentStatus())) {
-            order.setPaymentStatus("REFUNDED");
+                && order.getPaymentStatus() != PaymentStatus.REFUNDED) {
+            order.setPaymentStatus(PaymentStatus.REFUNDED);
             order.setAggregateVersion(order.getAggregateVersion() + 1);
             orderRepository.save(order);
             emitOrderStateChanged(order, correlationId);
@@ -99,8 +100,8 @@ public class RefundStatusConsumer {
         statePayload.put("orderId", order.getId());
         statePayload.put("storeId", order.getStoreId());
         statePayload.put("customerId", order.getCustomerId());
-        statePayload.put("status", order.getStatus());
-        statePayload.put("paymentStatus", order.getPaymentStatus());
+        statePayload.put("status", order.getStatus() != null ? order.getStatus().name() : OrderStatus.CANCELLED.name());
+        statePayload.put("paymentStatus", order.getPaymentStatus().name());
         statePayload.put("totalAmount", order.getTotalAmount().longValue());
         statePayload.put("commissionAmount", order.getCommissionAmount().longValue());
         statePayload.put("storeEarning", order.getStoreEarning().longValue());

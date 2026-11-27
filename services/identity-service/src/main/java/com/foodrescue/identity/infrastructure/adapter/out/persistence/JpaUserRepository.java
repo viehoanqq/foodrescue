@@ -1,8 +1,10 @@
 package com.foodrescue.identity.infrastructure.adapter.out.persistence;
 
 import com.foodrescue.identity.domain.model.PageResult;
-import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.domain.model.UserAccount;
+import com.foodrescue.identity.domain.model.enums.UserRole;
+import com.foodrescue.identity.domain.model.enums.UserStatus;
+import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.UserEntity;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataUserRepository;
 import java.util.Optional;
@@ -29,7 +31,7 @@ public class JpaUserRepository implements IUserRepository {
     @Override public long countAll() { return repository.count(); }
 
     @Override public long countActiveCustomers() {
-        return repository.countByRoleAndStatus("CUSTOMER", "ACTIVE");
+        return repository.countByRoleAndStatus(UserRole.CUSTOMER, UserStatus.ACTIVE);
     }
 
     @Override public UserAccount save(UserAccount user) {
@@ -51,10 +53,10 @@ public class JpaUserRepository implements IUserRepository {
         return toDomain(repository.saveAndFlush(entity));
     }
 
-    @Override public PageResult<UserAccount> search(String role, String status, String keyword, int page, int size) {
+    @Override public PageResult<UserAccount> search(UserRole role, UserStatus status, String keyword, int page, int size) {
         Specification<UserEntity> spec = (root, query, cb) -> cb.conjunction();
-        if (role != null && !role.isBlank()) spec = spec.and((r, q, cb) -> cb.equal(r.get("role"), role));
-        if (status != null && !status.isBlank()) spec = spec.and((r, q, cb) -> cb.equal(r.get("status"), status));
+        if (role != null) spec = spec.and((r, q, cb) -> cb.equal(r.get("role"), role));
+        if (status != null) spec = spec.and((r, q, cb) -> cb.equal(r.get("status"), status));
         if (keyword != null && !keyword.isBlank()) {
             String value = "%" + keyword.trim().toLowerCase() + "%";
             spec = spec.and((r, q, cb) -> cb.or(
@@ -68,7 +70,7 @@ public class JpaUserRepository implements IUserRepository {
     }
 
     @Override public PageResult<UserAccount> findStaffByStoreId(Long storeId, int page, int size) {
-        Page<UserAccount> found = repository.findByRoleAndStoreId("STORE_STAFF", storeId,
+        Page<UserAccount> found = repository.findByRoleAndStoreId(UserRole.STORE_STAFF, storeId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))).map(this::toDomain);
         return new PageResult<>(found.getContent(), page, size, found.getTotalElements(), found.getTotalPages());
     }
