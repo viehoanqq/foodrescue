@@ -29,7 +29,8 @@ public class CatalogSecurity {
                 .httpBasic(b -> b.disable()).formLogin(f -> f.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
-                                "/internal/health/db", "/actuator/health", "/internal/reservations", "/internal/reservations/**").permitAll()
+                                "/internal/health/db", "/actuator/health", "/internal/reservations", "/internal/reservations/**",
+                                "/internal/batches/checkout-store").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**",
                                 "/api/batches", "/api/batches/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

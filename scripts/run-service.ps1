@@ -51,10 +51,11 @@ switch ($Service) {
         Set-LocalEnv 'DB_PASSWORD' $settings['CATALOG_DB_PASSWORD']
     }
     'order-service' {
-        Set-LocalEnv 'DB_URL' 'jdbc:postgresql://localhost:5433/order_db'
+        Set-LocalEnv 'DB_URL' 'jdbc:mysql://localhost:3307/order_db?serverTimezone=Asia/Ho_Chi_Minh'
         Set-LocalEnv 'DB_USERNAME' 'order_app'
         Set-LocalEnv 'DB_PASSWORD' $settings['ORDER_DB_PASSWORD']
         Set-LocalEnv 'CATALOG_SERVICE_URL' 'http://localhost:8084'
+        Set-LocalEnv 'STORE_SERVICE_URL' 'http://localhost:8083'
     }
     'payment-finance-service' {
         Set-LocalEnv 'DB_URL' 'jdbc:postgresql://localhost:5433/finance_db'
