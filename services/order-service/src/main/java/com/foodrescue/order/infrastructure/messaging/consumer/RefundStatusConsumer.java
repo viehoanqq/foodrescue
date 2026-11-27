@@ -5,17 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.EventEnvelope;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.order.application.port.out.IOutboxPort;
+import com.foodrescue.order.application.port.out.IInboxPort;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderItemRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.SpringDataOrderRepository;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderEntity;
 import com.foodrescue.order.infrastructure.adapter.out.persistence.entity.OrderItemEntity;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,19 +22,19 @@ public class RefundStatusConsumer {
     private static final Logger log = LoggerFactory.getLogger(RefundStatusConsumer.class);
     private static final String CONSUMER_NAME = MessagingNames.ORDER_REFUND_STATUS_QUEUE;
 
-    private final JdbcTemplate jdbc;
+    private final IInboxPort inbox;
     private final ObjectMapper json;
     private final SpringDataOrderRepository orderRepository;
     private final SpringDataOrderItemRepository orderItemRepository;
     private final IOutboxPort outboxPort;
 
     public RefundStatusConsumer(
-            JdbcTemplate jdbc,
+            IInboxPort inbox,
             ObjectMapper json,
             SpringDataOrderRepository orderRepository,
             SpringDataOrderItemRepository orderItemRepository,
             IOutboxPort outboxPort) {
-        this.jdbc = jdbc;
+        this.inbox = inbox;
         this.json = json;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -56,10 +54,7 @@ public class RefundStatusConsumer {
         UUID eventId = UUID.fromString(eventIdStr);
 
         // Inbox deduplication
-        int inserted = jdbc.update(
-                "INSERT IGNORE INTO inbox_events (consumer_name, event_id, processed_at) VALUES (?, ?, ?)",
-                CONSUMER_NAME, eventId.toString(), Timestamp.from(Instant.now()));
-        if (inserted == 0) {
+        if (!inbox.claim(CONSUMER_NAME, eventId)) {
             log.info("Duplicate event ignored in refund-status: {}", eventId);
             return;
         }
