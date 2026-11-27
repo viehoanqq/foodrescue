@@ -20,6 +20,7 @@ const staffMenu = [
   { key: '/store/orders', icon: <ProfileOutlined />, label: 'Đơn cửa hàng' },
   { key: '/store/pickup', icon: <ShopOutlined />, label: 'Nhận hàng' },
   { key: '/store/batches', icon: <GiftOutlined />, label: 'Túi giải cứu' },
+  { key: '/store/categories', icon: <AppstoreOutlined />, label: 'Danh mục' },
 ];
 const ownerMenu = [
   ...staffMenu,
@@ -32,6 +33,7 @@ const ownerMenu = [
 const adminMenu = [
   { key: '/admin/dashboard', icon: <DashboardOutlined />, label: 'Tổng quan' },
   { key: '/admin/stores', icon: <ShopOutlined />, label: 'Cửa hàng' },
+  { key: '/admin/categories', icon: <AppstoreOutlined />, label: 'Danh mục & túi' },
   { key: '/admin/orders', icon: <InboxOutlined />, label: 'Đơn hàng' },
   { key: '/admin/refunds', icon: <ReloadOutlined />, label: 'Hoàn tiền' },
   { key: '/admin/payouts', icon: <BankOutlined />, label: 'Chi trả' },

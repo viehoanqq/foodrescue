@@ -5,6 +5,7 @@ import AuthScreen from '../pages/AuthScreen';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
 import AdminStoresPage from '../pages/admin/AdminStoresPage';
+import AdminCatalogPage from '../pages/admin/AdminCatalogPage';
 import ProfilePage from '../pages/ProfilePage';
 import MyStorePage from '../pages/MyStorePage';
 import PasswordPage from '../pages/PasswordPage';
@@ -16,9 +17,11 @@ import StoreRegistrationPage from '../pages/store/StoreRegistrationPage';
 import StoreProfilePage from '../pages/store/StoreProfilePage';
 import StoreStaffPage from '../pages/store/StoreStaffPage';
 import OwnerReviewsPage from '../pages/store/OwnerReviewsPage';
+import StoreCatalogPage from '../pages/store/StoreCatalogPage';
+import CatalogCategoriesPage from '../pages/store/CatalogCategoriesPage';
 import { AnonymousRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from './RouteGuards';
 import { STORE_ROLES } from './paths';
-import { DemoBatches, DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue, DemoStoreCategories } from '../demo/DemoPages';
+import { DemoOrderDetail, DemoOrders, DemoPickup, DemoRevenue } from '../demo/DemoPages';
 import DemoAdminPage from '../demo/DemoAdminPage';
 
 function OldCustomerOrderRedirect() {
@@ -80,12 +83,12 @@ export default function AppRoutes() {
           <Route path="/store/orders" element={<DemoOrders store />} />
           <Route path="/store/orders/:orderId" element={<DemoOrderDetail store />} />
           <Route path="/store/pickup" element={<DemoPickup />} />
-          <Route path="/store/batches" element={<DemoBatches />} />
+          <Route path="/store/batches" element={<StoreCatalogPage />} />
+          <Route path="/store/categories" element={<CatalogCategoriesPage />} />
         </Route>
         <Route element={<RoleRoute roles={['STORE_OWNER']} />}>
           <Route path="/store/profile" element={<StoreProfilePage />} />
           <Route path="/store/staff" element={<StoreStaffPage />} />
-          <Route path="/store/categories" element={<DemoStoreCategories />} />
           <Route path="/store/revenue" element={<DemoRevenue />} />
           <Route path="/store/reviews" element={<OwnerReviewsPage />} />
         </Route>
@@ -93,7 +96,7 @@ export default function AppRoutes() {
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/audit" element={<AdminAuditLogsPage />} />
           <Route path="/admin/stores" element={<AdminStoresPage />} />
-          <Route path="/admin/categories" element={<Navigate to="/admin/stores" replace />} />
+          <Route path="/admin/categories" element={<AdminCatalogPage />} />
           {['dashboard', 'orders', 'refunds', 'payouts', 'finance'].map(section => <Route key={section} path={`/admin/${section}`} element={<DemoAdminPage section={section} />} />)}
         </Route>
       </Route>

@@ -12,7 +12,7 @@ Năm miền nghiệp vụ có quyền ghi dữ liệu độc lập:
 |---|---|---|---:|---|
 | `identity-service` | Tài khoản, JWT, vai trò, khóa tài khoản, audit | `identity_db` MySQL | 8082 | Auth, hồ sơ, admin user, audit đã có |
 | `store-service` | Hồ sơ/duyệt cửa hàng, nhân viên, đánh giá | `store_db` MySQL | 8083 | Schema, entity, publisher; API nghiệp vụ dự kiến |
-| `catalog-inventory-service` | Danh mục, túi, sổ kho, giữ/trả kho, tìm gần | `catalog_db` PostgreSQL | 8084 | Giữ/trả kho nội bộ đã có; API công khai dự kiến |
+| `catalog-inventory-service` | Danh mục, túi, sổ kho, giữ/trả kho, tìm gần | `catalog_db` PostgreSQL | 8084 | CRUD cửa hàng/admin và sổ kho đã có; API khám phá công khai/OSRM còn dự kiến |
 | `order-service` | Giỏ, đơn, mã nhận hàng, hủy/giao, scheduler | `order_db` PostgreSQL | 8085 | Adapter gọi catalog và API nội bộ thử luồng đã có; đơn thật dự kiến |
 | `payment-finance-service` | VNPay, refund, doanh thu, payout, dashboard | `finance_db` PostgreSQL | 8086 | Schema, entity, publisher; API nghiệp vụ dự kiến |
 
@@ -109,7 +109,7 @@ Migration identity hiện có `V1__baseline.sql`, `V2__user_token_version.sql` v
 
 Store có `V4__store_updated_at.sql` thêm `stores.updated_at`, tự cập nhật khi hồ sơ, trạng thái hoặc hoa hồng thay đổi. Ba API `/internal/stores/**` do controller/use case/repository riêng phụ trách; endpoint tài khoản chi trả dùng `FINANCE_STORE_API_KEY` khác khóa nội bộ dùng chung.
 
-Catalog có `V2__store_owned_categories.sql`: `categories.store_id` bắt buộc; mỗi danh mục có `name`, `description`, `image_url`, `sort_order`, và tên chỉ cần duy nhất trong mỗi cửa hàng (`UNIQUE(store_id,name)`). Khóa ngoại ghép `rescue_batches(category_id,store_id)` bảo đảm túi chỉ dùng danh mục của chính cửa hàng. Migration tách danh mục cũ từng được nhiều cửa hàng sử dụng; danh mục cũ chưa có túi được giữ trong `legacy_unassigned_categories` để xử lý thủ công. Giao diện danh mục hiện dùng dữ liệu mẫu; API backend danh mục chưa được đổi theo hợp đồng mới.
+Catalog có `V2__store_owned_categories.sql`: `categories.store_id` bắt buộc; mỗi danh mục có `name`, `description`, `image_url`, `sort_order`, và tên chỉ cần duy nhất trong mỗi cửa hàng (`UNIQUE(store_id,name)`). Khóa ngoại ghép `rescue_batches(category_id,store_id)` bảo đảm túi chỉ dùng danh mục của chính cửa hàng. Migration tách danh mục cũ từng được nhiều cửa hàng sử dụng; danh mục cũ chưa có túi được giữ trong `legacy_unassigned_categories` để xử lý thủ công. `V3` thêm store-status projection/aggregate versions; `V4__catalog_soft_delete.sql` bổ sung archive danh mục và soft-delete túi. Xóa danh mục không cascade sang túi; hủy túi ghi sổ kho và audit/event vào Outbox cùng transaction. Queue `catalog.store-status` dùng direct DLX `foodrescue.dlx`, retry tối đa 3 lần với backoff; event sai định dạng đi thẳng vào DLQ. Catalog kiểm tra trạng thái hiện thời của Store qua HTTP; tra cứu owner khi projection trống cần Store cung cấp `GET /internal/stores/by-owner/{ownerId}` (response `{storeId,ownerId,status,version}`, `X-Internal-Key`, gọi nội bộ trực tiếp). Frontend có trang owner/staff/admin dùng API Catalog; staff chỉ xem và điều chỉnh tồn với sổ kho append-only.
 
 `users.store_id` hiện dùng cho nhân viên (`STORE_STAFF`); chủ cửa hàng được liên kết bằng `stores.owner_id`. Khi admin duyệt hồ sơ, identity đổi role của user hiện có sang `STORE_OWNER`, tăng `token_version`, và user đăng nhập lại để nhận quyền mới. Không tạo tài khoản thứ hai khi đăng ký cửa hàng.
 
@@ -119,11 +119,11 @@ Catalog có `V2__store_owned_categories.sql`: `categories.store_id` bắt buộc
 |---|---|---|
 | Identity | Đăng ký/đăng nhập, JWT, `/api/me`, đổi mật khẩu, khóa/mở khóa, reset tạm, danh sách user/audit; consumer `audit.action.v1` và `store.status-changed.v1` | Filter audit theo nhiều trường, producer Outbox identity |
 | Store | Đăng ký/duyệt/hồ sơ/staff/review, API công khai, Outbox publisher status và audit | API nội bộ policy/tài khoản chi trả/count |
-| Catalog | API nội bộ giữ/trả reservation nhiều túi, khóa row/trừ kho atomic, sổ kho, producer `stock.reserved.v1` và `stock.released.v1` | Category/batch API, kiểm tra cửa hàng APPROVED trước giữ kho, OSRM, consumer store status |
+| Catalog | CRUD category/batch owner/admin, điều chỉnh tồn owner/staff với sổ kho, kiểm tra Store trước reservation, Outbox audit/stock/cancel, consumer projection status | API khám phá công khai/OSRM, commit/expire reservation |
 | Order | `IInventoryPort` và HTTP adapter gọi catalog; endpoint nội bộ để thử giữ/trả kho | Giỏ, đơn thật, mã nhận, saga, các consumer/producer nghiệp vụ |
 | Finance | DB schema/JPA entity, Outbox publisher | VNPay, refunds, payout, snapshot, dashboard, consumer/producer nghiệp vụ |
 | Gateway | Route identity, `/api/health` tổng hợp 5 DB, kiểm tra trạng thái token cho các route cần bảo vệ | Route từng API mới khi service tương ứng hoàn tất |
-| Frontend | React Router, AuthProvider, role guard, layout, identity API, trang hồ sơ/admin, API client tách theo miền | Form mở cửa hàng chưa gửi API; trang túi cửa hàng còn dữ liệu mẫu; các màn hình nghiệp vụ phải nối service mới |
+| Frontend | React Router, AuthProvider, role guard, catalog UI owner/staff/admin nối API | Các màn hình customer discovery và các nghiệp vụ service khác còn demo |
 
 **Lưu ý:** Có entity/schema/Outbox publisher không đồng nghĩa với use case, producer hoặc consumer nghiệp vụ đã chạy. `identity-service` hiện chưa ghi event nào vào Outbox. Queue `foodrescue.migration-events` nhận bản sao event để quan sát, không xử lý nghiệp vụ.
 
@@ -198,24 +198,24 @@ Approve, reject, lock và unlock đều cập nhật `stores.status` cùng hai O
 
 | Trạng thái | Method + URL | Quyền | Req | Res | Event / Outbox |
 |---|---|---|---|---|---|
-| Dự kiến | `GET /api/categories?storeId` | Công khai | `storeId` để lọc theo cửa hàng | `[{id,storeId,name,description,imageUrl,sortOrder}]` | Không |
-| Dự kiến | `GET /api/store/categories` | STORE_OWNER/STORE_STAFF | Không có body; lấy cửa hàng từ context | Danh mục của cửa hàng hiện tại | Không |
-| Dự kiến | `POST /api/store/categories` | STORE_OWNER | `{name,description,image?,sortOrder}`; ảnh tải lên, `imageUrl` do server lưu | `{id,storeId,name,description,imageUrl,sortOrder}` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
-| Dự kiến | `PUT /api/store/categories/{id}` / `DELETE .../{id}` | STORE_OWNER | Field cần sửa/path ID | Danh mục mới / `204` nếu không còn túi tham chiếu; phải thuộc cửa hàng của caller | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
+| Đã có | `GET /api/categories?storeId` | Công khai | `storeId` để lọc theo cửa hàng APPROVED | Danh mục chưa archived | Không |
+| Đã có | `GET /api/store/categories` | STORE_OWNER/STORE_STAFF | Không có body; lấy cửa hàng từ token | Danh mục active của cửa hàng hiện tại | Không |
+| Đã có | `POST /api/store/categories`, `PUT .../{id}`, `DELETE .../{id}` | STORE_OWNER | CRUD của cửa hàng trong token | Category; DELETE trả `204`, ghi `archived_at`, không cascade batch | `audit.action.v1` trong Outbox cùng transaction |
+| Đã có | `GET/POST/PUT/DELETE /api/admin/categories?storeId=` | ADMIN | Admin chọn storeId; ID cửa hàng được xác minh qua Store | CRUD category theo cửa hàng, gồm archived khi list | `audit.action.v1` trong Outbox cùng transaction |
 | Dự kiến | `GET /api/batches?categoryId&lat&lon&radiusKm&sort&page&size` | Công khai | Bộ lọc 1/3/5/10 km, gần/rẻ/sắp hết giờ | `{content:[batchSummary],page,size,totalElements,totalPages}`; chỉ túi đang bán của store APPROVED | Không |
 | Dự kiến | `GET /api/batches/{id}` | Công khai | Path ID | `{id,storeId,categoryId,title,description,imageUrl,originalPrice,rescuePrice,remainingQuantity,pickupStart,pickupEnd,status,distanceKm?,travelMinutes?}` | Không |
-| Dự kiến | `GET /api/store/batches?status&page&size` | OWNER/STAFF | Query | Danh sách túi của store trong token/context | Không |
-| Dự kiến | `POST /api/store/batches` | STORE_OWNER | `multipart data={categoryId,title,description,originalPrice,rescuePrice,quantity,pickupStart,pickupEnd},image?`; `categoryId` phải thuộc cùng cửa hàng | `201 batch`; đồng thời ghi sổ kho `LISTED` | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
-| Dự kiến | `PUT /api/store/batches/{id}` | STORE_OWNER | Field mô tả/ảnh/giá/giờ được phép sửa | Batch mới; chặn đổi giá/giờ khi đã có đơn | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
-| Dự kiến | `PATCH /api/store/batches/{id}/quantity` | OWNER/STAFF | `{changeQty,reason:"ADDED"/"REMOVED",note?}` | `{batchId,quantity,remainingQuantity}`; không bớt quá số còn | Dự kiến Outbox `audit.action.v1` → `identity.audit-events` |
-| Dự kiến | `GET /api/store/batches/{id}/stock-movements` | OWNER/STAFF | Path ID, phân trang | `{content:[{reason,changeQty,remainingAfter,actorId,createdAt}],...}` | Không |
-| Dự kiến | `POST /api/store/batches/{id}/cancel` | STORE_OWNER | `{reason}` | `{id,status:"CANCELLED"}`; phát `catalog.batch-cancelled.v1` | Dự kiến Outbox `catalog.batch-cancelled.v1` → `order.batch-cancelled` + `audit.action.v1` → `identity.audit-events` |
+| Đã có | `GET /api/store/batches` | STORE_OWNER/STORE_STAFF | Không có body; store lấy từ token/context | Danh sách batch chưa hủy mềm | Không |
+| Đã có | `POST /api/store/batches`, `PUT .../{id}` | STORE_OWNER | JSON; category cùng store; giá cứu ≤60%; giờ nhận hợp lệ; không đổi tồn qua PUT | Batch; tạo mới ghi sổ `LISTED` | `audit.action.v1` trong Outbox cùng transaction |
+| Đã có | `PATCH /api/store/batches/{id}/quantity` | STORE_OWNER/STORE_STAFF | `{changeQty,reason:"ADDED"/"REMOVED",note?}`; changeQty là số dương | Batch mới; không giảm quá tồn hiện tại | Sổ kho append-only + `audit.action.v1` trong Outbox cùng transaction |
+| Đã có | `GET /api/store/batches/{id}/stock-movements` | STORE_OWNER/STORE_STAFF | Path ID, phân trang tối đa 100 | Trang sổ kho với actor/tồn sau | Không |
+| Đã có | `POST /api/store/batches/{id}/cancel` | STORE_OWNER | `{reason}`; từ chối nếu có reservation HELD | `{id,status:"CANCELLED",deleted:true}`; tồn còn lại ghi `REMOVED` | `catalog.batch-cancelled.v1` + `audit.action.v1` trong Outbox cùng transaction |
+| Đã có | `GET /api/admin/batches?storeId&page&size`, `POST /api/admin/batches/{id}/cancel` | ADMIN | Bộ lọc tùy chọn; lý do hủy bắt buộc | Trang batch mọi store, hủy mềm | `catalog.batch-cancelled.v1` + `audit.action.v1` |
 | **Đã có** | `POST /internal/reservations` | Order-service | `{reservationId:UUID,orderId,storeId,actorId,items:[{batchId,quantity}]}` + `X-Internal-Key` | `{reservationId,status:"HELD",items:[{batchId,quantity,unitPrice}],pickupStart,pickupEnd}` | Đã có Outbox `stock.reserved.v1`; V1 chưa có consumer nghiệp vụ |
 | **Đã có** | `GET /internal/reservations/{id}` | Order-service | `X-Internal-Key` | Reservation hiện tại | Không |
 | **Đã có** | `POST /internal/reservations/{id}/release` | Order-service | `X-Internal-Key` | Reservation `RELEASED`; gọi lặp không cộng kho lần hai | Đã có Outbox `stock.released.v1`; V1 chưa có consumer nghiệp vụ (chỉ khi thực sự release) |
-| Dự kiến | `GET /internal/batches/{id}` | Order-service | `X-Internal-Key` | `{batchId,storeId,status,rescuePrice,remainingQuantity,pickupEnd}` | Không |
+| Đã có | `POST /internal/batches/checkout-store` | Order-service | Batch IDs + `X-Internal-Key` | Store duy nhất chứa các batch | Không |
 
-**Luồng catalog:** chủ tạo túi → kiểm tra store APPROVED, giá cứu ≤ 60% giá gốc, giờ lấy hợp lệ → lưu batch và `stock_movements.LISTED`. Khi order yêu cầu giữ nhiều túi, catalog khóa row theo thứ tự batch ID, kiểm tra toàn bộ rồi trừ `remaining_quantity` trong **một transaction**, ghi `stock_reservations`, `stock_reservation_items`, `stock_movements.ORDERED` và `stock.reserved.v1` vào Outbox. Khi hủy/hết hạn, `release` cộng trả đúng một lần, ghi `RETURNED` và `stock.released.v1`. Code giữ/trả kho đã có; **kiểm tra store APPROVED và luồng commit/expire reservation chưa có**. OSRM chỉ tính thời gian đi đường/tìm kiếm, không tham gia quyết định còn hàng.
+**Luồng catalog:** owner tạo túi → kiểm tra Store APPROVED qua `STORE_SERVICE_URL`, giá cứu ≤ 60% giá gốc, giờ lấy hợp lệ → lưu batch và `stock_movements.LISTED`. Staff/owner điều chỉnh `ADDED`/`REMOVED`; mỗi thay đổi tồn append sổ kho và audit Outbox trong cùng transaction. Khi order yêu cầu giữ nhiều túi, JPA adapter khóa row theo thứ tự batch ID, kiểm tra toàn bộ rồi trừ `remaining_quantity` trong **một transaction**, ghi reservation/items, `ORDERED` và `stock.reserved.v1` vào Outbox. Khi hủy/hết hạn, `release` cộng trả đúng một lần, ghi `RETURNED` và `stock.released.v1`. Reservation kiểm tra store APPROVED qua Store HTTP; commit/expire reservation và OSRM vẫn chưa có.
 
 ### 5.4 Order API
 
@@ -427,7 +427,7 @@ React Router khai báo route ở `frontend/src/routes/AppRoutes.jsx`; `RouteGuar
 | Admin | `/admin/users` | ADMIN |
 | Cá nhân/kết quả | `/me`, `/payment/result` | `/me` cần đăng nhập; kết quả VNPay có thể mở công khai |
 
-Role guard ở FE chỉ phục vụ điều hướng; mỗi API ghi vẫn phải xác thực/phân quyền tại service sở hữu. Trang túi cửa hàng đang dùng mock và không được xem là chức năng catalog hoàn thành.
+Role guard ở FE chỉ phục vụ điều hướng; mỗi API ghi vẫn phải xác thực/phân quyền tại service sở hữu. Owner/staff/admin catalog pages hiện gọi Catalog API; customer discovery vẫn dùng dữ liệu demo.
 
 ## 9. Chạy local và theo dõi
 
