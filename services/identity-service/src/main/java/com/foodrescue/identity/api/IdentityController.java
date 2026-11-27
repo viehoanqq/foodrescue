@@ -38,6 +38,12 @@ public class IdentityController {
         return new AuthResponse(result.token(), UserView.from(result.user()));
     }
 
+    @PostMapping("/api/auth/google")
+    public AuthResponse google(@Valid @RequestBody GoogleLoginRequest request) {
+        var result = service.loginWithGoogle(request.idToken());
+        return new AuthResponse(result.token(), UserView.from(result.user()));
+    }
+
     @GetMapping("/api/me")
     @SecurityRequirement(name = "bearerAuth")
     public UserView me(@AuthenticationPrincipal IdentityPrincipal principal) {
@@ -64,6 +70,7 @@ public class IdentityController {
                                   @NotBlank @Size(max = 100) String fullName,
                                   @NotBlank @Size(max = 20) String phone) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
+    public record GoogleLoginRequest(@NotBlank String idToken) {}
     public record ProfileRequest(@NotBlank @Size(max = 100) String fullName,
                                  @NotBlank @Size(max = 20) String phone,
                                  @Size(max = 255) String address,

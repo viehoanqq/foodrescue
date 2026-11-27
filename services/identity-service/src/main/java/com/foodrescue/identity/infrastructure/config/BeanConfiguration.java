@@ -4,6 +4,7 @@ import com.foodrescue.identity.application.port.out.IAuditRepository;
 import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.application.port.out.ITokenPort;
 import com.foodrescue.identity.application.port.out.IUnitOfWork;
+import com.foodrescue.identity.application.port.out.IGoogleIdentityPort;
 import com.foodrescue.identity.application.usecase.IdentityService;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import org.springframework.context.annotation.Bean;
@@ -13,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class BeanConfiguration {
     @Bean
     IdentityService identityService(IUserRepository users, IPasswordPort passwords, ITokenPort tokens,
-                                    IAuditRepository audit, IUnitOfWork unitOfWork) {
-        return new IdentityService(users, passwords, tokens, audit, unitOfWork);
+                                    IAuditRepository audit, IUnitOfWork unitOfWork, IGoogleIdentityPort google) {
+        return new IdentityService(users, passwords, tokens, audit, unitOfWork, google);
     }
 }

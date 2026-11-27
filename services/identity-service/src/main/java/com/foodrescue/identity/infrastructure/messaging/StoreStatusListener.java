@@ -57,7 +57,7 @@ public class StoreStatusListener {
             if (created + advanced > 0 && "STORE_OWNER".equals(old.role())) {
                 users.save(new UserAccount(old.id(), old.email(), old.passwordHash(), old.fullName(), old.phone(),
                         old.role(), old.storeId(), old.status(), old.mustChangePassword(), old.createdAt(),
-                        old.tokenVersion() + 1, old.address(), old.latitude(), old.longitude()));
+                        old.tokenVersion() + 1, old.address(), old.latitude(), old.longitude(), old.googleSub()));
                 jdbc.update("UPDATE users SET token_version=token_version+1 " +
                         "WHERE role='STORE_STAFF' AND store_id=?", storeId);
             }
@@ -69,6 +69,6 @@ public class StoreStatusListener {
             throw new IllegalStateException("Store owner is not an active customer");
         users.save(new UserAccount(old.id(), old.email(), old.passwordHash(), old.fullName(), old.phone(),
                 "STORE_OWNER", null, old.status(), old.mustChangePassword(), old.createdAt(),
-                old.tokenVersion() + 1, old.address(), old.latitude(), old.longitude()));
+                old.tokenVersion() + 1, old.address(), old.latitude(), old.longitude(), old.googleSub()));
     }
 }

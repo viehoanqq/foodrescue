@@ -22,6 +22,9 @@ public class JpaUserRepository implements IUserRepository {
     @Override public Optional<UserAccount> findByEmail(String email) {
         return repository.findByEmailIgnoreCase(email).map(this::toDomain);
     }
+    @Override public Optional<UserAccount> findByGoogleSub(String googleSub) {
+        return repository.findByGoogleSub(googleSub).map(this::toDomain);
+    }
 
     @Override public long countAll() { return repository.count(); }
 
@@ -36,6 +39,7 @@ public class JpaUserRepository implements IUserRepository {
         entity.setPasswordHash(user.passwordHash());
         entity.setFullName(user.fullName());
         entity.setPhone(user.phone());
+        entity.setGoogleSub(user.googleSub());
         entity.setAddress(user.address());
         entity.setLatitude(user.latitude());
         entity.setLongitude(user.longitude());
@@ -73,6 +77,6 @@ public class JpaUserRepository implements IUserRepository {
         return new UserAccount(e.getId(), e.getEmail(), e.getPasswordHash(), e.getFullName(), e.getPhone(),
                 e.getRole(), e.getStoreId(), e.getStatus(), Boolean.TRUE.equals(e.getMustChangePassword()),
                 e.getCreatedAt(), e.getTokenVersion() == null ? 0 : e.getTokenVersion(),
-                e.getAddress(), e.getLatitude(), e.getLongitude());
+                e.getAddress(), e.getLatitude(), e.getLongitude(), e.getGoogleSub());
     }
 }

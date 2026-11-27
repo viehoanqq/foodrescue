@@ -28,7 +28,8 @@ class IdentityServiceStaffTest {
         when(transaction.execute(any())).thenAnswer(invocation ->
                 ((Supplier<?>) invocation.getArgument(0)).get());
         when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        service = new IdentityService(users, mock(IPasswordPort.class), mock(ITokenPort.class), audit, transaction);
+        service = new IdentityService(users, mock(IPasswordPort.class), mock(ITokenPort.class), audit, transaction,
+                mock(com.foodrescue.identity.application.port.out.IGoogleIdentityPort.class));
         when(users.findById(1L)).thenReturn(Optional.of(account(1L, "STORE_OWNER", null, "ACTIVE", 0)));
         when(users.findById(9L)).thenReturn(Optional.of(account(9L, "STORE_STAFF", 5L, "ACTIVE", 2)));
     }

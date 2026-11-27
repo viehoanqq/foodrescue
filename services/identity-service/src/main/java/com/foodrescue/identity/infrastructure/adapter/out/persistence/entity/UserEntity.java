@@ -22,14 +22,17 @@ public class UserEntity {
     @Column(name = "email", nullable = false, length = 100)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
+
+    @Column(name = "google_sub", length = 255, unique = true)
+    private String googleSub;
 
     @Column(name = "address", length = 255)
     private String address;
@@ -72,6 +75,8 @@ public class UserEntity {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+    public String getGoogleSub() { return googleSub; }
+    public void setGoogleSub(String googleSub) { this.googleSub = googleSub; }
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }

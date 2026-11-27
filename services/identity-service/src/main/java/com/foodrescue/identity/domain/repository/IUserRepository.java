@@ -7,6 +7,7 @@ import java.util.Optional;
 public interface IUserRepository {
     Optional<UserAccount> findById(Long id);
     Optional<UserAccount> findByEmail(String email);
+    Optional<UserAccount> findByGoogleSub(String googleSub);
     UserAccount save(UserAccount user);
     PageResult<UserAccount> search(String role, String status, String keyword, int page, int size);
     PageResult<UserAccount> findStaffByStoreId(Long storeId, int page, int size);

@@ -8,6 +8,7 @@ import com.foodrescue.identity.application.port.out.IAuditRepository;
 import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.application.port.out.ITokenPort;
 import com.foodrescue.identity.application.port.out.IUnitOfWork;
+import com.foodrescue.identity.application.port.out.IGoogleIdentityPort;
 import java.security.SecureRandom;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -25,14 +26,16 @@ public class IdentityService {
     private final ITokenPort tokens;
     private final IAuditRepository audit;
     private final IUnitOfWork unitOfWork;
+    private final IGoogleIdentityPort google;
 
     public IdentityService(IUserRepository users, IPasswordPort passwords, ITokenPort tokens, IAuditRepository audit,
-                           IUnitOfWork unitOfWork) {
+                           IUnitOfWork unitOfWork, IGoogleIdentityPort google) {
         this.users = users;
         this.passwords = passwords;
         this.tokens = tokens;
         this.audit = audit;
         this.unitOfWork = unitOfWork;
+        this.google = google;
     }
 
     public AuthResult register(String email, String password, String fullName, String phone) {
@@ -54,8 +57,38 @@ public class IdentityService {
     public AuthResult login(String email, String password) {
         UserAccount user = users.findByEmail(normalize(email))
                 .orElseThrow(() -> new IdentityException(401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng"));
-        if (!passwords.matches(password, user.passwordHash())) {
+        if (user.passwordHash() == null || !passwords.matches(password, user.passwordHash())) {
             throw new IdentityException(401, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không đúng");
+        }
+        if (!"ACTIVE".equals(user.status())) {
+            throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
+        }
+        return new AuthResult(user, tokens.issue(user.id(), user.tokenVersion()));
+    }
+
+    public AuthResult loginWithGoogle(String idToken) {
+        IGoogleIdentityPort.GoogleProfile profile = google.verify(idToken);
+        return unitOfWork.execute(() -> loginWithGoogleTransaction(profile));
+    }
+
+    private AuthResult loginWithGoogleTransaction(IGoogleIdentityPort.GoogleProfile profile) {
+        UserAccount user = users.findByGoogleSub(profile.sub()).orElseGet(() -> {
+            String email = normalize(profile.email());
+            if (users.findByEmail(email).isPresent()) {
+                throw new IdentityException(409, "GOOGLE_LINK_REQUIRED",
+                        "Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu để liên kết Google sau.");
+            }
+            String name = profile.fullName() == null || profile.fullName().isBlank()
+                    ? email : profile.fullName().trim();
+            UserAccount created = users.save(new UserAccount(null, email, null, name, null,
+                    "CUSTOMER", null, "ACTIVE", false,
+                    LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0,
+                    null, null, null, profile.sub()));
+            audit.record(created.id(), "USER_REGISTERED", "USER", created.id(), "GOOGLE");
+            return created;
+        });
+        if (!"CUSTOMER".equals(user.role()) && !"STORE_OWNER".equals(user.role())) {
+            throw new IdentityException(403, "GOOGLE_ROLE_FORBIDDEN", "Tài khoản này không thể đăng nhập bằng Google");
         }
         if (!"ACTIVE".equals(user.status())) {
             throw new IdentityException(403, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa");
@@ -145,7 +178,7 @@ public class IdentityService {
         UserAccount saved = users.save(new UserAccount(old.id(), old.email(), old.passwordHash(),
                 fullName.trim(), phone.trim(), old.role(), old.storeId(), old.status(),
                 old.mustChangePassword(), old.createdAt(), old.tokenVersion(),
-                address == null || address.isBlank() ? null : address.trim(), latitude, longitude));
+                address == null || address.isBlank() ? null : address.trim(), latitude, longitude, old.googleSub()));
         audit.record(id, "USER_PROFILE_UPDATED", "USER", id, null);
         return saved;
     }
@@ -156,6 +189,9 @@ public class IdentityService {
 
     private void changePasswordTransaction(Long id, String oldPassword, String newPassword) {
         UserAccount old = find(id);
+        if (old.passwordHash() == null) {
+            throw new IdentityException(409, "PASSWORD_NOT_SET", "Tài khoản Google chưa có mật khẩu");
+        }
         if (!passwords.matches(oldPassword, old.passwordHash())) {
             throw new IdentityException(422, "WRONG_OLD_PASSWORD", "Mật khẩu hiện tại không đúng");
         }
@@ -244,7 +280,7 @@ public class IdentityService {
                              String status, boolean mustChangePassword, long version) {
         return new UserAccount(old.id(), old.email(), passwordHash, fullName, phone, old.role(), old.storeId(),
                 status, mustChangePassword, old.createdAt(), version,
-                old.address(), old.latitude(), old.longitude());
+                old.address(), old.latitude(), old.longitude(), old.googleSub());
     }
 
     private String normalize(String email) { return email.trim().toLowerCase(Locale.ROOT); }

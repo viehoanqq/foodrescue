@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface ISpringDataUserRepository extends JpaRepository<UserEntity, Long>, JpaSpecificationExecutor<UserEntity> {
     Optional<UserEntity> findByEmailIgnoreCase(String email);
+    Optional<UserEntity> findByGoogleSub(String googleSub);
     long countByRoleAndStatus(String role, String status);
     Page<UserEntity> findByRoleAndStoreId(String role, Long storeId, Pageable pageable);
 }
