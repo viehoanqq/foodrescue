@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tabs, Tag, message } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { catalogApi } from '../../services/catalogApi';
@@ -11,39 +11,52 @@ export default function AdminCatalogPage() {
   const [batches, setBatches] = useState({ content: [], totalElements: 0 });
   const [tab, setTab] = useState('categories');
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [storesLoading, setStoresLoading] = useState(true);
+  const [storesError, setStoresError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
   const [editing, setEditing] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [cancelBatch, setCancelBatch] = useState(null);
   const [busy, setBusy] = useState(false);
   const [form] = Form.useForm();
   const [cancelForm] = Form.useForm();
+  const catalogRequest = useRef(0);
 
   const loadStores = useCallback(async () => {
+    setStoresLoading(true);
+    setStoresError('');
     try {
       const result = await storeApi.adminStores({ page: 0, size: 100 });
       setStores(result.content || []);
       if (result.content?.length) setStoreId((current) => current || result.content[0].id);
-    } catch (failure) { setError(failure.message || 'Không tải được danh sách cửa hàng'); }
+    } catch (failure) { setStoresError(failure.message || 'Không tải được danh sách cửa hàng'); }
+    finally { setStoresLoading(false); }
   }, []);
 
   const loadCatalog = useCallback(async () => {
+    const requestId = ++catalogRequest.current;
     setLoading(true);
-    setError('');
+    setCatalogError('');
     try {
       const [categoryRows, batchRows] = await Promise.all([
         storeId ? catalogApi.adminCategories(storeId) : Promise.resolve([]),
         catalogApi.adminBatches({ ...(storeId ? { storeId } : {}), page, size: 50 }),
       ]);
+      if (requestId !== catalogRequest.current) return;
       setCategories(categoryRows);
       setBatches(batchRows);
-    } catch (failure) { setError(failure.message || 'Không tải được dữ liệu catalog'); }
-    finally { setLoading(false); }
+    } catch (failure) {
+      if (requestId === catalogRequest.current) setCatalogError(failure.message || 'Không tải được dữ liệu catalog');
+    } finally {
+      if (requestId === catalogRequest.current) setLoading(false);
+    }
   }, [storeId, page]);
 
   useEffect(() => { loadStores(); }, [loadStores]);
-  useEffect(() => { loadCatalog(); }, [loadCatalog]);
+  useEffect(() => {
+    if (!storesLoading) loadCatalog();
+  }, [loadCatalog, storesLoading]);
 
   function showEditor(category = null) {
     setEditing(category);
@@ -105,7 +118,10 @@ export default function AdminCatalogPage() {
   const batchColumns = [
     { title: 'ID', dataIndex: 'id' },
     { title: 'Tên túi', dataIndex: 'title' },
-    { title: 'Danh mục', render: (_, row) => categories.find((category) => category.id === row.categoryId)?.name || 'Đã ẩn' },
+    { title: 'Danh mục', render: (_, row) => {
+      const category = categories.find((item) => item.id === row.categoryId);
+      return category?.name || (storeId ? 'Đã ẩn' : `Danh mục #${row.categoryId}`);
+    } },
     { title: 'Cửa hàng', dataIndex: 'storeId' },
     { title: 'Tồn', render: (_, row) => `${row.remainingQuantity} / ${row.quantity}` },
     { title: 'Trạng thái', dataIndex: 'status' },
@@ -117,16 +133,22 @@ export default function AdminCatalogPage() {
     <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
       <div><h1>Quản lý danh mục và túi</h1><p>Thao tác được lưu trong Catalog; xóa danh mục là ẩn mềm.</p></div>
       <Select allowClear showSearch optionFilterProp="label" placeholder="Tất cả cửa hàng"
+        loading={storesLoading}
         value={storeId} style={{ width: 300 }} onChange={(value) => { setStoreId(value || null); setPage(0); }}
         options={stores.map((store) => ({ value: store.id, label: `${store.name} (#${store.id})` }))} />
     </Space>
-    {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
+    {storesError && <Alert type="error" showIcon message={storesError} style={{ marginBottom: 16 }} />}
+    {catalogError && <Alert type="error" showIcon message={catalogError} style={{ marginBottom: 16 }} />}
+    {!storeId && !storesLoading && tab === 'categories' && <Alert type="info" showIcon
+      message={stores.length ? 'Chọn một cửa hàng để xem danh mục; danh sách túi vẫn có thể xem ở chế độ tất cả cửa hàng.' : 'Chưa có cửa hàng để quản lý danh mục.'}
+      style={{ marginBottom: 16 }} />}
     <Tabs activeKey={tab} onChange={setTab} items={[
       { key: 'categories', label: 'Danh mục', children: <>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
           <Button type="primary" icon={<PlusOutlined />} disabled={!storeId} onClick={() => showEditor()}>Tạo danh mục</Button>
         </div>
-        <Table rowKey="id" loading={loading} dataSource={categories} columns={categoryColumns} />
+        <Table rowKey="id" loading={loading} dataSource={categories} columns={categoryColumns}
+          locale={{ emptyText: storeId ? 'Cửa hàng này chưa có danh mục.' : 'Chọn một cửa hàng để xem danh mục.' }} />
       </> },
       { key: 'batches', label: 'Túi giải cứu', children: <Table rowKey="id" loading={loading}
         dataSource={batches.content} pagination={{ current: page + 1, pageSize: 50, total: batches.totalElements,

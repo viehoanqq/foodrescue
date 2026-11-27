@@ -7,6 +7,23 @@ import { catalogApi } from '../../services/catalogApi';
 const states = { AVAILABLE: 'Đang bán', SOLD_OUT: 'Hết hàng', CANCELLED: 'Đã hủy', EXPIRED: 'Hết hạn' };
 const localInput = (value) => value ? value.slice(0, 16) : '';
 const localDateTime = (value) => value && value.length === 16 ? `${value}:00` : value;
+const vietnamDateTime = (date, withSeconds = false) => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+    hourCycle: 'h23',
+  }).formatToParts(date).map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}${withSeconds ? `:${parts.second}` : ''}`;
+};
+const defaultPickupWindow = () => ({
+  pickupStart: vietnamDateTime(new Date(Date.now() + 60 * 60 * 1000)),
+  pickupEnd: vietnamDateTime(new Date(Date.now() + 3 * 60 * 60 * 1000)),
+});
 
 export default function StoreCatalogPage() {
   const { user } = useAuth();
@@ -44,7 +61,7 @@ export default function StoreCatalogPage() {
     setEditing(batch);
     form.setFieldsValue(batch ? { ...batch, pickupStart: localInput(batch.pickupStart), pickupEnd: localInput(batch.pickupEnd) } : {
       categoryId: categories[0]?.id, title: '', description: '', imageUrl: '',
-      originalPrice: 80000, rescuePrice: 40000, quantity: 1, pickupStart: '', pickupEnd: '',
+      originalPrice: 80000, rescuePrice: 40000, quantity: 1, ...defaultPickupWindow(),
     });
     setEditorOpen(true);
   }
@@ -52,9 +69,19 @@ export default function StoreCatalogPage() {
   async function save(values) {
     setBusy(true);
     try {
+      const pickupStartChanged = !editing || values.pickupStart !== localInput(editing.pickupStart);
+      const pickupEndChanged = !editing || values.pickupEnd !== localInput(editing.pickupEnd);
+      const pickupStart = pickupStartChanged ? localDateTime(values.pickupStart) : editing.pickupStart;
+      const pickupEnd = pickupEndChanged ? localDateTime(values.pickupEnd) : editing.pickupEnd;
+      const pickupWindowChanged = pickupStartChanged || pickupEndChanged;
+      const now = vietnamDateTime(new Date(), true);
+      if (pickupEnd <= pickupStart || pickupEnd <= now || (pickupWindowChanged && pickupStart <= now)) {
+        message.error('Khung giờ nhận không hợp lệ. Giờ bắt đầu cần ở tương lai và giờ kết thúc phải sau giờ bắt đầu.');
+        return;
+      }
       const request = { ...values, title: values.title.trim(), description: values.description?.trim() || null,
-        imageUrl: values.imageUrl?.trim() || null, pickupStart: localDateTime(values.pickupStart),
-        pickupEnd: localDateTime(values.pickupEnd), quantity: editing ? editing.quantity : values.quantity };
+        imageUrl: values.imageUrl?.trim() || null, pickupStart, pickupEnd,
+        quantity: editing ? editing.quantity : values.quantity };
       if (editing) await catalogApi.updateBatch(editing.id, request);
       else await catalogApi.createBatch(request);
       setEditorOpen(false);
@@ -147,10 +174,10 @@ export default function StoreCatalogPage() {
         <Form.Item name="quantity" label="Số lượng ban đầu" rules={[{ required: true }]} extra={editing ? 'Tồn kho chỉ đổi qua nút Chỉnh tồn.' : null}>
           <InputNumber min={1} max={100000} precision={0} disabled={Boolean(editing)} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item name="pickupStart" label="Bắt đầu nhận" rules={[{ required: true }]}>
+        <Form.Item name="pickupStart" label="Bắt đầu nhận (giờ Việt Nam)" rules={[{ required: true }]}>
           <Input type="datetime-local" />
         </Form.Item>
-        <Form.Item name="pickupEnd" label="Kết thúc nhận" rules={[{ required: true }]}>
+        <Form.Item name="pickupEnd" label="Kết thúc nhận (giờ Việt Nam)" rules={[{ required: true }]}>
           <Input type="datetime-local" />
         </Form.Item>
       </Form>

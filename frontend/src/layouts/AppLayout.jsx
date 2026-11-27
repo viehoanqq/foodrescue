@@ -24,7 +24,6 @@ const staffMenu = [
 ];
 const ownerMenu = [
   ...staffMenu,
-  { key: '/store/categories', icon: <AppstoreOutlined />, label: 'Danh mục' },
   { key: '/store/profile', icon: <ShopOutlined />, label: 'Hồ sơ cửa hàng' },
   { key: '/store/staff', icon: <TeamOutlined />, label: 'Nhân viên' },
   { key: '/store/revenue', icon: <DollarOutlined />, label: 'Doanh thu' },
