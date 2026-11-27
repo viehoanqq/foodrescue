@@ -62,7 +62,7 @@ public class BatchCancelledConsumer {
 
         // Inbox deduplication
         int inserted = jdbc.update(
-                "INSERT INTO inbox_events (consumer_name, event_id, processed_at) VALUES (?, CAST(? AS UUID), ?) ON CONFLICT DO NOTHING",
+                "INSERT IGNORE INTO inbox_events (consumer_name, event_id, processed_at) VALUES (?, ?, ?)",
                 CONSUMER_NAME, eventId.toString(), Timestamp.from(Instant.now()));
         if (inserted == 0) {
             log.info("Duplicate event ignored in batch-cancelled: {}", eventId);
