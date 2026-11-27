@@ -1,6 +1,8 @@
 import { api } from './axios';
 
 export const catalogApi = {
+  publicBatches: (params) => api.get('/batches', { params }),
+  publicBatch: (id, params) => api.get(`/batches/${id}`, { params }),
   storeCategories: () => api.get('/store/categories'),
   publicCategories: (storeId) => api.get('/categories', { params: { storeId } }),
   createCategory: (values) => api.post('/store/categories', values),

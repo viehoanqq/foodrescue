@@ -160,6 +160,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       IDENTITY_SERVICE_URL: http://identity-service:8082
       STORE_SERVICE_URL: http://store-service:8083
+      OSRM_BASE_URL: ${OSRM_BASE_URL:-}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}

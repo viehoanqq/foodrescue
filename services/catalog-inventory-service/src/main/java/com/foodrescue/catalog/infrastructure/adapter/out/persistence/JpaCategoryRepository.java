@@ -4,6 +4,7 @@ import com.foodrescue.catalog.application.port.out.ICategoryRepository;
 import com.foodrescue.catalog.domain.exception.CatalogException;
 import com.foodrescue.catalog.domain.model.Category;
 import com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity.CategoryEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,6 +23,13 @@ public class JpaCategoryRepository implements ICategoryRepository {
     @Override
     public List<Category> findByStore(Long storeId) {
         return categories.findByStoreIdAndArchivedAtIsNullOrderBySortOrderAscIdAsc(storeId)
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Category> findByStores(Collection<Long> storeIds) {
+        if (storeIds == null || storeIds.isEmpty()) return List.of();
+        return categories.findByStoreIdInAndArchivedAtIsNullOrderBySortOrderAscIdAsc(List.copyOf(storeIds))
                 .stream().map(this::toDomain).toList();
     }
 

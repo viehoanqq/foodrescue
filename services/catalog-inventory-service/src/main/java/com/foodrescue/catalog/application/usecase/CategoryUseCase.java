@@ -4,6 +4,7 @@ import com.foodrescue.buildingblocks.events.EventEnvelope;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.catalog.application.port.out.ICategoryRepository;
 import com.foodrescue.catalog.application.port.out.IOutboxPort;
+import com.foodrescue.catalog.application.port.out.IStoreDirectoryPort;
 import com.foodrescue.catalog.domain.exception.CatalogException;
 import com.foodrescue.catalog.domain.model.Actor;
 import com.foodrescue.catalog.domain.model.Category;
@@ -29,17 +30,27 @@ public class CategoryUseCase {
     private final ICategoryRepository categories;
     private final CatalogStoreAccess storeAccess;
     private final IOutboxPort outbox;
+    private final IStoreDirectoryPort stores;
 
-    public CategoryUseCase(ICategoryRepository categories, CatalogStoreAccess storeAccess, IOutboxPort outbox) {
+    public CategoryUseCase(ICategoryRepository categories, CatalogStoreAccess storeAccess,
+            IOutboxPort outbox, IStoreDirectoryPort stores) {
         this.categories = categories;
         this.storeAccess = storeAccess;
         this.outbox = outbox;
+        this.stores = stores;
     }
 
     /** Công khai: chỉ cửa hàng APPROVED. */
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public List<Category> listPublic(Long storeId) {
         return categories.findByStore(storeAccess.requireApprovedStoreId(storeId));
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    public List<Category> listPublicAcrossStores() {
+        List<Long> approvedStoreIds = stores.findApprovedStores(null, null, null).stream()
+                .map(com.foodrescue.catalog.domain.model.CatalogStoreSummary::id).toList();
+        return categories.findByStores(approvedStoreIds);
     }
 
     @Transactional(readOnly = true)

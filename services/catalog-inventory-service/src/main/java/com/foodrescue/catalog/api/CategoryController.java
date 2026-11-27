@@ -28,8 +28,10 @@ public class CategoryController {
 
     /** Công khai: danh mục của một cửa hàng đã được duyệt. */
     @GetMapping("/api/categories")
-    public List<CategoryResponse> listPublic(@RequestParam Long storeId) {
-        return categories.listPublic(storeId).stream().map(CategoryResponse::from).toList();
+    public List<CategoryResponse> listPublic(@RequestParam(required = false) Long storeId) {
+        List<Category> result = storeId == null
+                ? categories.listPublicAcrossStores() : categories.listPublic(storeId);
+        return result.stream().map(CategoryResponse::from).toList();
     }
 
     @GetMapping("/api/store/categories")

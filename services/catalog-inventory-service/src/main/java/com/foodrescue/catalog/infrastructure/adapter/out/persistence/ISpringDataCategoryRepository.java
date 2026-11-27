@@ -10,6 +10,9 @@ import org.springframework.data.jpa.repository.Lock;
 public interface ISpringDataCategoryRepository extends JpaRepository<CategoryEntity, Long> {
     List<CategoryEntity> findByStoreIdAndArchivedAtIsNullOrderBySortOrderAscIdAsc(Long storeId);
 
+    List<CategoryEntity> findByStoreIdInAndArchivedAtIsNullOrderBySortOrderAscIdAsc(
+            List<Long> storeIds);
+
     List<CategoryEntity> findByStoreIdOrderBySortOrderAscIdAsc(Long storeId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

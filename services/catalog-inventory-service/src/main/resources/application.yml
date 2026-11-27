@@ -43,4 +43,6 @@ app:
     secret: ${JWT_SECRET:}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8082}
   store-service-url: ${STORE_SERVICE_URL:http://localhost:8083}
+  osrm:
+    base-url: ${OSRM_BASE_URL:}
 

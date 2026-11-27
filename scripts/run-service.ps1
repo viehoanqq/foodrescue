@@ -50,6 +50,7 @@ switch ($Service) {
         Set-LocalEnv 'DB_USERNAME' 'catalog_app'
         Set-LocalEnv 'DB_PASSWORD' $settings['CATALOG_DB_PASSWORD']
         Set-LocalEnv 'STORE_SERVICE_URL' 'http://localhost:8083'
+        Set-LocalEnv 'OSRM_BASE_URL' $settings['OSRM_BASE_URL']
     }
     'order-service' {
         Set-LocalEnv 'DB_URL' 'jdbc:mysql://localhost:3307/order_db?serverTimezone=Asia/Ho_Chi_Minh'

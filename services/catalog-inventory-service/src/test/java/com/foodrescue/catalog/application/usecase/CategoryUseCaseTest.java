@@ -11,6 +11,7 @@ import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.catalog.application.port.out.ICategoryRepository;
 import com.foodrescue.catalog.application.port.out.IOutboxPort;
 import com.foodrescue.catalog.application.port.out.IStoreOwnerLookupPort;
+import com.foodrescue.catalog.application.port.out.IStoreDirectoryPort;
 import com.foodrescue.catalog.application.port.out.IStoreProjectionRepository;
 import com.foodrescue.catalog.application.port.out.IStoreStatusPort;
 import com.foodrescue.catalog.domain.exception.CatalogException;
@@ -29,9 +30,10 @@ class CategoryUseCaseTest {
     private final IStoreProjectionRepository stores = mock(IStoreProjectionRepository.class);
     private final IStoreOwnerLookupPort ownerLookup = mock(IStoreOwnerLookupPort.class);
     private final IStoreStatusPort storeStatus = mock(IStoreStatusPort.class);
+    private final IStoreDirectoryPort storeDirectory = mock(IStoreDirectoryPort.class);
     private final IOutboxPort outbox = mock(IOutboxPort.class);
     private final CatalogStoreAccess storeAccess = new CatalogStoreAccess(stores, ownerLookup, storeStatus);
-    private final CategoryUseCase useCase = new CategoryUseCase(categories, storeAccess, outbox);
+    private final CategoryUseCase useCase = new CategoryUseCase(categories, storeAccess, outbox, storeDirectory);
 
     private final Actor owner = new Actor(7L, "STORE_OWNER", null);
     private final Actor staff = new Actor(30L, "STORE_STAFF", 15L);
@@ -224,5 +226,16 @@ class CategoryUseCaseTest {
         when(categories.findByStore(eq(15L))).thenReturn(List.of(c));
 
         assertEquals(List.of(c), useCase.listPublic(15L));
+    }
+
+    @Test
+    void publicListWithoutStoreIncludesCategoriesOnlyFromApprovedStores() {
+        when(storeDirectory.findApprovedStores(null, null, null)).thenReturn(List.of(
+                new com.foodrescue.catalog.domain.model.CatalogStoreSummary(15L, "A", null, null, null,
+                        null, null, null, null, 0, null, null, null)));
+        Category category = new Category(1L, 15L, "Bánh mì", null, null, 0, 1L);
+        when(categories.findByStores(List.of(15L))).thenReturn(List.of(category));
+
+        assertEquals(List.of(category), useCase.listPublicAcrossStores());
     }
 }

@@ -1,11 +1,13 @@
 package com.foodrescue.catalog.application.port.out;
 
 import com.foodrescue.catalog.domain.model.Category;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface ICategoryRepository {
     List<Category> findByStore(Long storeId);
+    List<Category> findByStores(Collection<Long> storeIds);
     List<Category> findAllByStore(Long storeId);
 
     /** Tìm trong đúng cửa hàng và khóa dòng để sửa/xóa an toàn khi đồng thời. */
