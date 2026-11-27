@@ -4,22 +4,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.identity.domain.repository.IUserRepository;
 import com.foodrescue.identity.domain.model.UserAccount;
-import java.sql.Timestamp;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataInboxRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataStoreStatusRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataUserRepository;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class StoreStatusListener {
     private final ObjectMapper json;
-    private final JdbcTemplate jdbc;
+    private final ISpringDataInboxRepository inbox;
+    private final ISpringDataStoreStatusRepository storeStatuses;
+    private final ISpringDataUserRepository userEntities;
     private final IUserRepository users;
 
-    public StoreStatusListener(ObjectMapper json, JdbcTemplate jdbc, IUserRepository users) {
-        this.json = json; this.jdbc = jdbc; this.users = users;
+    public StoreStatusListener(ObjectMapper json, ISpringDataInboxRepository inbox,
+            ISpringDataStoreStatusRepository storeStatuses, ISpringDataUserRepository userEntities,
+            IUserRepository users) {
+        this.json = json; this.inbox = inbox; this.storeStatuses = storeStatuses;
+        this.userEntities = userEntities; this.users = users;
     }
 
     @RabbitListener(queues = MessagingNames.IDENTITY_STORE_STATUS_QUEUE)
@@ -40,16 +46,11 @@ public class StoreStatusListener {
                 || !Long.toString(storeId).equals(event.path("aggregateId").asText())
                 || !java.util.Set.of("APPROVED", "REJECTED", "LOCKED").contains(status))
             throw new IllegalArgumentException("Invalid store status payload");
-        int inserted = jdbc.update("INSERT IGNORE INTO inbox_events(consumer_name,event_id,processed_at) VALUES (?,?,?)",
-                MessagingNames.IDENTITY_STORE_STATUS_QUEUE, eventId.toString(), Timestamp.valueOf(LocalDateTime.now()));
+        int inserted = inbox.insertIfAbsent(MessagingNames.IDENTITY_STORE_STATUS_QUEUE,
+                eventId.toString(), LocalDateTime.now());
         if (inserted == 0) return;
-        int created = jdbc.update("INSERT IGNORE INTO store_status_projection" +
-                        "(store_id,owner_id,status,aggregate_version) VALUES (?,?,?,?)",
-                storeId, ownerId, status, version);
-        int advanced = created == 0 ? jdbc.update("UPDATE store_status_projection SET owner_id=?,status=?," +
-                        "aggregate_version=?,updated_at=CURRENT_TIMESTAMP(6) " +
-                        "WHERE store_id=? AND aggregate_version<?",
-                ownerId, status, version, storeId, version) : 0;
+        int created = storeStatuses.insertIfAbsent(storeId, ownerId, status, version);
+        int advanced = created == 0 ? storeStatuses.advanceIfNewer(storeId, ownerId, status, version) : 0;
         if ("REJECTED".equals(status)) return;
         UserAccount old = users.findById(ownerId)
                 .orElseThrow(() -> new IllegalStateException("Store owner does not exist"));
@@ -58,8 +59,7 @@ public class StoreStatusListener {
                 users.save(new UserAccount(old.id(), old.email(), old.passwordHash(), old.fullName(), old.phone(),
                         old.role(), old.storeId(), old.status(), old.mustChangePassword(), old.createdAt(),
                         old.tokenVersion() + 1, old.address(), old.latitude(), old.longitude(), old.googleSub()));
-                jdbc.update("UPDATE users SET token_version=token_version+1 " +
-                        "WHERE role='STORE_STAFF' AND store_id=?", storeId);
+                userEntities.incrementStaffTokenVersions(storeId);
             }
             return;
         }

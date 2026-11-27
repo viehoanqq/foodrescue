@@ -5,22 +5,25 @@ import com.foodrescue.identity.domain.model.PageResult;
 import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.AuditLogEntity;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.sql.Timestamp;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class JpaAuditRepository implements IAuditRepository {
     private final ISpringDataAuditRepository repository;
-    private final NamedParameterJdbcTemplate jdbc;
+    private final ISpringDataUserRepository users;
 
-    public JpaAuditRepository(ISpringDataAuditRepository repository, JdbcTemplate jdbc) {
+    public JpaAuditRepository(ISpringDataAuditRepository repository, ISpringDataUserRepository users) {
         this.repository = repository;
-        this.jdbc = new NamedParameterJdbcTemplate(jdbc);
+        this.users = users;
     }
 
     @Override public void record(Long actorId, String action, String entityType, Long entityId, String detail) {
@@ -36,51 +39,32 @@ public class JpaAuditRepository implements IAuditRepository {
 
     @Override public PageResult<Map<String, Object>> search(Long actorId, String action, String entityType,
             Long entityId, LocalDateTime from, LocalDateTime to, int page, int size) {
-        StringBuilder where = new StringBuilder(" WHERE 1=1");
-        MapSqlParameterSource params = new MapSqlParameterSource();
-        if (actorId != null) {
-            where.append(" AND a.actor_id = :actorId");
-            params.addValue("actorId", actorId);
-        }
-        if (action != null) {
-            where.append(" AND a.action = :action");
-            params.addValue("action", action);
-        }
-        if (entityType != null) {
-            where.append(" AND a.entity_type = :entityType");
-            params.addValue("entityType", entityType);
-        }
-        if (entityId != null) {
-            where.append(" AND a.entity_id = :entityId");
-            params.addValue("entityId", entityId);
-        }
-        if (from != null) {
-            where.append(" AND a.created_at >= :fromTime");
-            params.addValue("fromTime", Timestamp.valueOf(from));
-        }
-        if (to != null) {
-            where.append(" AND a.created_at <= :toTime");
-            params.addValue("toTime", Timestamp.valueOf(to));
-        }
-        long total = jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs a" + where, params, Long.class);
-        params.addValue("size", size).addValue("offset", (long) page * size);
-        var rows = jdbc.query("SELECT a.id, a.actor_id, u.email AS actor_email, a.action, a.entity_type, " +
-                        "a.entity_id, a.amount, a.detail, a.created_at FROM audit_logs a " +
-                        "LEFT JOIN users u ON u.id = a.actor_id" + where +
-                        " ORDER BY a.created_at DESC, a.id DESC LIMIT :size OFFSET :offset",
-                params, (rs, index) -> {
+        Specification<AuditLogEntity> filters = (root, query, cb) -> cb.conjunction();
+        if (actorId != null) filters = filters.and((root, query, cb) -> cb.equal(root.get("actorId"), actorId));
+        if (action != null) filters = filters.and((root, query, cb) -> cb.equal(root.get("action"), action));
+        if (entityType != null) filters = filters.and((root, query, cb) -> cb.equal(root.get("entityType"), entityType));
+        if (entityId != null) filters = filters.and((root, query, cb) -> cb.equal(root.get("entityId"), entityId));
+        if (from != null) filters = filters.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("createdAt"), from));
+        if (to != null) filters = filters.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("createdAt"), to));
+        Page<AuditLogEntity> found = repository.findAll(filters,
+                PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
+        Set<Long> actorIds = found.getContent().stream().map(AuditLogEntity::getActorId)
+                .filter(id -> id != null).collect(Collectors.toSet());
+        Map<Long, String> actorEmails = users.findAllById(actorIds).stream()
+                .collect(Collectors.toMap(user -> user.getId(), user -> user.getEmail()));
+        List<Map<String, Object>> rows = found.getContent().stream().map(entry -> {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("id", rs.getLong("id"));
-            row.put("actorId", rs.getObject("actor_id"));
-            row.put("actorEmail", rs.getString("actor_email"));
-            row.put("action", rs.getString("action"));
-            row.put("entityType", rs.getString("entity_type"));
-            row.put("entityId", rs.getLong("entity_id"));
-            row.put("amount", rs.getBigDecimal("amount"));
-            row.put("detail", rs.getString("detail"));
-            row.put("createdAt", rs.getTimestamp("created_at").toLocalDateTime());
+            row.put("id", entry.getId());
+            row.put("actorId", entry.getActorId());
+            row.put("actorEmail", actorEmails.get(entry.getActorId()));
+            row.put("action", entry.getAction());
+            row.put("entityType", entry.getEntityType());
+            row.put("entityId", entry.getEntityId());
+            row.put("amount", entry.getAmount());
+            row.put("detail", entry.getDetail());
+            row.put("createdAt", entry.getCreatedAt());
             return row;
-        });
-        return new PageResult<>(rows, page, size, total, (int) ((total + size - 1) / size));
+        }).toList();
+        return new PageResult<>(rows, page, size, found.getTotalElements(), found.getTotalPages());
     }
 }

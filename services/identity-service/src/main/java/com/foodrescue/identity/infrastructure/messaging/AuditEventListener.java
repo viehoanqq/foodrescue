@@ -1,26 +1,29 @@
 package com.foodrescue.identity.infrastructure.messaging;
 
 import com.foodrescue.buildingblocks.events.MessagingNames;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataAuditRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataInboxRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.entity.AuditLogEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /** An inbox row and the audit row are committed together; redelivery is safe. */
 @Component
 public class AuditEventListener {
-    private final JdbcTemplate jdbc;
+    private final ISpringDataInboxRepository inbox;
+    private final ISpringDataAuditRepository audit;
     private final ObjectMapper json;
 
-    public AuditEventListener(JdbcTemplate jdbc, ObjectMapper json) {
-        this.jdbc = jdbc;
+    public AuditEventListener(ISpringDataInboxRepository inbox, ISpringDataAuditRepository audit, ObjectMapper json) {
+        this.inbox = inbox;
+        this.audit = audit;
         this.json = json;
     }
 
@@ -43,12 +46,18 @@ public class AuditEventListener {
         BigDecimal amount = payload.path("amount").isNumber() ? payload.path("amount").decimalValue() : null;
         String detail = payload.path("detail").isTextual() ? payload.path("detail").textValue() : null;
         if (detail != null && detail.length() > 500) throw new IllegalArgumentException("Audit detail too long");
-        int inserted = jdbc.update("INSERT IGNORE INTO inbox_events(consumer_name,event_id,processed_at) VALUES (?,?,?)",
-                MessagingNames.IDENTITY_AUDIT_CONSUMER, eventId.toString(), Timestamp.valueOf(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))));
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        int inserted = inbox.insertIfAbsent(MessagingNames.IDENTITY_AUDIT_CONSUMER, eventId.toString(), now);
         if (inserted == 0) return;
-        jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,amount,detail,created_at) " +
-                        "VALUES (?,?,?,?,?,?,?)", actorId, action, entityType, entityId, amount, detail,
-                Timestamp.valueOf(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))));
+        AuditLogEntity entry = new AuditLogEntity();
+        entry.setActorId(actorId);
+        entry.setAction(action);
+        entry.setEntityType(entityType);
+        entry.setEntityId(entityId);
+        entry.setAmount(amount);
+        entry.setDetail(detail);
+        entry.setCreatedAt(now);
+        audit.save(entry);
     }
 
     private String requiredText(JsonNode node, String key) {

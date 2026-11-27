@@ -3,13 +3,15 @@ package com.foodrescue.identity.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.identity.domain.model.UserAccount;
 import com.foodrescue.identity.domain.repository.IUserRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataInboxRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataStoreStatusRepository;
+import com.foodrescue.identity.infrastructure.adapter.out.persistence.ISpringDataUserRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -17,15 +19,17 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class StoreStatusListenerTest {
-    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final ISpringDataInboxRepository inbox = mock(ISpringDataInboxRepository.class);
+    private final ISpringDataStoreStatusRepository storeStatuses = mock(ISpringDataStoreStatusRepository.class);
+    private final ISpringDataUserRepository userEntities = mock(ISpringDataUserRepository.class);
     private final IUserRepository users = mock(IUserRepository.class);
-    private final StoreStatusListener listener = new StoreStatusListener(new ObjectMapper(), jdbc, users);
+    private final StoreStatusListener listener = new StoreStatusListener(
+            new ObjectMapper(), inbox, storeStatuses, userEntities, users);
 
     @BeforeEach
     void acceptNewEvent() {
-        when(jdbc.update(startsWith("INSERT IGNORE INTO inbox_events"), any(), any(), any())).thenReturn(1);
-        when(jdbc.update(startsWith("INSERT IGNORE INTO store_status_projection"),
-                any(), any(), any(), any())).thenReturn(1);
+        when(inbox.insertIfAbsent(anyString(), anyString(), any())).thenReturn(1);
+        when(storeStatuses.insertIfAbsent(anyLong(), anyLong(), anyString(), anyLong())).thenReturn(1);
     }
 
     @Test
@@ -46,8 +50,7 @@ class StoreStatusListenerTest {
         listener.receive(event("REJECTED", 1));
 
         verifyNoInteractions(users);
-        verify(jdbc).update(startsWith("INSERT IGNORE INTO store_status_projection"),
-                eq(7L), eq(5L), eq("REJECTED"), eq(1L));
+        verify(storeStatuses).insertIfAbsent(7L, 5L, "REJECTED", 1L);
     }
 
     @Test
@@ -59,7 +62,7 @@ class StoreStatusListenerTest {
         ArgumentCaptor<UserAccount> saved = ArgumentCaptor.forClass(UserAccount.class);
         verify(users).save(saved.capture());
         assertEquals(4, saved.getValue().tokenVersion());
-        verify(jdbc).update(startsWith("UPDATE users SET token_version"), eq(7L));
+        verify(userEntities).incrementStaffTokenVersions(7L);
     }
 
     private UserAccount account(String role, long version) {
