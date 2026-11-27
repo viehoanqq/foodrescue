@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Empty, Form, Input, InputNumber, Modal, Radio, Segmented, Space, Steps, Tag, message } from 'antd';
+import { Alert, Button, Card, Empty, Form, Input, InputNumber, Radio, Segmented, Space, Steps, Tag } from 'antd';
 import { ArrowLeftOutlined, BankOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EnvironmentOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { QRCodeSVG } from 'qrcode.react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { money, updateDemo } from '../../demo/data';
 import { useDemo } from '../../demo/useDemo';
+import { confirmDialog, toast } from '../../components/feedback';
 import './customerOrderFlow.css';
 
 const statuses = [
@@ -17,10 +18,35 @@ const statuses = [
 ];
 const statusLabels = { PENDING_PAYMENT: 'Chờ thanh toán', CONFIRMED: 'Chờ nhận', COMPLETED: 'Đã hoàn thành', CANCELLED: 'Đã hủy' };
 const paymentLabels = { UNPAID: 'Chưa thanh toán', PAID: 'Đã thanh toán', REFUND_PENDING: 'Chờ hoàn tiền', REFUNDED: 'Đã hoàn tiền' };
+const orderStatusColors = {
+  COMPLETED: '#1E8E4E',
+  CONFIRMED: '#FF7A1A',
+  PENDING_PAYMENT: '#D97706',
+  CANCELLED: '#E5484D',
+};
+const paymentStatusColors = {
+  PAID: '#1E8E4E',
+  UNPAID: '#D97706',
+  REFUND_PENDING: '#D97706',
+  REFUNDED: '#2C7BE5',
+};
 
 function OrderStatus({ order }) {
-  const color = order.status === 'COMPLETED' ? 'green' : order.status === 'CANCELLED' ? 'red' : 'gold';
-  return <Tag color={color}>{statusLabels[order.status] || order.status}</Tag>;
+  const bg = orderStatusColors[order.status] || '#6B7280';
+  return (
+    <Tag className="order-status-tag" style={{ backgroundColor: bg, color: '#FFFFFF' }}>
+      {statusLabels[order.status] || order.status}
+    </Tag>
+  );
+}
+
+function PaymentStatusTag({ status }) {
+  const bg = paymentStatusColors[status] || '#6B7280';
+  return (
+    <Tag className="order-status-tag" style={{ backgroundColor: bg, color: '#FFFFFF' }}>
+      {paymentLabels[status] || status}
+    </Tag>
+  );
 }
 
 function cartRows(data) {
@@ -42,8 +68,8 @@ function CartProduct({ row, data, editable = false }) {
             const current = next.cart.find(item => item.batchId === row.batchId);
             if (current) current.quantity = value || 1;
           })} /><Button danger type="text" icon={<DeleteOutlined />} aria-label={`Xóa ${row.batch.title}`}
-          onClick={() => Modal.confirm({ title: 'Bỏ túi khỏi giỏ hàng?', content: row.batch.title,
-            okText: 'Bỏ túi', cancelText: 'Giữ lại', okButtonProps: { danger: true },
+          onClick={() => confirmDialog({ title: 'Bỏ túi khỏi giỏ hàng?', content: row.batch.title,
+            okText: 'Bỏ túi', cancelText: 'Giữ lại', danger: true,
             onOk: () => updateDemo(next => { next.cart = next.cart.filter(item => item.batchId !== row.batchId); }) })} /></>
           : <span>× {row.quantity}</span>}</div>
     </div>
@@ -128,7 +154,7 @@ export function CheckoutPaymentPage() {
     if (latest.some(item => {
       const batch = live.find(row => row.id === item.batchId);
       return !batch || batch.status !== 'AVAILABLE' || batch.remaining < item.quantity;
-    })) { message.error('Số lượng túi đã thay đổi. Vui lòng kiểm tra lại giỏ hàng.'); navigate('/customer/cart'); return; }
+    })) { toast.error('Số lượng túi đã thay đổi. Vui lòng kiểm tra lại giỏ hàng.'); navigate('/customer/cart'); return; }
     const orderId = Math.max(Date.now(), ...data.orders.map(order => order.id + 1));
     updateDemo(next => {
       next.orders.unshift({ id: orderId, customer: draft.fullName, storeId: draft.storeId,
@@ -150,9 +176,9 @@ export function CheckoutPaymentPage() {
         <Radio value="VNPAY_DEMO"><ShoppingCartOutlined /> VNPay (mô phỏng)</Radio>
       </Radio.Group>
       <Alert type="info" showIcon message="Đây là dữ liệu mẫu, không chuyển tiền thật." style={{ margin: '20px 0' }} />
-      <Space><Button onClick={() => navigate('/customer/checkout')}>Sửa thông tin</Button><Button type="primary" onClick={() => Modal.confirm({
+      <Space><Button onClick={() => navigate('/customer/checkout')}>Sửa thông tin</Button><Button type="primary" onClick={() => confirmDialog({
         title: 'Xác nhận tạo đơn?', content: `Bạn sẽ đặt ${rows.reduce((sum, row) => sum + row.quantity, 0)} túi, tổng ${money(total)}. Số lượng sẽ được giữ cho đơn này.`,
-        okText: 'Tạo đơn', cancelText: 'Kiểm tra lại', onOk: createOrder,
+        okText: 'Tạo đơn', cancelText: 'Kiểm tra lại', tone: 'eco', onOk: createOrder,
       })}>Tạo đơn và tiếp tục</Button></Space>
     </section><aside className="checkout-side-card"><h2>Xác nhận đơn</h2>
       <p>Người nhận: {draft.fullName}</p><p>Điện thoại: {draft.phone}</p><p>Địa chỉ liên hệ: {draft.address}</p>
@@ -188,9 +214,9 @@ export function CustomerPaymentPage() {
           ? <><p>Ngân hàng: <strong>Ngân hàng mẫu</strong></p><p>Số tài khoản: <strong>0000000000</strong></p><p>Nội dung: <strong>FR {order.id}</strong></p></>
           : <p>Quét mã VNPay mô phỏng để xem thông tin thanh toán.</p>}
           <p>Số tiền: <strong>{money(order.total)}</strong></p>
-          <Button type="primary" size="large" onClick={() => Modal.confirm({
+          <Button type="primary" size="large" onClick={() => confirmDialog({
             title: 'Xác nhận thanh toán mô phỏng?', content: `Đơn #${order.id} · ${money(order.total)}. Thao tác sẽ chuyển đơn sang đã thanh toán và cấp mã nhận hàng.`,
-            okText: 'Xác nhận', cancelText: 'Quay lại', onOk: confirmPayment,
+            okText: 'Xác nhận', cancelText: 'Quay lại', tone: 'eco', onOk: confirmPayment,
           })}>Xác nhận thanh toán mô phỏng</Button>
           <p><Link to={`/me/orders/${order.id}`}>Xem đơn trước khi thanh toán</Link></p></div></div>
     </Card>
@@ -236,8 +262,8 @@ export function CustomerOrderDetailPage() {
   const store = data.stores.find(item => item.id === order.storeId);
 
   function cancel() {
-    Modal.confirm({ title: 'Hủy đơn hàng?', content: 'Đơn đã thanh toán sẽ chuyển sang chờ hoàn tiền.',
-      okText: 'Hủy đơn', okButtonProps: { danger: true }, cancelText: 'Giữ đơn',
+    confirmDialog({ title: 'Hủy đơn hàng?', content: 'Đơn đã thanh toán sẽ chuyển sang chờ hoàn tiền.',
+      okText: 'Hủy đơn', danger: true, cancelText: 'Giữ đơn',
       onOk: () => {
         updateDemo(next => {
           const current = next.orders.find(item => item.id === order.id);
@@ -249,7 +275,7 @@ export function CustomerOrderDetailPage() {
             next.refunds.push({ id: Date.now(), orderId: current.id, amount: current.total, status: 'PENDING', reason: 'CUSTOMER_CANCELLED' });
           }
         });
-        message.success('Đã hủy đơn');
+        toast.success('Đã hủy đơn');
       },
     });
   }
@@ -258,7 +284,7 @@ export function CustomerOrderDetailPage() {
     <div className="customer-orders-heading"><h1>Đơn #{order.id}</h1><OrderStatus order={order} /></div>
     <Card className="customer-order-detail-card"><h2>{store?.name || `Cửa hàng #${order.storeId}`}</h2>
       <p><EnvironmentOutlined /> {store?.address}</p><p>Ngày tạo: {order.createdAt}</p>
-      <p>Thanh toán: <Tag color={order.paymentStatus === 'PAID' ? 'green' : 'gold'}>{paymentLabels[order.paymentStatus] || order.paymentStatus}</Tag></p>
+      <p>Thanh toán: <PaymentStatusTag status={order.paymentStatus} /></p>
       {order.contact && <div className="customer-order-contact"><h3>Thông tin nhận hàng</h3><p>{order.contact.fullName} · {order.contact.phone}</p><p>{order.contact.address}</p>{order.contact.note && <p>Ghi chú: {order.contact.note}</p>}</div>}
       <h3>Túi đã đặt</h3>{order.items.map(item => <p className="customer-order-item" key={item.batchId}>
         <span>{data.batches.find(batch => batch.id === item.batchId)?.title || `Túi #${item.batchId}`} × {item.quantity}</span><b>{money(item.price * item.quantity)}</b></p>)}

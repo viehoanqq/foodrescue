@@ -25,9 +25,7 @@
 .auth-google-section { margin-top: 18px; }
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 8px 0 18px; color: #718077; }
 .auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; background: #dfe5e2; }
-.google-signin-button { display: flex; justify-content: center; min-height: 44px; }
-.google-signin-disabled { opacity: .6; pointer-events: none; }
-.google-signin-error { margin: 8px 0 0; color: #b42318; text-align: center; }
+.google-signin-error { text-align: center; }
 @media (max-width: 520px) {
   .auth-page { padding: 14px; }
   .auth-card { padding: 26px 18px; border-radius: 20px; }

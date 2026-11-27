@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Col, Descriptions, Form, Image, Input, InputNumber, Modal, Row, Select, Space, Table, Tag, TimePicker, message } from 'antd';
+import { Alert, Button, Col, Descriptions, Form, Image, Input, InputNumber, Modal, Row, Select, Space, Table, Tag, TimePicker } from 'antd';
 import { CheckOutlined, EyeOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { storeApi } from '../../services/storeApi';
+import { confirmDialog, toast } from '../../components/feedback';
 import '../store/storePages.css';
 
 const states = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối', LOCKED: 'Đã khóa' };
@@ -39,7 +40,7 @@ export default function AdminStoresPage() {
       const result = await storeApi.adminStore(id);
       setSelected(result);
       try { const blob = await storeApi.adminLicense(id); setLicenseUrl(URL.createObjectURL(blob)); }
-      catch (failure) { message.warning(failure.message || 'Không tải được ảnh giấy phép'); }
+      catch (failure) { toast.warning(failure.message || 'Không tải được ảnh giấy phép'); }
     } catch (failure) { setError(failure.message || 'Không tải được hồ sơ'); }
   }
 
@@ -47,36 +48,36 @@ export default function AdminStoresPage() {
     setBusy(true);
     try {
       const updated = await storeApi.approve(selected.id, Number(selected.commissionRate ?? 15));
-      setSelected(updated); await load(); message.success('Đã duyệt cửa hàng. Quyền chủ sẽ được cập nhật qua RabbitMQ.');
-    } catch (failure) { message.error(failure.message || 'Không duyệt được cửa hàng'); }
+      setSelected(updated); await load(); toast.success('Đã duyệt cửa hàng. Quyền chủ sẽ được cập nhật qua RabbitMQ.');
+    } catch (failure) { toast.error(failure.message || 'Không duyệt được cửa hàng'); }
     finally { setBusy(false); }
   }
 
   async function reject(values) {
     setBusy(true);
-    try { setSelected(await storeApi.reject(selected.id, values.reason)); setRejectOpen(false); rejectForm.resetFields(); await load(); message.success('Đã từ chối hồ sơ'); }
-    catch (failure) { message.error(failure.message || 'Không từ chối được hồ sơ'); }
+    try { setSelected(await storeApi.reject(selected.id, values.reason)); setRejectOpen(false); rejectForm.resetFields(); await load(); toast.success('Đã từ chối hồ sơ'); }
+    catch (failure) { toast.error(failure.message || 'Không từ chối được hồ sơ'); }
     finally { setBusy(false); }
   }
 
   async function lock(values) {
     setBusy(true);
-    try { setSelected(await storeApi.setStoreLocked(selected.id, true, values.reason)); setLockOpen(false); lockForm.resetFields(); await load(); message.success('Đã khóa cửa hàng'); }
-    catch (failure) { message.error(failure.message || 'Không khóa được cửa hàng'); }
+    try { setSelected(await storeApi.setStoreLocked(selected.id, true, values.reason)); setLockOpen(false); lockForm.resetFields(); await load(); toast.success('Đã khóa cửa hàng'); }
+    catch (failure) { toast.error(failure.message || 'Không khóa được cửa hàng'); }
     finally { setBusy(false); }
   }
 
   async function unlock() {
     setBusy(true);
-    try { setSelected(await storeApi.setStoreLocked(selected.id, false)); await load(); message.success('Đã mở khóa cửa hàng'); }
-    catch (failure) { message.error(failure.message || 'Không mở khóa được cửa hàng'); }
+    try { setSelected(await storeApi.setStoreLocked(selected.id, false)); await load(); toast.success('Đã mở khóa cửa hàng'); }
+    catch (failure) { toast.error(failure.message || 'Không mở khóa được cửa hàng'); }
     finally { setBusy(false); }
   }
 
   async function saveCommission() {
     setBusy(true);
-    try { setSelected(await storeApi.setCommission(selected.id, Number(selected.commissionRate))); await load(); message.success('Đã cập nhật hoa hồng'); }
-    catch (failure) { message.error(failure.message || 'Không cập nhật được hoa hồng'); }
+    try { setSelected(await storeApi.setCommission(selected.id, Number(selected.commissionRate))); await load(); toast.success('Đã cập nhật hoa hồng'); }
+    catch (failure) { toast.error(failure.message || 'Không cập nhật được hoa hồng'); }
     finally { setBusy(false); }
   }
 
@@ -96,13 +97,13 @@ export default function AdminStoresPage() {
       openTime: values.openTime.format('HH:mm'), closeTime: values.closeTime.format('HH:mm'),
       bankAccountNo: values.bankAccountNo?.trim() || null,
     };
-    if (request.closeTime <= request.openTime) { message.error('Giờ đóng cửa phải sau giờ mở cửa'); return; }
+    if (request.closeTime <= request.openTime) { toast.error('Giờ đóng cửa phải sau giờ mở cửa'); return; }
     setBusy(true);
     try {
       const updated = await storeApi.updateAdminStore(selected.id, request);
       setSelected(updated); setEditOpen(false); await load();
-      message.success('Đã cập nhật thông tin cửa hàng');
-    } catch (failure) { message.error(failure.message || 'Không cập nhật được cửa hàng'); }
+      toast.success('Đã cập nhật thông tin cửa hàng');
+    } catch (failure) { toast.error(failure.message || 'Không cập nhật được cửa hàng'); }
     finally { setBusy(false); }
   }
 
@@ -115,7 +116,7 @@ export default function AdminStoresPage() {
       { title: 'Trạng thái', dataIndex: 'status', render: (value) => <Tag color={value === 'APPROVED' ? 'green' : value === 'PENDING' ? 'gold' : 'red'}>{states[value] || value}</Tag> },
       { title: '', render: (_, row) => <Button icon={<EyeOutlined />} onClick={() => show(row.id)}>Xem hồ sơ</Button> },
     ]} />
-    <Modal title="Chi tiết hồ sơ cửa hàng" width={760} open={Boolean(selected)} onCancel={() => { setSelected(null); setLicenseUrl(''); }} footer={<Space><Button onClick={() => setSelected(null)}>Đóng</Button><Button onClick={editStore}>Chỉnh sửa</Button>{selected?.status === 'PENDING' && <><Button danger icon={<CloseOutlined />} onClick={() => setRejectOpen(true)}>Từ chối</Button><Button type="primary" icon={<CheckOutlined />} disabled={!licenseUrl} loading={busy} onClick={() => Modal.confirm({ title: 'Xác nhận duyệt cửa hàng?', content: 'Sau khi duyệt, cửa hàng sẽ hiển thị công khai và Identity sẽ cấp quyền chủ cửa hàng.', okText: 'Duyệt', cancelText: 'Hủy', onOk: approve })}>Duyệt</Button></>}{selected?.status === 'APPROVED' && <Button danger loading={busy} onClick={() => setLockOpen(true)}>Khóa cửa hàng</Button>}{selected?.status === 'LOCKED' && <Button loading={busy} onClick={() => Modal.confirm({ title: 'Mở khóa cửa hàng?', okText: 'Mở khóa', cancelText: 'Hủy', onOk: unlock })}>Mở khóa</Button>}</Space>}>
+    <Modal title="Chi tiết hồ sơ cửa hàng" width={760} open={Boolean(selected)} onCancel={() => { setSelected(null); setLicenseUrl(''); }} footer={<Space><Button onClick={() => setSelected(null)}>Đóng</Button><Button onClick={editStore}>Chỉnh sửa</Button>{selected?.status === 'PENDING' && <><Button danger icon={<CloseOutlined />} onClick={() => setRejectOpen(true)}>Từ chối</Button><Button type="primary" icon={<CheckOutlined />} disabled={!licenseUrl} loading={busy} onClick={() => confirmDialog({ title: 'Xác nhận duyệt cửa hàng?', content: 'Sau khi duyệt, cửa hàng sẽ hiển thị công khai và Identity sẽ cấp quyền chủ cửa hàng.', okText: 'Duyệt', cancelText: 'Hủy', tone: 'eco', onOk: approve })}>Duyệt</Button></>}{selected?.status === 'APPROVED' && <Button danger loading={busy} onClick={() => setLockOpen(true)}>Khóa cửa hàng</Button>}{selected?.status === 'LOCKED' && <Button loading={busy} onClick={() => confirmDialog({ title: 'Mở khóa cửa hàng?', okText: 'Mở khóa', cancelText: 'Hủy', tone: 'eco', onOk: unlock })}>Mở khóa</Button>}</Space>}>
       {selected && <><Descriptions bordered column={{ xs: 1, sm: 2 }} items={[
         { key: 'name', label: 'Tên cửa hàng', children: selected.name },
         { key: 'owner', label: 'Chủ tài khoản', children: `#${selected.ownerId}` },
@@ -130,12 +131,12 @@ export default function AdminStoresPage() {
       ]} />{selected.imageUrl && <Image src={selected.imageUrl} alt={selected.name} width={180} style={{ marginTop: 18 }} />}
         <h3>Giấy phép kinh doanh</h3>{licenseUrl ? <Image src={licenseUrl} alt="Giấy phép kinh doanh" width={240} /> : <Alert type="warning" showIcon message="Chưa tải được ảnh giấy phép" />}
         {selected.rejectReason && <Alert style={{ marginTop: 16 }} type="error" showIcon message="Lý do từ chối" description={selected.rejectReason} />}
-        {['PENDING', 'APPROVED', 'LOCKED'].includes(selected.status) && <p style={{ marginTop: 16 }}>Hoa hồng: <InputNumber min={0} max={50} value={Number(selected.commissionRate ?? 15)} onChange={(value) => setSelected((old) => ({ ...old, commissionRate: value }))} addonAfter="%" />{selected.status !== 'PENDING' && <Button style={{ marginLeft: 8 }} loading={busy} onClick={() => Modal.confirm({ title: 'Cập nhật hoa hồng?', content: `Cửa hàng ${selected.name} sẽ áp dụng mức ${selected.commissionRate}%.`, okText: 'Cập nhật', cancelText: 'Hủy', onOk: saveCommission })}>Lưu hoa hồng</Button>}</p>}
+        {['PENDING', 'APPROVED', 'LOCKED'].includes(selected.status) && <p style={{ marginTop: 16 }}>Hoa hồng: <InputNumber min={0} max={50} value={Number(selected.commissionRate ?? 15)} onChange={(value) => setSelected((old) => ({ ...old, commissionRate: value }))} addonAfter="%" />{selected.status !== 'PENDING' && <Button style={{ marginLeft: 8 }} loading={busy} onClick={() => confirmDialog({ title: 'Cập nhật hoa hồng?', content: `Cửa hàng ${selected.name} sẽ áp dụng mức ${selected.commissionRate}%.`, okText: 'Cập nhật', cancelText: 'Hủy', onOk: saveCommission })}>Lưu hoa hồng</Button>}</p>}
       </>}
     </Modal>
     <Modal title="Chỉnh sửa cửa hàng" width={760} open={editOpen} onCancel={() => setEditOpen(false)} onOk={() => editForm.submit()} okText="Lưu thay đổi" confirmLoading={busy} destroyOnClose>
-      <Form form={editForm} layout="vertical" onFinish={(values) => Modal.confirm({ title: 'Lưu thay đổi cửa hàng?',
-        content: 'Thông tin mới sẽ cập nhật hồ sơ cửa hàng.', okText: 'Lưu thay đổi', cancelText: 'Kiểm tra lại', onOk: () => saveStore(values) })}>
+      <Form form={editForm} layout="vertical" onFinish={(values) => confirmDialog({ title: 'Lưu thay đổi cửa hàng?',
+        content: 'Thông tin mới sẽ cập nhật hồ sơ cửa hàng.', okText: 'Lưu thay đổi', cancelText: 'Kiểm tra lại', tone: 'eco', onOk: () => saveStore(values) })}>
         <Row gutter={16}><Col xs={24} sm={12}><Form.Item name="name" label="Tên cửa hàng" rules={[{ required: true, whitespace: true }, { max: 150 }]}><Input maxLength={150} /></Form.Item></Col>
           <Col xs={24} sm={12}><Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, whitespace: true }, { max: 20 }]}><Input maxLength={20} /></Form.Item></Col></Row>
         <Form.Item name="description" label="Giới thiệu" rules={[{ max: 1000 }]}><Input.TextArea rows={3} maxLength={1000} showCount /></Form.Item>

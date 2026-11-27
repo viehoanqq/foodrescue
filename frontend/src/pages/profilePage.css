@@ -1,5 +1,47 @@
-.profile-location-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:520px}
-.profile-location-fields .ant-input-number{width:100%}
-.profile-locate-button{margin:0 0 20px}
-.profile-form-actions{display:flex;justify-content:flex-start;padding-top:4px}
-@media(max-width:560px){.profile-location-fields{grid-template-columns:1fr;gap:0}}
+.profile-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.profile-card {
+  border-radius: 14px;
+}
+
+.profile-location-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 520px;
+}
+
+.profile-location-fields .ant-input-number {
+  width: 100%;
+}
+
+.profile-locate-button {
+  margin: 0 0 20px;
+}
+
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.profile-google-box {
+  display: grid;
+  gap: 14px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.profile-google-box .google-signin-button {
+  justify-content: flex-start;
+}
+
+@media (max-width: 560px) {
+  .profile-location-fields {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

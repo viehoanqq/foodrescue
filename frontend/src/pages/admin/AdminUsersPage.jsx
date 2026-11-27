@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import { identityApi } from '../../services/identityApi';
 import { useAuth } from '../../auth/AuthProvider';
+import { infoDialog, toast } from '../../components/feedback';
 
 const roles = [
   { value: 'CUSTOMER', label: 'Khách hàng' },
@@ -28,7 +29,7 @@ export default function AdminUsersPage() {
     setLoading(true);
     identityApi.users({ keyword: keyword || undefined, role, status, page, size })
       .then((result) => { if (active) setData(result); })
-      .catch((error) => { if (active) message.error(error.message || 'Không tải được tài khoản'); })
+      .catch((error) => { if (active) toast.error(error.message || 'Không tải được tài khoản'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [keyword, role, status, page, size, revision]);
@@ -38,10 +39,10 @@ export default function AdminUsersPage() {
     try {
       const locked = record.status !== 'LOCKED';
       await identityApi.setUserLocked(record.id, locked);
-      message.success(locked ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
+      toast.success(locked ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản');
       setRevision((value) => value + 1);
     } catch (error) {
-      message.error(error.message || 'Không thay đổi được trạng thái');
+      toast.error(error.message || 'Không thay đổi được trạng thái');
     } finally {
       setActionId(null);
     }
@@ -51,7 +52,7 @@ export default function AdminUsersPage() {
     setActionId(record.id);
     try {
       const result = await identityApi.resetPassword(record.id);
-      Modal.info({
+      infoDialog({
         title: 'Mật khẩu tạm của ' + record.email,
         content: <Space direction="vertical">
           <Typography.Text>Mật khẩu này chỉ hiển thị một lần. Hãy chuyển cho người dùng qua kênh phù hợp.</Typography.Text>
@@ -60,7 +61,7 @@ export default function AdminUsersPage() {
       });
       setRevision((value) => value + 1);
     } catch (error) {
-      message.error(error.message || 'Không đặt lại được mật khẩu');
+      toast.error(error.message || 'Không đặt lại được mật khẩu');
     } finally {
       setActionId(null);
     }

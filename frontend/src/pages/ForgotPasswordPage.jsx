@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Button, Form, Input, message } from 'antd';
+import { Button, Form, Input } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toFormErrors } from '../services/axios';
 import { identityApi } from '../services/identityApi';
+import { toast } from '../components/feedback';
 import './authScreen.css';
 
 function loginPathForPortal(portal) {
@@ -36,10 +37,10 @@ export default function ForgotPasswordPage() {
       await identityApi.sendForgotPasswordOtp(email);
       setOtpCooldown(60);
       setLastOtpEmail(email);
-      message.success('Đã gửi mã xác minh đến email của bạn');
+      toast.success('Đã gửi mã xác minh đến email của bạn');
       return true;
     } catch (error) {
-      message.error(error.message || 'Không gửi được mã xác minh');
+      toast.error(error.message || 'Không gửi được mã xác minh');
       return false;
     } finally {
       setOtpSending(false);
@@ -65,11 +66,11 @@ export default function ForgotPasswordPage() {
         otp: values.otp.trim(),
         newPassword: values.newPassword,
       });
-      message.success('Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.');
+      toast.success('Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.');
       navigate(backToLogin, { replace: true });
     } catch (error) {
       if (error.details?.length) form.setFields(toFormErrors(error));
-      message.error(error.message || 'Không thể đặt lại mật khẩu');
+      toast.error(error.message || 'Không thể đặt lại mật khẩu');
     } finally {
       setBusy(false);
     }

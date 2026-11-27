@@ -51,6 +51,7 @@
 .customer-order-card>div>span,.customer-order-card p { color: #66756c; }
 .customer-order-card p { margin: 10px 0; }
 .customer-order-card b { color: #d66d2c; }
+.order-status-tag { margin-inline-end: 0; border: 0; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; line-height: 1.4; }
 .customer-order-detail-card { margin-top: 18px; }
 .customer-order-contact { border-top: 1px solid #e5eae4; margin-top: 18px; padding-top: 16px; }
 .customer-order-contact h3 { margin: 0 0 8px; }

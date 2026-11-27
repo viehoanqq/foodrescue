@@ -7,6 +7,7 @@ import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage';
 import AdminStoresPage from '../pages/admin/AdminStoresPage';
 import ProfilePage from '../pages/ProfilePage';
+import AddressPage from '../pages/AddressPage';
 import MyStorePage from '../pages/MyStorePage';
 import PasswordPage from '../pages/PasswordPage';
 import CustomerLanding from '../pages/customer/CustomerLanding';
@@ -59,6 +60,7 @@ export default function AppRoutes() {
           <Route path="/me" element={<ProfilePage />} />
           <Route path="/me/password" element={<PasswordPage />} />
           <Route element={<RoleRoute roles={['CUSTOMER']} />}>
+            <Route path="/me/address" element={<AddressPage />} />
             <Route path="/me/orders" element={<CustomerOrdersPage />} />
             <Route path="/me/orders/:orderId" element={<CustomerOrderDetailPage />} />
           </Route>
