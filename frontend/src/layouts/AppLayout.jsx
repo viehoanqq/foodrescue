@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { homeForRole, loginForRole } from '../routes/paths';
 import { useDemo } from '../demo/useDemo';
 import { confirmDialog } from '../components/feedback';
+import CustomerChatWidget from '../components/CustomerChatWidget';
 import './layout.css';
 
 const customerMenu = [
@@ -133,5 +134,6 @@ export default function AppLayout() {
     <Drawer title="FoodRescue" placement="left" open={drawerOpen} onClose={() => setDrawerOpen(false)} width={264} className="app-mobile-drawer">
       <div className="app-sidebar-inner">{navigation}</div>
     </Drawer>
+    <CustomerChatWidget />
   </Layout>;
 }
