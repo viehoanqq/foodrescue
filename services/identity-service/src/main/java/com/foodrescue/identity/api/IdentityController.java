@@ -28,8 +28,13 @@ public class IdentityController {
 
     @PostMapping("/api/auth/register")
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        var result = service.register(request.email(), request.password(), request.fullName(), request.phone());
+        var result = service.register(request.email(), request.password(), request.fullName(), request.phone(), request.otp());
         return new AuthResponse(result.token(), UserView.from(result.user()));
+    }
+
+    @PostMapping("/api/auth/register/otp")
+    public void sendRegistrationOtp(@Valid @RequestBody RegistrationOtpRequest request) {
+        service.sendRegistrationOtp(request.email());
     }
 
     @PostMapping("/api/auth/login")
@@ -75,7 +80,9 @@ public class IdentityController {
     public record RegisterRequest(@NotBlank @Email String email,
                                   @NotBlank @Size(min = 8, max = 72) String password,
                                   @NotBlank @Size(max = 100) String fullName,
-                                  @NotBlank @Size(max = 20) String phone) {}
+                                  @NotBlank @Size(max = 20) String phone,
+                                  @NotBlank @jakarta.validation.constraints.Pattern(regexp = "[0-9]{6}") String otp) {}
+    public record RegistrationOtpRequest(@NotBlank @Email String email) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
     public record GoogleLoginRequest(@NotBlank String idToken) {}
     public record LinkGoogleRequest(@NotBlank String idToken, @NotBlank String password) {}

@@ -28,7 +28,8 @@ class IdentityGoogleLoginTest {
         when(unitOfWork.execute(any())).thenAnswer(inv -> ((Supplier<?>) inv.getArgument(0)).get());
         when(google.verify("valid-token"))
                 .thenReturn(new IGoogleIdentityPort.GoogleProfile("google-123", "person@example.com", "Person"));
-        service = new IdentityService(users, passwords, tokens, audit, unitOfWork, google);
+        service = new IdentityService(users, passwords, tokens, audit, unitOfWork, google,
+                mock(IRegistrationOtpPort.class));
     }
 
     @Test

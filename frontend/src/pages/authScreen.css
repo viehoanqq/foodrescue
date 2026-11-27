@@ -35,3 +35,28 @@
   .auth-brand { height: 88px; }
   .auth-brand img { width: min(100%, 290px); height: 82px; }
 }
+.auth-otp-row {
+  display: flex;
+  gap: 10px;
+}
+
+.auth-otp-row .ant-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.auth-otp-row .ant-btn {
+  flex: none;
+}
+
+.auth-back {
+  margin-top: 10px;
+  border: 0;
+  box-shadow: none;
+  color: #28694e;
+}
+
+@media (max-width: 480px) {
+  .auth-otp-row { flex-wrap: wrap; }
+  .auth-otp-row .ant-btn { width: 100%; }
+}

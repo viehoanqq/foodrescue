@@ -9,6 +9,7 @@ import com.foodrescue.identity.application.port.out.IPasswordPort;
 import com.foodrescue.identity.application.port.out.ITokenPort;
 import com.foodrescue.identity.application.port.out.IUnitOfWork;
 import com.foodrescue.identity.application.port.out.IGoogleIdentityPort;
+import com.foodrescue.identity.application.port.out.IRegistrationOtpPort;
 import java.security.SecureRandom;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,26 +28,38 @@ public class IdentityService {
     private final IAuditRepository audit;
     private final IUnitOfWork unitOfWork;
     private final IGoogleIdentityPort google;
+    private final IRegistrationOtpPort registrationOtp;
 
     public IdentityService(IUserRepository users, IPasswordPort passwords, ITokenPort tokens, IAuditRepository audit,
-                           IUnitOfWork unitOfWork, IGoogleIdentityPort google) {
+                           IUnitOfWork unitOfWork, IGoogleIdentityPort google, IRegistrationOtpPort registrationOtp) {
         this.users = users;
         this.passwords = passwords;
         this.tokens = tokens;
         this.audit = audit;
         this.unitOfWork = unitOfWork;
         this.google = google;
+        this.registrationOtp = registrationOtp;
     }
 
-    public AuthResult register(String email, String password, String fullName, String phone) {
-        return unitOfWork.execute(() -> registerTransaction(email, password, fullName, phone));
+    public void sendRegistrationOtp(String email) {
+        String normalized = normalize(email);
+        if (users.findByEmail(normalized).isPresent())
+            throw new IdentityException(409, "EMAIL_EXISTS", "Email đã được sử dụng");
+        registrationOtp.send(normalized);
     }
 
-    private AuthResult registerTransaction(String email, String password, String fullName, String phone) {
+    public AuthResult register(String email, String password, String fullName, String phone, String otp) {
+        String normalized = normalize(email);
+        registrationOtp.verify(normalized, otp);
+        return unitOfWork.execute(() -> registerTransaction(normalized, password, fullName, phone, otp));
+    }
+
+    private AuthResult registerTransaction(String email, String password, String fullName, String phone, String otp) {
         String normalized = normalize(email);
         if (users.findByEmail(normalized).isPresent()) {
             throw new IdentityException(409, "EMAIL_EXISTS", "Email đã được sử dụng");
         }
+        registrationOtp.consume(normalized, otp);
         UserAccount saved = users.save(new UserAccount(null, normalized, passwords.hash(password),
                 fullName.trim(), phone.trim(), "CUSTOMER", null, "ACTIVE", false,
                 LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")), 0));

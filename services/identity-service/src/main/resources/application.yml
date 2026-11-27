@@ -17,6 +17,20 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  mail:
+    host: ${SMTP_HOST:smtp81196.bkns.com.vn}
+    port: ${SMTP_PORT:465}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -32,6 +46,8 @@ management:
       exposure:
         include: health,info
 app:
+  otp:
+    secret: ${OTP_SECRET:}
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
   jwt:

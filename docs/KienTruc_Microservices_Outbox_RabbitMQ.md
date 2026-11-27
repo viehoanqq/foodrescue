@@ -140,7 +140,8 @@ Catalog có `V2__store_owned_categories.sql`: `categories.store_id` bắt buộc
 
 | Trạng thái | Method + URL | Quyền | Req | Res | Event / Outbox |
 |---|---|---|---|---|---|
-| Đã có | `POST /api/auth/register` | Công khai | `{email,password,fullName,phone}` (password 8–72 ký tự) | `{token,user}` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
+| Đã có | `POST /api/auth/register/otp` | Công khai | `{email}` | `200` nếu mã xác minh đã được gửi; giới hạn gửi lại 60 giây | Không |
+| Đã có | `POST /api/auth/register` | Công khai | `{email,password,fullName,phone,otp}` (password 8–72 ký tự, OTP 6 chữ số) | `{token,user}`; OTP dùng một lần, hiệu lực 10 phút | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
 | Đã có | `POST /api/auth/login` | Công khai | `{email,password}` | `{token,user}` | Không |
 | Đã có | `GET /api/me` | Đăng nhập | Không có body | `user` | Không |
 | Đã có | `PUT /api/me` | Đăng nhập | `{fullName,phone}` | `user` | Audit trực tiếp vào `identity.audit_logs`; không phát RabbitMQ |
