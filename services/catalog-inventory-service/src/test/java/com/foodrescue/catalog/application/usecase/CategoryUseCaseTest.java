@@ -88,6 +88,19 @@ class CategoryUseCaseTest {
     }
 
     @Test
+    void staffCanManageApprovedStoreEvenWhenProjectionIsEmpty() {
+        CatalogStore approved = new CatalogStore(15L, null, "APPROVED", 2);
+        when(stores.findByStoreId(15L)).thenReturn(Optional.empty());
+        when(storeStatus.findByStoreId(15L)).thenReturn(Optional.of(approved));
+        when(categories.findByStore(15L)).thenReturn(List.of());
+
+        assertTrue(useCase.listMine(staff).isEmpty());
+
+        verify(storeStatus).findByStoreId(15L);
+        verify(categories).findByStore(15L);
+    }
+
+    @Test
     void staffOfLockedStoreCannotManage() {
         CatalogStore locked = new CatalogStore(15L, 7L, "LOCKED", 3);
         when(stores.findByStoreId(15L)).thenReturn(Optional.of(locked));

@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -28,7 +29,15 @@ public class OsrmRouteDistanceAdapter implements IRouteDistancePort {
     private final String baseUrl;
     private final RestClient client;
 
+    @Autowired
     public OsrmRouteDistanceAdapter(@Value("${app.osrm.base-url:}") String configuredUrl) {
+        this(configuredUrl, RestClient.builder().requestFactory(
+                configuredUrl == null || configuredUrl.isBlank()
+                        ? new org.springframework.http.client.SimpleClientHttpRequestFactory()
+                        : defaultRequestFactory()));
+    }
+
+    OsrmRouteDistanceAdapter(String configuredUrl, RestClient.Builder builder) {
         this.baseUrl = configuredUrl == null ? "" : configuredUrl.trim().replaceAll("/+$", "");
         if (!this.baseUrl.isEmpty()) {
             URI uri = URI.create(this.baseUrl);
@@ -37,16 +46,21 @@ public class OsrmRouteDistanceAdapter implements IRouteDistancePort {
                 throw new IllegalArgumentException("OSRM base URL must use HTTP(S)");
             }
         }
+        this.client = this.baseUrl.isEmpty() ? null : builder.build();
+    }
+
+    private static JdkClientHttpRequestFactory defaultRequestFactory() {
         HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(Duration.ofSeconds(2));
-        this.client = RestClient.builder().requestFactory(factory).build();
+        return factory;
     }
 
     @Override
     public Map<Long, RouteMetrics> findRoutes(BigDecimal latitude, BigDecimal longitude,
             Collection<CatalogStoreSummary> stores) {
-        if (baseUrl.isEmpty() || latitude == null || longitude == null || stores == null || stores.isEmpty()) {
+        if (client == null || baseUrl.isEmpty() || latitude == null || longitude == null
+                || stores == null || stores.isEmpty()) {
             return Map.of();
         }
         List<CatalogStoreSummary> destinations = stores.stream()
@@ -70,8 +84,8 @@ public class OsrmRouteDistanceAdapter implements IRouteDistancePort {
             JsonNode durations = response.path("durations").path(0);
             Map<Long, RouteMetrics> result = new HashMap<>();
             for (int index = 0; index < destinations.size(); index++) {
-                JsonNode distance = distances.path(index + 1);
-                JsonNode duration = durations.path(index + 1);
+                JsonNode distance = distances.path(index);
+                JsonNode duration = durations.path(index);
                 if (!distance.isNumber() || !duration.isNumber()
                         || distance.doubleValue() < 0 || duration.doubleValue() < 0) continue;
                 result.put(destinations.get(index).id(), new RouteMetrics(

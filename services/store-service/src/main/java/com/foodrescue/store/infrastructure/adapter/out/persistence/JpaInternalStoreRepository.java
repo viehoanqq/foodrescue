@@ -26,6 +26,12 @@ public class JpaInternalStoreRepository implements IInternalStoreRepository {
     }
 
     @Override
+    public Optional<StoreInternalView.OwnerStore> findByOwnerId(Long ownerId) {
+        return stores.findByOwnerId(ownerId).map(s -> new StoreInternalView.OwnerStore(
+                s.getId(), s.getOwnerId(), s.getStatus().name(), s.getAggregateVersion()));
+    }
+
+    @Override
     public StoreInternalView.Counts countByStatus() {
         return new StoreInternalView.Counts(stores.countByStatus(StoreStatus.APPROVED),
                 stores.countByStatus(StoreStatus.LOCKED), stores.countByStatus(StoreStatus.PENDING));

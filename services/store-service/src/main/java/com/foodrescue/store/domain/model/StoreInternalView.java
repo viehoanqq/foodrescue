@@ -13,5 +13,7 @@ public final class StoreInternalView {
                                 String bankAccountNo, String bankAccountName,
                                 LocalDateTime updatedAt) {}
 
+    public record OwnerStore(Long storeId, Long ownerId, String status, Long version) {}
+
     public record Counts(long approved, long locked, long pending) {}
 }

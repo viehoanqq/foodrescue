@@ -12,14 +12,20 @@ public class ReadInternalStoreUseCase {
     }
 
     public StoreInternalView.CheckoutPolicy checkoutPolicy(Long storeId) {
-        validateId(storeId);
+        validatePositiveId(storeId, "INVALID_STORE_ID", "Mã cửa hàng không hợp lệ");
         return stores.findCheckoutPolicy(storeId)
                 .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
     }
 
     public StoreInternalView.PayoutAccount payoutAccount(Long storeId) {
-        validateId(storeId);
+        validatePositiveId(storeId, "INVALID_STORE_ID", "Mã cửa hàng không hợp lệ");
         return stores.findPayoutAccount(storeId)
+                .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
+    }
+
+    public StoreInternalView.OwnerStore byOwner(Long ownerId) {
+        validatePositiveId(ownerId, "INVALID_OWNER_ID", "Mã chủ cửa hàng không hợp lệ");
+        return stores.findByOwnerId(ownerId)
                 .orElseThrow(() -> new StoreException(404, "STORE_NOT_FOUND", "Không tìm thấy cửa hàng"));
     }
 
@@ -27,8 +33,8 @@ public class ReadInternalStoreUseCase {
         return stores.countByStatus();
     }
 
-    private void validateId(Long storeId) {
-        if (storeId == null || storeId <= 0)
-            throw new StoreException(400, "INVALID_STORE_ID", "Mã cửa hàng không hợp lệ");
+    private void validatePositiveId(Long id, String code, String message) {
+        if (id == null || id <= 0)
+            throw new StoreException(400, code, message);
     }
 }

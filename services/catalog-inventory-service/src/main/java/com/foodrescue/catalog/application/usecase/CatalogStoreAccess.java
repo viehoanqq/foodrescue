@@ -25,21 +25,25 @@ public class CatalogStoreAccess {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Long requireManagedStoreId(Actor actor) {
-        CatalogStore store;
+        long storeId;
         if ("STORE_STAFF".equals(actor.role())) {
             if (actor.storeId() == null) {
                 throw CatalogException.forbidden("STORE_NOT_ASSIGNED", "Tài khoản chưa thuộc cửa hàng nào");
             }
-            store = projections.findByStoreId(actor.storeId()).orElseThrow(this::storeNotApproved);
+            if (actor.storeId() < 1) {
+                throw storeNotApproved();
+            }
+            storeId = actor.storeId();
         } else if ("STORE_OWNER".equals(actor.role())) {
-            store = projections.findByOwnerId(actor.userId())
+            storeId = projections.findByOwnerId(actor.userId())
                     .or(() -> owners.findByOwnerId(actor.userId()))
                     .orElseThrow(() -> CatalogException.forbidden(
-                            "STORE_NOT_FOUND", "Tài khoản chưa có cửa hàng được duyệt"));
+                            "STORE_NOT_FOUND", "Tài khoản chưa có cửa hàng được duyệt"))
+                    .storeId();
         } else {
             throw CatalogException.forbidden("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này");
         }
-        CatalogStore current = statuses.findByStoreId(store.storeId()).orElseThrow(this::storeNotApproved);
+        CatalogStore current = statuses.findByStoreId(storeId).orElseThrow(this::storeNotApproved);
         if (!current.approved()) throw storeNotApproved();
         return current.storeId();
     }

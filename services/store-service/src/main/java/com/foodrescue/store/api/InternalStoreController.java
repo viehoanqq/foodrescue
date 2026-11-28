@@ -42,6 +42,13 @@ public class InternalStoreController {
                 .body(stores.payoutAccount(id));
     }
 
+    @GetMapping("/internal/stores/by-owner/{ownerId}")
+    public StoreInternalView.OwnerStore byOwner(
+            @RequestHeader("X-Internal-Key") String key, @PathVariable Long ownerId) {
+        sharedKey.verify(key);
+        return stores.byOwner(ownerId);
+    }
+
     @GetMapping("/internal/stores/count")
     public StoreInternalView.Counts count(@RequestHeader("X-Internal-Key") String key) {
         sharedKey.verify(key);
