@@ -63,15 +63,20 @@
 
 | Nhóm | Endpoint/luồng |
 |---|---|
-| Danh mục | `GET /api/categories`; admin `POST/PUT/DELETE /api/admin/categories/**`; không xóa category còn batch tham chiếu |
+| Danh mục | `GET /api/categories`; owner `POST/GET/PUT/DELETE /api/store/categories/**`; admin `POST/GET/PUT/DELETE /api/admin/categories/**?storeId=` |
 | Khám phá | `GET /api/batches` theo category, giá, tọa độ/bán kính, thời gian; `GET /api/batches/{id}`. Chỉ AVAILABLE, còn hàng, còn giờ và store APPROVED; OSRM dùng cho quãng đường/ETA với timeout/fallback |
-| Túi của cửa hàng | `GET/POST/PUT /api/store/batches/**`, `PATCH .../{id}/quantity`, `GET .../{id}/stock-movements`, `POST .../{id}/cancel`; giá cứu ≤60% giá gốc, thời gian nhận hợp lệ, điều chỉnh tồn có sổ kho |
+| Túi của cửa hàng | Owner `GET/POST/PUT /api/store/batches/**`, `POST .../{id}/cancel`; owner/staff `GET /api/store/batches`, `PATCH .../{id}/quantity`, `GET .../{id}/stock-movements`; giá cứu ≤60% giá gốc, thời gian nhận hợp lệ, mọi thay đổi tồn có sổ kho |
+| Admin catalog | `GET /api/admin/batches?storeId&page&size`, `POST .../{id}/cancel`; admin CRUD danh mục theo `storeId`, xem túi giữa các cửa hàng |
 | Reservation nội bộ | Hoàn thiện giữ/trả idempotent, `GET /internal/reservations/{id}` khi Order timeout; chốt và thêm commit reservation khi thanh toán nếu dùng trạng thái `COMMITTED` |
 | Internal batch | `GET /internal/batches/{id}` nếu Order cần đối chiếu ngoài kết quả reservation |
 
-**Publisher phải làm:** `catalog.batch-cancelled.v1` khi chủ/admin hủy túi → queue `order.batch-cancelled`, consumer Order hủy các đơn còn hiệu lực. Ghi `audit.action.v1` cùng transaction cho sửa tồn/hủy túi → `identity.audit-events`. `stock.reserved.v1`/`stock.released.v1` đã có producer; V1 **không bắt buộc Order consume** vì HTTP reservation là nguồn kết quả. `catalog.batch-changed.v1` chỉ thêm khi có projection/search thật cần nhận.
+**Publisher:** `catalog.batch-cancelled.v1` khi chủ/admin hủy túi → queue `order.batch-cancelled`, consumer Order hủy các đơn còn hiệu lực. Ghi `audit.action.v1` cùng transaction cho tạo/sửa/ẩn danh mục, tạo/sửa/hủy túi và điều chỉnh tồn → `identity.audit-events`. `stock.reserved.v1`/`stock.released.v1` được ghi vào Outbox; V1 **không bắt buộc Order consume** vì HTTP reservation là nguồn kết quả. `catalog.batch-changed.v1` chỉ thêm khi có projection/search thật cần nhận.
 
-**Consumer:** mặc định V1 dùng HTTP `checkout-policy` từ Store khi tạo/giữ túi. Nếu nhóm chọn projection cho search, B tạo migration bảng store projection, queue `catalog.store-status` cho `store.status-changed.v1` và có thể `catalog.store-profile` cho `store.profile-changed.v1`; Inbox + version/freshness, không dùng event không có chỗ lưu bền. **Không consume `order.state-changed.v1` để trả kho**: C gọi release HTTP idempotent.
+**Xóa mềm và sổ kho:** category dùng `archived_at`; batch hủy dùng `deleted_at` cùng `status=CANCELLED`. Ẩn category **không cascade** sang batch: batch hiện hữu và lịch sử reservation/sổ kho được giữ để đơn đang xử lý không bị ảnh hưởng; category archived không được dùng cho batch mới. Hủy batch ghi `REMOVED` cho tồn còn lại, append-only, đồng thời ghi audit và `catalog.batch-cancelled.v1` vào Outbox cùng transaction. Staff chỉ xem danh mục/túi và điều chỉnh tồn `ADDED`/`REMOVED`; chỉ owner tạo/sửa/ẩn danh mục và tạo/sửa/hủy túi.
+
+Store cần cung cấp `GET /internal/stores/by-owner/{ownerId}` cho Catalog tra cứu các cửa hàng hiện hữu khi projection chưa nhận event; response `{storeId,ownerId,status,version}`. Đây là API service-to-service có `X-Internal-Key`, gọi trực tiếp và không thêm vào Gateway.
+
+**Consumer:** Catalog nhận `store.status-changed.v1` tại queue `catalog.store-status`, dùng Inbox và `aggregateVersion` để bỏ qua event trùng/cũ. Các thao tác ghi tồn vẫn kiểm tra trạng thái Store hiện thời qua HTTP `checkout-policy`; khi projection chưa có dữ liệu owner, dùng `GET /internal/stores/by-owner/{ownerId}`. **Không consume `order.state-changed.v1` để trả kho**: C gọi release HTTP idempotent.
 
 **Bàn giao:** B chốt response reservation gồm giá/khung giờ với C, event batch cancel với C; FE thay catalog/demo batch bằng API khi có auth và pagination.
 

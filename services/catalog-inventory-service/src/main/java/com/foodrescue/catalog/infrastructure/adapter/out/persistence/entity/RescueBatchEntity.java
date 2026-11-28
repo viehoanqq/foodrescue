@@ -3,7 +3,6 @@ package com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
-import java.util.UUID;
 
 /** Persistence mapping for this service's own table; cross-service IDs stay scalar. */
 @Entity
@@ -55,6 +54,9 @@ public class RescueBatchEntity {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -96,4 +98,13 @@ public class RescueBatchEntity {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public OffsetDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(OffsetDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    @Column(name = "aggregate_version", nullable = false)
+    private Long aggregateVersion = 1L;
+
+    public Long getAggregateVersion() { return aggregateVersion; }
+    public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
 }

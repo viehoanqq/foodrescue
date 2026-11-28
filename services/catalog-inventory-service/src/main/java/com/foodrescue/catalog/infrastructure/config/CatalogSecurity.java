@@ -34,7 +34,14 @@ public class CatalogSecurity {
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**",
                                 "/api/batches", "/api/batches/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/store/batches", "/api/store/batches/**").hasAnyRole("STORE_OWNER", "STORE_STAFF")
+                        .requestMatchers(HttpMethod.GET, "/api/store/categories", "/api/store/categories/**",
+                                "/api/store/batches", "/api/store/batches",
+                                "/api/store/batches/*/stock-movements")
+                                .hasAnyRole("STORE_OWNER", "STORE_STAFF")
+                        .requestMatchers(HttpMethod.PATCH, "/api/store/batches/*/quantity")
+                                .hasAnyRole("STORE_OWNER", "STORE_STAFF")
+                        .requestMatchers("/api/store/categories", "/api/store/categories/**",
+                                "/api/store/batches", "/api/store/batches/**").hasRole("STORE_OWNER")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> errors.write(req, res, 401,

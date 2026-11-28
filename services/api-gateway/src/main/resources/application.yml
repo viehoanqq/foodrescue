@@ -22,7 +22,7 @@ spring:
         - id: catalog-api
           uri: ${CATALOG_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/categories,/api/categories/**,/api/batches,/api/batches/**,/api/store/batches,/api/store/batches/**,/api/admin/categories,/api/admin/categories/**
+            - Path=/api/categories,/api/categories/**,/api/batches,/api/batches/**,/api/store/categories,/api/store/categories/**,/api/store/batches,/api/store/batches/**,/api/admin/categories,/api/admin/categories/**,/api/admin/batches,/api/admin/batches/**
         - id: order-api
           uri: ${ORDER_SERVICE_URL:http://localhost:8085}
           predicates:

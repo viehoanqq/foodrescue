@@ -120,12 +120,14 @@ public interface EventHandler<T> {
 | Service | DB và bảng sở hữu | API nội bộ cung cấp |
 |---|---|---|
 | Identity | MySQL `identity_db`: `users`, `audit_logs`, Outbox/Inbox | `GET /internal/users/{id}/status`, `GET /internal/users/count`, tạo/khóa staff |
-| Store | MySQL `store_db`: `stores`, `reviews`, Outbox/Inbox | `GET /internal/stores/{id}/checkout-policy`, payout account, store count |
+| Store | MySQL `store_db`: `stores`, `reviews`, Outbox/Inbox | `GET /internal/stores/{id}/checkout-policy`, `GET /internal/stores/by-owner/{ownerId}`, payout account, store count |
 | Catalog | PostgreSQL `catalog_db`: `categories`, `rescue_batches`, `stock_movements`, `stock_reservations`, `stock_reservation_items`, Outbox/Inbox | `POST/GET /internal/reservations`, release/commit reservation |
 | Order | PostgreSQL `order_db`: `cart_items`, `orders`, `order_items`, Outbox/Inbox | Payment intent, review eligibility |
 | Finance | PostgreSQL `finance_db`: `payments`, `refunds`, `payouts`, `payout_items`, `order_snapshots`, Outbox/Inbox | Payment status để đối soát nếu cần |
 
 ID thuộc service khác chỉ là tham chiếu, **không có FK xuyên DB**. Chỉ owner được ghi bảng của mình. `users.store_id` là liên kết staff do Identity ghi; `stores.owner_id` do Store ghi. Catalog sở hữu `remaining_quantity`; Order sở hữu `orders.status/payment_status`; Finance sở hữu giao dịch và snapshot tài chính. `order_snapshots` là projection, không là nguồn thay đổi đơn.
+
+`GET /internal/stores/by-owner/{ownerId}` chỉ phục vụ service-to-service để Catalog tìm `storeId` khi projection chưa có dữ liệu; response `{storeId,ownerId,status,version}`. Endpoint cần `X-Internal-Key`, gọi trực tiếp Store bằng `STORE_SERVICE_URL`, và không route công khai qua Gateway.
 
 Browser chỉ gọi `/api/**` qua Gateway; service gọi `/internal/**` trực tiếp. JSON dùng `camelCase`, ID số nguyên 64 bit, tiền VND integer, thời gian API ISO-8601 có offset (identity hiện còn `LocalDateTime` không offset, cần chuyển có kiểm soát). `Authorization: Bearer <JWT>` cho route bảo vệ; JWT hiện ký HS256 và chỉ có `sub`, `ver`, `iat`, `exp`. Bốn service nghiệp vụ xác minh chữ ký/hạn token rồi gọi `GET /internal/users/{id}/status` để lấy role và trạng thái hiện tại, đối chiếu `tokenVersion`, chặn `mustChangePassword`; Identity lỗi thì fail closed với 503. `@AuthenticationPrincipal AuthenticatedUser` là nguồn userId/role trong API, nhưng quyền sở hữu store/order phải kiểm tra thêm tại service owner. `X-Correlation-Id` xuyên request/event; `Idempotency-Key` cho tạo đơn, link thanh toán và payout; `X-Internal-Key` chỉ ở service-to-service local. Không tin userId/storeId/role browser gửi trong body. Internal client có timeout, chỉ tự retry GET hoặc POST idempotent. Error body và mã lỗi ở mục 5; frontend không dựa vào chuỗi message để quyết định hành vi.
 

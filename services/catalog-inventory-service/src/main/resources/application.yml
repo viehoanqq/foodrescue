@@ -23,6 +23,15 @@ spring:
     username: ${RABBITMQ_USER:foodrescue}
     password: ${RABBITMQ_PASSWORD:}
     publisher-confirm-type: correlated
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1s
+          max-attempts: 3
+          max-interval: 10s
+          multiplier: 2
 management:
   endpoints:
     web:
@@ -33,4 +42,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:}
   identity-service-url: ${IDENTITY_SERVICE_URL:http://localhost:8082}
+  store-service-url: ${STORE_SERVICE_URL:http://localhost:8083}
+  osrm:
+    base-url: ${OSRM_BASE_URL:}
 
