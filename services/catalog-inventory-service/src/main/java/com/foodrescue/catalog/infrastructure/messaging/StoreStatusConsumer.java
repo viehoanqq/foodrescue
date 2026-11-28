@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.buildingblocks.events.MessagingNames;
 import com.foodrescue.catalog.application.usecase.StoreStatusProjectionUseCase;
 import com.foodrescue.catalog.domain.model.StoreStatusChange;
+import com.foodrescue.catalog.domain.model.enums.StoreProjectionStatus;
 import java.util.UUID;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -41,7 +42,7 @@ public class StoreStatusConsumer {
                 throw new IllegalArgumentException("Store event metadata does not match payload");
             }
             change = new StoreStatusChange(storeId, payload.path("ownerId").asLong(),
-                    payload.path("status").asText(), version);
+                    StoreProjectionStatus.parseRequired(payload.path("status").asText()), version);
         } catch (JsonProcessingException | IllegalArgumentException ex) {
             throw new AmqpRejectAndDontRequeueException("Invalid store status event", ex);
         }

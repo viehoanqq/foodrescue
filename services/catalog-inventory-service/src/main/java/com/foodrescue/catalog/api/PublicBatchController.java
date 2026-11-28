@@ -78,7 +78,7 @@ public class PublicBatchController {
             return new BatchResponse(batch.id(), batch.storeId(), batch.categoryId(), batch.title(),
                     batch.description(), batch.imageUrl(), batch.originalPrice(), batch.rescuePrice(),
                     batch.quantity(), batch.remainingQuantity(), batch.pickupStart(), batch.pickupEnd(),
-                    batch.status(), batch.createdAt(), CategoryResponse.from(view.category()),
+                    batch.status() != null ? batch.status().name() : null, batch.createdAt(), CategoryResponse.from(view.category()),
                     StoreResponse.from(view.store(), view.route()));
         }
     }

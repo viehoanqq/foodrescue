@@ -1,5 +1,6 @@
 package com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.catalog.domain.model.enums.StoreProjectionStatus;
 import jakarta.persistence.*;
 import java.time.Instant;
 
@@ -9,7 +10,7 @@ import java.time.Instant;
 public class StoreProjectionEntity {
     public StoreProjectionEntity() {}
 
-    public StoreProjectionEntity(Long storeId, Long ownerId, String status, Long aggregateVersion) {
+    public StoreProjectionEntity(Long storeId, Long ownerId, StoreProjectionStatus status, Long aggregateVersion) {
         this.storeId = storeId;
         this.ownerId = ownerId;
         this.status = status;
@@ -24,8 +25,9 @@ public class StoreProjectionEntity {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private StoreProjectionStatus status;
 
     @Column(name = "aggregate_version", nullable = false)
     private Long aggregateVersion;
@@ -36,8 +38,8 @@ public class StoreProjectionEntity {
     public Long getStoreId() { return storeId; }
     public Long getOwnerId() { return ownerId; }
     public void setOwnerId(Long ownerId) { this.ownerId = ownerId; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public StoreProjectionStatus getStatus() { return status; }
+    public void setStatus(StoreProjectionStatus status) { this.status = status; }
     public Long getAggregateVersion() { return aggregateVersion; }
     public void setAggregateVersion(Long aggregateVersion) { this.aggregateVersion = aggregateVersion; }
     public Instant getUpdatedAt() { return updatedAt; }

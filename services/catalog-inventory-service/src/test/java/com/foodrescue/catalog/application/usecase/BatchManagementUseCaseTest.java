@@ -14,6 +14,8 @@ import com.foodrescue.catalog.domain.model.Actor;
 import com.foodrescue.catalog.domain.model.CatalogStore;
 import com.foodrescue.catalog.domain.model.RescueBatch;
 import com.foodrescue.catalog.domain.model.StockMovement;
+import com.foodrescue.catalog.domain.model.enums.BatchStatus;
+import com.foodrescue.catalog.domain.model.enums.StockMovementReason;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -34,7 +36,7 @@ class BatchManagementUseCaseTest {
     private final Actor staff = new Actor(30L, "STORE_STAFF", 15L);
     private final RescueBatch batch = new RescueBatch(5L, 15L, 2L, "Túi", null, null,
             BigDecimal.valueOf(100_000), BigDecimal.valueOf(50_000), 5, 2,
-            now().plusHours(1), now().plusHours(2), "AVAILABLE", now(), 3L, false);
+            now().plusHours(1), now().plusHours(2), BatchStatus.AVAILABLE, now(), 3L, false);
 
     private static LocalDateTime now() {
         return LocalDateTime.now(BUSINESS_ZONE);
@@ -58,7 +60,7 @@ class BatchManagementUseCaseTest {
         ArgumentCaptor<StockMovement> movement = ArgumentCaptor.forClass(StockMovement.class);
         verify(batches).appendMovement(movement.capture());
         assertEquals(-1, movement.getValue().changeQty());
-        assertEquals("REMOVED", movement.getValue().reason());
+        assertEquals(StockMovementReason.REMOVED, movement.getValue().reason());
         verify(outbox).append(any());
     }
 
@@ -88,6 +90,39 @@ class BatchManagementUseCaseTest {
         assertEquals("BATCH_HAS_ACTIVE_RESERVATION", error.code());
         verify(batches, never()).save(any());
         verify(batches, never()).appendMovement(any());
+        verifyNoInteractions(outbox);
+    }
+
+    @Test
+    void cancellingBatchWithoutHeldReservationCancelsBatchAndAppendsRemovedMovement() {
+        approvedStore();
+        when(batches.findForUpdate(15L, 5L)).thenReturn(Optional.of(batch));
+        when(batches.hasHeldReservations(5L)).thenReturn(false);
+        when(batches.save(any())).thenAnswer(call -> call.getArgument(0));
+
+        RescueBatch cancelled = useCase.cancel(staff, 5L, "Hết nguyên liệu", false);
+
+        assertEquals(BatchStatus.CANCELLED, cancelled.status());
+        assertEquals(0, cancelled.remainingQuantity());
+        ArgumentCaptor<StockMovement> movement = ArgumentCaptor.forClass(StockMovement.class);
+        verify(batches).appendMovement(movement.capture());
+        assertEquals(StockMovementReason.REMOVED, movement.getValue().reason());
+        assertEquals(-2, movement.getValue().changeQty());
+        verify(outbox, times(2)).append(any());
+    }
+
+    @Test
+    void rejectsCancellingAlreadyExpiredBatch() {
+        approvedStore();
+        RescueBatch expired = new RescueBatch(5L, 15L, 2L, "Túi", null, null,
+                BigDecimal.valueOf(100_000), BigDecimal.valueOf(50_000), 5, 0,
+                now().minusHours(2), now().minusHours(1), BatchStatus.EXPIRED, now().minusDays(1), 3L, false);
+        when(batches.findForUpdate(15L, 5L)).thenReturn(Optional.of(expired));
+
+        CatalogException error = assertThrows(CatalogException.class,
+                () -> useCase.cancel(staff, 5L, "Không còn hàng", false));
+
+        assertEquals("BATCH_STATUS_CONFLICT", error.code());
         verifyNoInteractions(outbox);
     }
 }

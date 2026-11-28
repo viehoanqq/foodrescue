@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import com.foodrescue.catalog.application.port.out.IInboxPort;
 import com.foodrescue.catalog.application.port.out.IStoreProjectionRepository;
 import com.foodrescue.catalog.domain.model.StoreStatusChange;
+import com.foodrescue.catalog.domain.model.enums.StoreProjectionStatus;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,7 @@ class StoreStatusProjectionUseCaseTest {
     private final IStoreProjectionRepository projection = mock(IStoreProjectionRepository.class);
     private final StoreStatusProjectionUseCase useCase = new StoreStatusProjectionUseCase(inbox, projection);
     private final UUID eventId = UUID.randomUUID();
-    private final StoreStatusChange change = new StoreStatusChange(15L, 7L, "APPROVED", 2L);
+    private final StoreStatusChange change = new StoreStatusChange(15L, 7L, StoreProjectionStatus.APPROVED, 2L);
 
     @Test
     void appliesNewEventOnce() {
@@ -36,8 +37,11 @@ class StoreStatusProjectionUseCaseTest {
 
     @Test
     void rejectsUnknownStatusAndInvalidIds() {
-        assertThrows(IllegalArgumentException.class, () -> new StoreStatusChange(15L, 7L, "PENDING", 1L));
-        assertThrows(IllegalArgumentException.class, () -> new StoreStatusChange(0L, 7L, "APPROVED", 1L));
-        assertThrows(IllegalArgumentException.class, () -> new StoreStatusChange(15L, 7L, "APPROVED", 0L));
+        assertThrows(IllegalArgumentException.class, () -> StoreProjectionStatus.parseRequired("PENDING"));
+        assertThrows(IllegalArgumentException.class, () -> new StoreStatusChange(15L, 7L, null, 1L));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StoreStatusChange(0L, 7L, StoreProjectionStatus.APPROVED, 1L));
+        assertThrows(IllegalArgumentException.class,
+                () -> new StoreStatusChange(15L, 7L, StoreProjectionStatus.APPROVED, 0L));
     }
 }

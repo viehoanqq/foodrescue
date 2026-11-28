@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foodrescue.catalog.application.usecase.StoreStatusProjectionUseCase;
 import com.foodrescue.catalog.domain.model.StoreStatusChange;
+import com.foodrescue.catalog.domain.model.enums.StoreProjectionStatus;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -28,7 +29,7 @@ class StoreStatusConsumerTest {
     void validEventIsForwardedToUseCase() {
         consumer.receive(message("store.status-changed.v1", "15", 2, "APPROVED", 2));
 
-        verify(useCase).apply(eventId, new StoreStatusChange(15L, 7L, "APPROVED", 2L));
+        verify(useCase).apply(eventId, new StoreStatusChange(15L, 7L, StoreProjectionStatus.APPROVED, 2L));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.catalog.domain.model.enums.BatchStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
@@ -48,8 +49,9 @@ public class RescueBatchEntity {
     @Column(name = "pickup_end", nullable = false)
     private LocalDateTime pickupEnd;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private BatchStatus status;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -93,8 +95,8 @@ public class RescueBatchEntity {
     public LocalDateTime getPickupEnd() { return pickupEnd; }
     public void setPickupEnd(LocalDateTime pickupEnd) { this.pickupEnd = pickupEnd; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public BatchStatus getStatus() { return status; }
+    public void setStatus(BatchStatus status) { this.status = status; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -1,5 +1,6 @@
 package com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.catalog.domain.model.enums.ReservationStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
@@ -21,8 +22,9 @@ public class StockReservationEntity {
     @Column(name = "request_hash", nullable = false, length = 64)
     private String requestHash;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private String status;
+    private ReservationStatus status;
 
     @Column(name = "pickup_start", nullable = false)
     private LocalDateTime pickupStart;
@@ -45,8 +47,8 @@ public class StockReservationEntity {
     public String getRequestHash() { return requestHash; }
     public void setRequestHash(String requestHash) { this.requestHash = requestHash; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public ReservationStatus getStatus() { return status; }
+    public void setStatus(ReservationStatus status) { this.status = status; }
 
     public LocalDateTime getPickupStart() { return pickupStart; }
     public void setPickupStart(LocalDateTime pickupStart) { this.pickupStart = pickupStart; }

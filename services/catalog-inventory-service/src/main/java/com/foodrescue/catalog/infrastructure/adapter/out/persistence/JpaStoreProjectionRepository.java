@@ -45,6 +45,7 @@ public class JpaStoreProjectionRepository implements IStoreProjectionRepository 
     }
 
     private CatalogStore toDomain(StoreProjectionEntity e) {
-        return new CatalogStore(e.getStoreId(), e.getOwnerId(), e.getStatus(), e.getAggregateVersion());
+        return new CatalogStore(e.getStoreId(), e.getOwnerId(),
+                e.getStatus() != null ? e.getStatus().name() : null, e.getAggregateVersion());
     }
 }

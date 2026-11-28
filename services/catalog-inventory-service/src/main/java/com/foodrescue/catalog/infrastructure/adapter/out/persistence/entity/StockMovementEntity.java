@@ -1,5 +1,6 @@
 package com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity;
 
+import com.foodrescue.catalog.domain.model.enums.StockMovementReason;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
@@ -22,8 +23,9 @@ public class StockMovementEntity {
     @Column(name = "change_qty", nullable = false)
     private Integer changeQty;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "reason", nullable = false, length = 20)
-    private String reason;
+    private StockMovementReason reason;
 
     @Column(name = "order_id")
     private Long orderId;
@@ -49,8 +51,8 @@ public class StockMovementEntity {
     public Integer getChangeQty() { return changeQty; }
     public void setChangeQty(Integer changeQty) { this.changeQty = changeQty; }
 
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
+    public StockMovementReason getReason() { return reason; }
+    public void setReason(StockMovementReason reason) { this.reason = reason; }
 
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }

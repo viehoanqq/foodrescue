@@ -15,6 +15,7 @@ import com.foodrescue.catalog.domain.exception.CatalogException;
 import com.foodrescue.catalog.domain.model.CatalogStoreSummary;
 import com.foodrescue.catalog.domain.model.RescueBatch;
 import com.foodrescue.catalog.domain.model.RouteMetrics;
+import com.foodrescue.catalog.domain.model.enums.BatchStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -37,7 +38,7 @@ class PublicBatchUseCaseTest {
     void searchIncludesApprovedStoreNameMatchesAndUsesCurrentStoreDirectory() {
         CatalogStoreSummary store = new CatalogStoreSummary(10L, "Bếp Xanh", null, null, "Quận 1",
                 null, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.valueOf(4.5), 2, null, null, null);
-        RescueBatch batch = batch("AVAILABLE", 3);
+        RescueBatch batch = batch(BatchStatus.AVAILABLE, 3);
         when(stores.findApprovedStores(null, null, null)).thenReturn(List.of(store));
         when(batches.search(anyCollection(), anyCollection(), eq(null), eq(null), eq("Bếp"),
                 eq(null), eq(null), eq(null), eq(null), any(LocalDateTime.class),
@@ -54,13 +55,13 @@ class PublicBatchUseCaseTest {
 
     @Test
     void publicDetailAllowsVisibleSoldOutBatchButNeverAnExpiredOne() {
-        when(batches.findById(5L)).thenReturn(Optional.of(batch("SOLD_OUT", 0)));
+        when(batches.findById(5L)).thenReturn(Optional.of(batch(BatchStatus.SOLD_OUT, 0)));
         when(stores.findApprovedStore(10L)).thenReturn(Optional.of(new CatalogStoreSummary(10L, "Bếp Xanh",
                 null, null, "Quận 1", null, BigDecimal.TEN, BigDecimal.TEN, null, 0, null, null, null)));
 
         var result = useCase.get(5L, null, null);
 
-        assertEquals("SOLD_OUT", result.batch().status());
+        assertEquals(BatchStatus.SOLD_OUT, result.batch().status());
         verify(stores).findApprovedStore(10L);
     }
 
@@ -68,7 +69,7 @@ class PublicBatchUseCaseTest {
     void detailUsesConfiguredRouteMetricsWhenAvailable() {
         CatalogStoreSummary store = new CatalogStoreSummary(10L, "Bếp Xanh", null, null, "Quận 1",
                 null, BigDecimal.TEN, BigDecimal.TEN, null, 0, null, null, null);
-        when(batches.findById(5L)).thenReturn(Optional.of(batch("AVAILABLE", 1)));
+        when(batches.findById(5L)).thenReturn(Optional.of(batch(BatchStatus.AVAILABLE, 1)));
         when(stores.findApprovedStore(10L)).thenReturn(Optional.of(store));
         when(routes.findRoutes(eq(BigDecimal.ONE), eq(BigDecimal.ONE), anyCollection()))
                 .thenReturn(java.util.Map.of(10L, new RouteMetrics(2.4, 8.5)));
@@ -90,7 +91,7 @@ class PublicBatchUseCaseTest {
         LocalDateTime end = start.plusDays(4).withHour(18);
         RescueBatch multiDayBatch = new RescueBatch(5L, 10L, 2L, "Túi", "Mô tả", null,
                 BigDecimal.valueOf(100), BigDecimal.valueOf(50), 3, 2, start, end,
-                "AVAILABLE", now(), 1, false);
+                BatchStatus.AVAILABLE, now(), 1, false);
         when(stores.findApprovedStores(null, null, null)).thenReturn(List.of(summary));
         when(stores.findApprovedStore(10L)).thenReturn(Optional.of(details));
         when(batches.search(anyCollection(), anyCollection(), eq(null), eq(null), eq(null),
@@ -108,7 +109,7 @@ class PublicBatchUseCaseTest {
     void detailDoesNotExposeExpiredBatchOrCallStoreService() {
         when(batches.findById(6L)).thenReturn(Optional.of(new RescueBatch(6L, 10L, 2L,
                 "Hết hạn", null, null, BigDecimal.valueOf(100), BigDecimal.valueOf(50), 2, 1,
-                now().minusHours(2), now().minusHours(1), "AVAILABLE",
+                now().minusHours(2), now().minusHours(1), BatchStatus.AVAILABLE,
                 now().minusDays(1), 1, false)));
 
         CatalogException error = assertThrows(CatalogException.class, () -> useCase.get(6L, null, null));
@@ -129,7 +130,7 @@ class PublicBatchUseCaseTest {
         verifyNoInteractions(stores, batches);
     }
 
-    private RescueBatch batch(String status, int remaining) {
+    private RescueBatch batch(BatchStatus status, int remaining) {
         return new RescueBatch(5L, 10L, 2L, "Túi", "Mô tả", null,
                 BigDecimal.valueOf(100), BigDecimal.valueOf(50), 3, remaining,
                 now().plusMinutes(30), now().plusHours(2), status, now(), 1, false);

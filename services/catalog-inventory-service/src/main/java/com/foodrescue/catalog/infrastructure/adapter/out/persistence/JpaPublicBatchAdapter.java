@@ -2,6 +2,7 @@ package com.foodrescue.catalog.infrastructure.adapter.out.persistence;
 
 import com.foodrescue.catalog.application.port.out.IPublicBatchRepository;
 import com.foodrescue.catalog.domain.model.RescueBatch;
+import com.foodrescue.catalog.domain.model.enums.BatchStatus;
 import com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity.RescueBatchEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -70,9 +71,9 @@ public class JpaPublicBatchAdapter implements IPublicBatchRepository {
         predicates.add(batch.get("storeId").in(approvedStoreIds));
         predicates.add(builder.isNull(batch.get("deletedAt")));
         predicates.add(builder.greaterThan(batch.<LocalDateTime>get("pickupEnd"), now));
-        Predicate available = builder.and(builder.equal(batch.get("status"), "AVAILABLE"),
+        Predicate available = builder.and(builder.equal(batch.get("status"), BatchStatus.AVAILABLE),
                 builder.greaterThan(batch.<Integer>get("remainingQuantity"), 0));
-        Predicate soldOut = builder.and(builder.equal(batch.get("status"), "SOLD_OUT"),
+        Predicate soldOut = builder.and(builder.equal(batch.get("status"), BatchStatus.SOLD_OUT),
                 builder.equal(batch.<Integer>get("remainingQuantity"), 0));
         predicates.add(builder.or(available, soldOut));
         if (storeId != null) predicates.add(builder.equal(batch.get("storeId"), storeId));

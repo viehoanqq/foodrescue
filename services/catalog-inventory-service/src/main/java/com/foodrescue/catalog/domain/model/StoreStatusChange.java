@@ -1,13 +1,11 @@
 package com.foodrescue.catalog.domain.model;
 
-import java.util.Set;
+import com.foodrescue.catalog.domain.model.enums.StoreProjectionStatus;
 
 /** Nội dung đã kiểm tra của store.status-changed.v1. */
-public record StoreStatusChange(long storeId, long ownerId, String status, long version) {
-    private static final Set<String> STATUSES = Set.of("APPROVED", "REJECTED", "LOCKED");
-
+public record StoreStatusChange(long storeId, long ownerId, StoreProjectionStatus status, long version) {
     public StoreStatusChange {
-        if (storeId <= 0 || ownerId <= 0 || version <= 0 || status == null || !STATUSES.contains(status)) {
+        if (storeId <= 0 || ownerId <= 0 || version <= 0 || status == null) {
             throw new IllegalArgumentException("Invalid store status change");
         }
     }

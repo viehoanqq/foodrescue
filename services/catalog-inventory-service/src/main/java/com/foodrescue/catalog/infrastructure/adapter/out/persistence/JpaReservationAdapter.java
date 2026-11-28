@@ -7,6 +7,9 @@ import com.foodrescue.catalog.application.port.out.IReservationPort;
 import com.foodrescue.catalog.domain.exception.CatalogException;
 import com.foodrescue.catalog.domain.model.ReservationRequest;
 import com.foodrescue.catalog.domain.model.ReservationResult;
+import com.foodrescue.catalog.domain.model.enums.BatchStatus;
+import com.foodrescue.catalog.domain.model.enums.ReservationStatus;
+import com.foodrescue.catalog.domain.model.enums.StockMovementReason;
 import com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity.OutboxEventEntity;
 import com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity.RescueBatchEntity;
 import com.foodrescue.catalog.infrastructure.adapter.out.persistence.entity.StockMovementEntity;
@@ -83,7 +86,7 @@ public class JpaReservationAdapter implements IReservationPort {
             RescueBatchEntity batch = batches.findForUpdateByIdAndDeletedAtIsNull(item.batchId())
                     .orElseThrow(() -> CatalogException.notFound("BATCH_NOT_FOUND", "Batch not found"));
             if (!request.storeId().equals(batch.getStoreId())
-                    || !"AVAILABLE".equals(batch.getStatus())
+                    || batch.getStatus() != BatchStatus.AVAILABLE
                     || !batch.getPickupEnd().isAfter(now)
                     || batch.getRemainingQuantity() < item.quantity()) {
                 throw CatalogException.conflict("BATCH_NOT_AVAILABLE", "Batch unavailable");
@@ -106,7 +109,7 @@ public class JpaReservationAdapter implements IReservationPort {
         reservation.setReservationId(request.reservationId());
         reservation.setOrderId(request.orderId());
         reservation.setRequestHash(requestHash);
-        reservation.setStatus("HELD");
+        reservation.setStatus(ReservationStatus.HELD);
         reservation.setPickupStart(pickupStart);
         reservation.setPickupEnd(pickupEnd);
         reservation.setExpiresAt(expiresAt);
@@ -118,7 +121,7 @@ public class JpaReservationAdapter implements IReservationPort {
             ReservationResult.Item line = resultItems.get(i);
             int remaining = batch.getRemainingQuantity() - line.quantity();
             batch.setRemainingQuantity(remaining);
-            if (remaining == 0) batch.setStatus("SOLD_OUT");
+            if (remaining == 0) batch.setStatus(BatchStatus.SOLD_OUT);
             batch.setAggregateVersion(batch.getAggregateVersion() + 1);
             batches.saveAndFlush(batch);
 
@@ -128,7 +131,7 @@ public class JpaReservationAdapter implements IReservationPort {
             item.setQuantity(line.quantity());
             item.setUnitPrice(line.unitPrice());
             reservationItems.save(item);
-            appendMovement(line.batchId(), -line.quantity(), "ORDERED", request.orderId(), null,
+            appendMovement(line.batchId(), -line.quantity(), StockMovementReason.ORDERED, request.orderId(), null,
                     remaining, "Reservation " + request.reservationId(), now);
         }
         appendEvent("stock.reserved.v1", request.reservationId(), 1, request.actorId(), Map.of(
@@ -136,7 +139,8 @@ public class JpaReservationAdapter implements IReservationPort {
                 "storeId", request.storeId(), "expiresAt", expiresAt.toInstant().toString(),
                 "items", resultItems.stream().map(line -> Map.of("batchId", line.batchId(),
                         "quantity", line.quantity(), "unitPrice", line.unitPrice())).toList()));
-        return new ReservationResult(request.reservationId(), "HELD", resultItems, pickupStart, pickupEnd);
+        return new ReservationResult(request.reservationId(), ReservationStatus.HELD.name(), resultItems,
+                pickupStart, pickupEnd);
     }
 
     @Override
@@ -144,8 +148,8 @@ public class JpaReservationAdapter implements IReservationPort {
     public ReservationResult release(UUID reservationId) {
         StockReservationEntity reservation = reservations.findForUpdateByReservationId(reservationId)
                 .orElseThrow(() -> CatalogException.notFound("RESERVATION_NOT_FOUND", "Reservation not found"));
-        if ("RELEASED".equals(reservation.getStatus())) return load(reservationId);
-        if (!"HELD".equals(reservation.getStatus())) {
+        if (reservation.getStatus() == ReservationStatus.RELEASED) return load(reservationId);
+        if (reservation.getStatus() != ReservationStatus.HELD) {
             throw CatalogException.conflict("RESERVATION_CONFLICT", "Reservation cannot be released");
         }
         LocalDateTime now = LocalDateTime.now(VIETNAM);
@@ -155,15 +159,15 @@ public class JpaReservationAdapter implements IReservationPort {
                             "RESERVATION_CONFLICT", "A reserved batch is no longer available"));
             int remaining = batch.getRemainingQuantity() + item.getQuantity();
             batch.setRemainingQuantity(remaining);
-            if ("SOLD_OUT".equals(batch.getStatus()) && batch.getPickupEnd().isAfter(now)) {
-                batch.setStatus("AVAILABLE");
+            if (batch.getStatus() == BatchStatus.SOLD_OUT && batch.getPickupEnd().isAfter(now)) {
+                batch.setStatus(BatchStatus.AVAILABLE);
             }
             batch.setAggregateVersion(batch.getAggregateVersion() + 1);
             batches.saveAndFlush(batch);
-            appendMovement(batch.getId(), item.getQuantity(), "RETURNED", reservation.getOrderId(),
+            appendMovement(batch.getId(), item.getQuantity(), StockMovementReason.RETURNED, reservation.getOrderId(),
                     null, remaining, "Release " + reservationId, now);
         }
-        reservation.setStatus("RELEASED");
+        reservation.setStatus(ReservationStatus.RELEASED);
         reservations.saveAndFlush(reservation);
         appendEvent("stock.released.v1", reservationId, 2, null,
                 Map.of("reservationId", reservationId, "orderId", reservation.getOrderId(),
@@ -179,11 +183,11 @@ public class JpaReservationAdapter implements IReservationPort {
         List<ReservationResult.Item> items = reservationItems.findByReservationIdOrderByBatchId(reservationId)
                 .stream().map(item -> new ReservationResult.Item(item.getBatchId(), item.getQuantity(),
                         item.getUnitPrice())).toList();
-        return new ReservationResult(reservationId, reservation.getStatus(), items,
+        return new ReservationResult(reservationId, reservation.getStatus().name(), items,
                 reservation.getPickupStart(), reservation.getPickupEnd());
     }
 
-    private void appendMovement(Long batchId, int change, String reason, Long orderId, Long actorId,
+    private void appendMovement(Long batchId, int change, StockMovementReason reason, Long orderId, Long actorId,
                                 int remaining, String note, LocalDateTime createdAt) {
         StockMovementEntity movement = new StockMovementEntity();
         movement.setBatchId(batchId);

@@ -9,6 +9,8 @@ import com.foodrescue.catalog.domain.model.Actor;
 import com.foodrescue.catalog.domain.model.BatchDraft;
 import com.foodrescue.catalog.domain.model.RescueBatch;
 import com.foodrescue.catalog.domain.model.StockMovement;
+import com.foodrescue.catalog.domain.model.enums.BatchStatus;
+import com.foodrescue.catalog.domain.model.enums.StockMovementReason;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -57,9 +59,9 @@ public class BatchManagementUseCase {
         LocalDateTime now = LocalDateTime.now(VIETNAM);
         RescueBatch batch = batches.save(new RescueBatch(null, storeId, draft.categoryId(), draft.title(),
                 draft.description(), draft.imageUrl(), draft.originalPrice(), draft.rescuePrice(),
-                draft.quantity(), draft.quantity(), draft.pickupStart(), draft.pickupEnd(), "AVAILABLE",
+                draft.quantity(), draft.quantity(), draft.pickupStart(), draft.pickupEnd(), BatchStatus.AVAILABLE,
                 now, 1, false));
-        batches.appendMovement(new StockMovement(null, batch.id(), batch.quantity(), "LISTED", null,
+        batches.appendMovement(new StockMovement(null, batch.id(), batch.quantity(), StockMovementReason.LISTED, null,
                 actor.userId(), batch.remainingQuantity(), "Tạo túi giải cứu", now));
         audit(actor, batch, "BATCH_CREATED", "storeId=" + storeId + "; quantity=" + batch.quantity());
         return batch;
@@ -77,7 +79,7 @@ public class BatchManagementUseCase {
         if (draft.quantity() != current.quantity()) {
             throw invalid("Thay đổi tồn kho phải dùng API điều chỉnh tồn");
         }
-        if (!"AVAILABLE".equals(current.status())) {
+        if (current.status() == null || !current.status().isAvailable()) {
             throw CatalogException.conflict("BATCH_STATUS_CONFLICT", "Chỉ sửa được túi đang bán");
         }
         if (current.remainingQuantity() != current.quantity()
@@ -107,15 +109,16 @@ public class BatchManagementUseCase {
         long storeId = storeAccess.requireManagedStoreId(actor);
         RescueBatch current = batches.findForUpdate(storeId, batchId).orElseThrow(this::batchNotFound);
         if (amount < 1 || amount > MAX_QUANTITY) throw invalid("Số lượng điều chỉnh phải từ 1 đến 100000");
-        if (!"ADDED".equals(reason) && !"REMOVED".equals(reason)) throw invalid("reason phải là ADDED hoặc REMOVED");
+        StockMovementReason adjustment = StockMovementReason.parseManualAdjustment(reason)
+                .orElseThrow(() -> invalid("reason phải là ADDED hoặc REMOVED"));
         if (note != null && note.length() > 255) throw invalid("Ghi chú tối đa 255 ký tự");
-        if (!"AVAILABLE".equals(current.status()) && !"SOLD_OUT".equals(current.status())) {
+        if (current.status() == null || !current.status().isStockAdjustable()) {
             throw CatalogException.conflict("BATCH_STATUS_CONFLICT", "Không thể điều chỉnh tồn của túi đã hủy hoặc hết hạn");
         }
         if (!current.pickupEnd().isAfter(LocalDateTime.now(VIETNAM))) {
             throw CatalogException.conflict("BATCH_EXPIRED", "Đã quá giờ nhận, không thể điều chỉnh tồn");
         }
-        boolean add = "ADDED".equals(reason);
+        boolean add = adjustment == StockMovementReason.ADDED;
         if (!add && amount > current.remainingQuantity()) {
             throw CatalogException.conflict("STOCK_NOT_ENOUGH", "Không thể giảm tồn nhiều hơn số lượng còn lại");
         }
@@ -125,15 +128,15 @@ public class BatchManagementUseCase {
         int delta = add ? amount : -amount;
         int remaining = current.remainingQuantity() + delta;
         int quantity = current.quantity() + (add ? amount : 0);
-        String status = remaining == 0 ? "SOLD_OUT" : "AVAILABLE";
+        BatchStatus status = BatchStatus.fromRemainingQuantity(remaining);
         RescueBatch saved = batches.save(new RescueBatch(current.id(), current.storeId(), current.categoryId(),
                 current.title(), current.description(), current.imageUrl(), current.originalPrice(),
                 current.rescuePrice(), quantity, remaining, current.pickupStart(), current.pickupEnd(), status,
                 current.createdAt(), current.version() + 1, false));
-        String cleanNote = note == null || note.isBlank() ? reason : note.trim();
-        batches.appendMovement(new StockMovement(null, saved.id(), delta, reason, null, actor.userId(),
+        String cleanNote = note == null || note.isBlank() ? adjustment.name() : note.trim();
+        batches.appendMovement(new StockMovement(null, saved.id(), delta, adjustment, null, actor.userId(),
                 remaining, cleanNote, LocalDateTime.now(VIETNAM)));
-        audit(actor, saved, "STOCK_" + reason, "changeQty=" + delta + "; remaining=" + remaining);
+        audit(actor, saved, "STOCK_" + adjustment.name(), "changeQty=" + delta + "; remaining=" + remaining);
         return saved;
     }
 
@@ -146,6 +149,9 @@ public class BatchManagementUseCase {
         if (reason == null || reason.isBlank() || reason.trim().length() > 255) {
             throw invalid("Lý do hủy phải từ 1 đến 255 ký tự");
         }
+        if (current.status() == null || !current.status().isCancellable()) {
+            throw CatalogException.conflict("BATCH_STATUS_CONFLICT", "Không thể hủy túi ở trạng thái hiện tại");
+        }
         if (batches.hasHeldReservations(batchId)) {
             throw CatalogException.conflict("BATCH_HAS_ACTIVE_RESERVATION",
                     "Túi đang được giữ trong đơn hàng, chưa thể hủy");
@@ -154,11 +160,11 @@ public class BatchManagementUseCase {
         RescueBatch cancelled = new RescueBatch(current.id(), current.storeId(), current.categoryId(),
                 current.title(), current.description(), current.imageUrl(), current.originalPrice(),
                 current.rescuePrice(), current.quantity(), 0, current.pickupStart(), current.pickupEnd(),
-                "CANCELLED", current.createdAt(), current.version() + 1, true);
+                BatchStatus.CANCELLED, current.createdAt(), current.version() + 1, true);
         RescueBatch saved = batches.save(cancelled);
         if (current.remainingQuantity() > 0) {
-            batches.appendMovement(new StockMovement(null, current.id(), -current.remainingQuantity(), "REMOVED",
-                    null, actor.userId(), 0, limitNote("Hủy túi: " + reason.trim()), now));
+            batches.appendMovement(new StockMovement(null, current.id(), -current.remainingQuantity(),
+                    StockMovementReason.REMOVED, null, actor.userId(), 0, limitNote("Hủy túi: " + reason.trim()), now));
         }
         audit(actor, saved, "BATCH_CANCELLED", "storeId=" + saved.storeId() + "; reason=" + reason.trim());
         outbox.append(EventEnvelope.create("catalog.batch-cancelled.v1", "RescueBatch",

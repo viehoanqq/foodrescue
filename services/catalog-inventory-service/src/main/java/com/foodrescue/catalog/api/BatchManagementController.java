@@ -121,7 +121,7 @@ public class BatchManagementController {
             return new BatchResponse(batch.id(), batch.storeId(), batch.categoryId(), batch.title(),
                     batch.description(), batch.imageUrl(), batch.originalPrice(), batch.rescuePrice(),
                     batch.quantity(), batch.remainingQuantity(), batch.pickupStart(), batch.pickupEnd(),
-                    batch.status(), batch.createdAt(), batch.version(), batch.deleted());
+                    batch.status() != null ? batch.status().name() : null, batch.createdAt(), batch.version(), batch.deleted());
         }
     }
 
@@ -129,8 +129,8 @@ public class BatchManagementController {
             Long orderId, Long actorId, int remainingAfter, String note, LocalDateTime createdAt) {
         static StockMovementResponse from(StockMovement movement) {
             return new StockMovementResponse(movement.id(), movement.batchId(), movement.changeQty(),
-                    movement.reason(), movement.orderId(), movement.actorId(), movement.remainingAfter(),
-                    movement.note(), movement.createdAt());
+                    movement.reason() != null ? movement.reason().name() : null, movement.orderId(), movement.actorId(),
+                    movement.remainingAfter(), movement.note(), movement.createdAt());
         }
     }
 

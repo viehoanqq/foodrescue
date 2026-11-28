@@ -164,8 +164,7 @@ public class PublicBatchUseCase {
 
     private boolean isPublic(RescueBatch batch, LocalDateTime now) {
         return !batch.deleted() && batch.pickupEnd().isAfter(now)
-                && (("AVAILABLE".equals(batch.status()) && batch.remainingQuantity() > 0)
-                    || ("SOLD_OUT".equals(batch.status()) && batch.remainingQuantity() == 0));
+                && batch.status() != null && batch.status().isPubliclyVisible(batch.remainingQuantity());
     }
 
     private Double distanceKm(BigDecimal latitude, BigDecimal longitude, BigDecimal storeLatitude,
